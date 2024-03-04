@@ -1,18 +1,18 @@
 package main
 
 import (
+	"log"
+
+	"example.com/main/src/database"
 	"example.com/main/src/models"
-	"github.com/jinzhu/gorm"
 	_ "github.com/lib/pq"
 )
 
 func main() {
-	// postgress
-	db, err := gorm.Open("postgres", "host=localhost port=5432 user=postgres dbname=postgres password=postgres sslmode=disable")
-	if err != nil {
-		panic(err)
-	}
+	database.Init()
+	db := database.DB
 	db.AutoMigrate(&models.User{})
-
+	defer log.Default().Printf("DB :%v", db.HasTable(&models.User{}))
+	defer log.Default().Printf("Program successfully finished!")
 	defer db.Close()
 }
