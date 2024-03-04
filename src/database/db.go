@@ -3,7 +3,7 @@ package database
 import (
 	"os"
 
-	"example.com/m/models"
+	"example.com/main/src/models"
 	"github.com/jinzhu/gorm"
 )
 

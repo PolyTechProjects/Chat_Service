@@ -1,7 +1,7 @@
 package main
 
 import (
-	"example.com/m/models"
+	"example.com/main/src/models"
 	"github.com/jinzhu/gorm"
 	_ "github.com/lib/pq"
 )
