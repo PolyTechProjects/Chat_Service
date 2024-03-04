@@ -1,10 +1,13 @@
 package database
 
 import (
+	"fmt"
 	"os"
 
 	"example.com/main/src/models"
 	"github.com/jinzhu/gorm"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 var DB *gorm.DB
@@ -19,6 +22,10 @@ type DbConnectStruct struct {
 }
 
 func Init() {
+	err := godotenv.Load()
+	if err != nil {
+		panic(err)
+	}
 	db_struct := DbConnectStruct{
 		host:     os.Getenv("DB_HOST"),
 		port:     os.Getenv("DB_PORT"),
@@ -27,9 +34,8 @@ func Init() {
 		dbname:   os.Getenv("DB_NAME"),
 		sslmode:  os.Getenv("DB_SSLMODE"),
 	}
-	db, err := gorm.Open(
-		"postgres",
-		"host=%s port=%s user=%s dbname=%s password=%s sslmode=%s",
+	str := fmt.Sprintf(
+		"host=%v port=%v user=%v dbname=%v password=%v sslmode=%v",
 		db_struct.host,
 		db_struct.port,
 		db_struct.user,
@@ -37,8 +43,13 @@ func Init() {
 		db_struct.password,
 		db_struct.sslmode,
 	)
+	db, err := gorm.Open(
+		"postgres",
+		str,
+	)
 	if err != nil {
 		panic(err)
 	}
 	db.AutoMigrate(&models.User{})
+	DB = db
 }
