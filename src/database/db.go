@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"example.com/main/src/models"
@@ -26,6 +27,7 @@ func Init() {
 	if err != nil {
 		panic(err)
 	}
+	log.Default().Output(1, "DB Connection started...")
 	db_struct := DbConnectStruct{
 		host:     os.Getenv("DB_HOST"),
 		port:     os.Getenv("DB_PORT"),
@@ -52,4 +54,5 @@ func Init() {
 	}
 	db.AutoMigrate(&models.User{})
 	DB = db
+	log.Default().Printf("DB Connection successful!")
 }
