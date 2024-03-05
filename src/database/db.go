@@ -49,6 +49,7 @@ func Init() {
 		str,
 	)
 	if err != nil {
+		log.Panicln(err, str)
 		panic(err)
 	}
 	db.AutoMigrate(&models.User{})
