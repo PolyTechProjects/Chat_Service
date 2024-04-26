@@ -1,12 +1,10 @@
 # This workflow will build a golang project
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
 
-name: Go
+name: Telegram_Notify
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
     branches: [ "main" ]
 
 jobs:
@@ -19,5 +17,5 @@ jobs:
         to: ${{ secrets.TELEGRAM_RELEASES_CHANNEL }}
         token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         message: Гооооооооол!
-        photo: ./test/goal.png
-        
+        photo: 'test/goal.png'
+        document: test/goal.png
