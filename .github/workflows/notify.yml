@@ -18,4 +18,5 @@ jobs:
       with:
         to: ${{ secrets.TELEGRAM_RELEASES_CHANNEL }}
         token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        message: Build is ready!
+        photo: goal.png
+        message: Goaaaaaaal!
