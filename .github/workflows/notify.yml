@@ -18,5 +18,6 @@ jobs:
       with:
         to: ${{ secrets.TELEGRAM_RELEASES_CHANNEL }}
         token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        photo: test/goal.png
         message: Гооооооооол!
+        photo: test/goal.png
+        
