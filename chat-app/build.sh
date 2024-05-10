@@ -1,0 +1,1 @@
+go build -C src/ -o ../build/ChatApp-001-build
