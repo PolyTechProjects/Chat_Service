@@ -37,19 +37,19 @@ func Init() {
 		sslmode:  os.Getenv("DB_SSLMODE"),
 	}
 	str := fmt.Sprintf(
-		"host=%v port=%v user=%v dbname=%v password=%v sslmode=%v",
+		"postgres://%v:%v@%v:%v/%v?sslmode=disable",
+		db_struct.user,
+		db_struct.password,
 		db_struct.host,
 		db_struct.port,
-		db_struct.user,
 		db_struct.dbname,
-		db_struct.password,
-		db_struct.sslmode,
 	)
 	db, err := gorm.Open(
 		"postgres",
 		str,
 	)
 	if err != nil {
+		log.Panicln(err, str)
 		panic(err)
 	}
 	db.AutoMigrate(&models.User{})
