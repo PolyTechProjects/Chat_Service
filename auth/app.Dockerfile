@@ -3,6 +3,8 @@ WORKDIR /app
 ENV GOPROXY=direct
 COPY go.mod go.sum ./
 COPY .env ./
+COPY config ./config
+ENV CONFIG_PATH="config/local.yaml"
 RUN go mod download
 COPY src ./src
 RUN go mod tidy
