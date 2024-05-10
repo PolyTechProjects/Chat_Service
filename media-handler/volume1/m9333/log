@@ -1,17 +1,0 @@
-      58
-	raft:join"I{"name":"192.168.168.26:9333","connectionString":"192.168.168.26:19333"}
-       c
-raft:nop      23
-MaxVolumeId"{"maxVolumeId":1}
-      23
-MaxVolumeId"{"maxVolumeId":2}
-      23
-MaxVolumeId"{"maxVolumeId":3}
-      23
-MaxVolumeId"{"maxVolumeId":4}
-      23
-MaxVolumeId"{"maxVolumeId":5}
-      23
-MaxVolumeId"{"maxVolumeId":6}
-      23
-	MaxVolumeId"{"maxVolumeId":7}
