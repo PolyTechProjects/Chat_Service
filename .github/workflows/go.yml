@@ -21,10 +21,10 @@ jobs:
           go-version: "1.22"
 
       - name: Build Auth
-        run: ./auth/build.sh
+        run: cd auth/ && ./build.sh && cd ../
 
       - name: Build Chat
-        run: ./chat-app/build.sh
+        run: cd chat-app/ && ./build.sh && cd ../
 
       - name: Build Media Handler
-        run: ./media-handler/build.sh
+        run: cd media-handler/ && ./build.sh && cd ../
