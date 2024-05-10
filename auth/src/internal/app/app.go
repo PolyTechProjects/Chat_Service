@@ -4,19 +4,19 @@ import (
 	"log/slog"
 
 	grpcapp "example.com/main/src/internal/app/grpc"
-	wsapp "example.com/main/src/internal/app/websocket"
 )
 
 type App struct {
-	GRPCApp      *grpcapp.App
-	WebSocketApp *wsapp.App
+	GRPCSrv *grpcapp.App
 }
 
-func New(log *slog.Logger, grpcPort int, wsPort int) *App {
-	grpcApp := grpcapp.New(log, grpcPort)
-	websocketApp := wsapp.New(log, wsPort)
+func New(
+	log *slog.Logger,
+	port int,
+) *App {
+	log.Info("Starting gRPC server...")
+	grpcApp := grpcapp.New(log, port)
 	return &App{
-		GRPCApp:      grpcApp,
-		WebSocketApp: websocketApp,
+		GRPCSrv: grpcApp,
 	}
 }

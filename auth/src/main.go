@@ -17,9 +17,8 @@ import (
 func main() {
 	cfg := config.MustLoad()
 	log := setupLogger(cfg.Env)
-	application := app.New(log, cfg.GRPC.Port, cfg.WebSocket.Port)
-	go application.GRPCApp.MustRun()
-	go application.WebSocketApp.MustRun()
+	application := app.New(log, cfg.GRPC.Port)
+	go application.GRPCSrv.Run()
 	fmt.Println(cfg)
 	database.Init()
 	db := database.DB
