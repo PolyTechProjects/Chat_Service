@@ -1,0 +1,17 @@
+services:
+  media_app:
+    build:
+      context: .
+      dockerfile: app.Dockerfile
+    ports:
+      - "${APP_PORT}:8080"
+    depends_on:
+      - media_db
+  media_db:
+    image: postgres:15.3
+    ports:
+      - "${DB_PORT}:5432"
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}

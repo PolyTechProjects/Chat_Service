@@ -1,0 +1,1 @@
+go build -C src/ -o ../build/MediaHandlerApp-001-build
