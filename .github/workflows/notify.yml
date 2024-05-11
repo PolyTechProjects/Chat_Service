@@ -16,6 +16,5 @@ jobs:
       with:
         to: ${{ secrets.TELEGRAM_RELEASES_CHANNEL }}
         token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        message: Гооооооооол!${{ github.workspace }} !!
-        photo: ${{ github.workspace }}/test/goal.png
-        document: ~/test/goal.png
+        message: ГООООООООООООООООООЛ!!!
+        photo: test/goal.png
