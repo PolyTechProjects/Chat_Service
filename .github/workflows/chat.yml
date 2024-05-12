@@ -6,7 +6,7 @@ name: Chat Service CI
 on:
   push:
     paths: 
-      - 'chat-app/'
+      - 'chat-app/**'
 
 jobs:
   build:

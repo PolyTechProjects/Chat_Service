@@ -6,7 +6,7 @@ name: Media Handler Service CI
 on:
   push:
     paths: 
-      - 'media-handler/'
+      - 'media-handler/**'
 
 jobs:
   build:
