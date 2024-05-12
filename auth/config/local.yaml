@@ -1,4 +1,8 @@
 env: local
 grpc:
-  port: 1488
+  port: 8080
   timeout: 1h
+db:
+  port: 5432
+  host: 172.24.0.2
+  sslmode: disable
