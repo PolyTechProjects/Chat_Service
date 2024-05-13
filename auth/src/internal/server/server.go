@@ -48,3 +48,12 @@ func (s *GRPCServer) Login(ctx context.Context, req *sso.LoginRequest) (*sso.Log
 	}
 	return &sso.LoginResponse{Token: token}, nil
 }
+
+func (s *GRPCServer) Authorize(ctx context.Context, req *sso.AuthorizeRequest) (*sso.AuthorizeResponse, error) {
+	err := s.AuthService.Authorize(req.GetToken())
+	if err != nil {
+		slog.Error(err.Error())
+		return nil, status.Error(codes.PermissionDenied, err.Error())
+	}
+	return &sso.AuthorizeResponse{Authorized: true}, nil
+}
