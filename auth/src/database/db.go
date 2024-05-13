@@ -39,5 +39,5 @@ func Init(cfg *config.Config) {
 	}
 	db.AutoMigrate(&models.User{})
 	DB = db
-	slog.Info("Connected to DB")
+	slog.Debug("Connected to DB")
 }

@@ -26,8 +26,8 @@ func New(authService *service.AuthService) *GRPCServer {
 }
 
 func (s *GRPCServer) Start(l net.Listener) error {
-	slog.Info("Starting gRPC server")
-	slog.Info(l.Addr().String())
+	slog.Debug("Starting gRPC server")
+	slog.Debug(l.Addr().String())
 	return s.gRPCServer.Serve(l)
 }
 

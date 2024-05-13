@@ -18,6 +18,7 @@ import (
 func main() {
 	cfg := config.MustLoad()
 	log := setupLogger(cfg.Env)
+	slog.SetDefault(log)
 	database.Init(cfg)
 	db := database.DB
 	repository := repository.New(db)
