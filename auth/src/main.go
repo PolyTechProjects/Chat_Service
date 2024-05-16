@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -10,23 +9,26 @@ import (
 	"example.com/main/src/config"
 	"example.com/main/src/database"
 	"example.com/main/src/internal/app"
-	"example.com/main/src/models"
+	"example.com/main/src/internal/repository"
+	"example.com/main/src/internal/server"
+	"example.com/main/src/internal/service"
 	_ "github.com/lib/pq"
 )
 
 func main() {
 	cfg := config.MustLoad()
 	log := setupLogger(cfg.Env)
-	application := app.New(log, cfg.GRPC.Port)
-	go application.GRPCSrv.Run()
-	fmt.Println(cfg)
-	database.Init()
+	slog.SetDefault(log)
+	database.Init(cfg)
 	db := database.DB
-	db.AutoMigrate(&models.User{})
+	repository := repository.New(db)
+	service := service.New(repository)
+	server := server.New(service)
+	app := app.New(log, cfg.GRPC.Port, server)
+	go app.MustRun()
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop
-	defer log.Info("DB :%b", db.HasTable(&models.User{}))
 	defer log.Info("Program successfully finished!")
 	defer db.Close()
 }

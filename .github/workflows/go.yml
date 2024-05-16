@@ -1,17 +1,21 @@
 # This workflow will build a golang project
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
 
-name: Go
+name: Build and Send Notification on master
 
 on:
-  push:
-    branches: ["main"]
   pull_request:
-    branches: ["main"]
+    types:
+      - closed
+    branches:
+      - "main"
 
 jobs:
   build:
+    if: github.event.pull_request.merged == true
+    
     runs-on: ubuntu-latest
+    
     steps:
       - uses: actions/checkout@v3
 
@@ -28,3 +32,15 @@ jobs:
 
       - name: Build Media Handler
         run: cd media-handler/ && ./build.sh && cd ../
+
+  telegram-notification:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Send the build to telegram
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TELEGRAM_RELEASES_CHANNEL }}
+        token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        message: ГООООООООООООООООООЛ!!!
+        photo: test/goal.png

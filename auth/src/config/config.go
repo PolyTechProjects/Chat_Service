@@ -8,9 +8,9 @@ import (
 )
 
 type Config struct {
-	Env       string          `yaml:"env"`
-	GRPC      GRPCConfig      `yaml:"grpc"`
-	WebSocket WebSocketConfig `yaml:"websocket"`
+	Env  string     `yaml:"env"`
+	GRPC GRPCConfig `yaml:"grpc"`
+	DB   DbConfig   `yaml:"db"`
 }
 
 type GRPCConfig struct {
@@ -18,8 +18,10 @@ type GRPCConfig struct {
 	Timeout time.Duration `yaml:"timeout"`
 }
 
-type WebSocketConfig struct {
-	Port int `yaml:"port"`
+type DbConfig struct {
+	Host    string `yaml:"host"`
+	Port    string `yaml:"port"`
+	SslMode string `yaml:"sslmode"`
 }
 
 func MustLoad() *Config {
