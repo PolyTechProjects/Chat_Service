@@ -1,0 +1,29 @@
+version: '3.3'
+
+services:
+  user_mgmt_app:
+    build:
+      context: .
+      dockerfile: app.Dockerfile
+    ports:
+      - "${APP_PORT}:8080"
+    depends_on:
+      - user_mgmt_db
+    networks:
+        - micro-proxy-net
+
+  user_mgmt_db:
+    image: postgres:15.3
+    ports:
+      - "${DB_PORT}:5432"
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    networks:
+      - micro-proxy-net
+
+networks:
+  micro-proxy-net:
+    external:
+      name: microservice-network

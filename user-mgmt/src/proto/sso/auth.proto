@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "example.com/user-mgmt/src/proto/sso";
+
+service Auth {
+    rpc Register (RegisterRequest) returns (RegisterResponse) {}
+
+    rpc Login (LoginRequest) returns (LoginResponse) {}
+
+    rpc Authorize (AuthorizeRequest) returns (AuthorizeResponse) {}
+}
+
+message RegisterRequest {
+    string username = 1;
+    string password = 2;
+    string login = 3;
+}
+
+message RegisterResponse {
+    string token = 1;
+}
+
+message LoginRequest {
+    string password = 2;
+    string login = 4;
+}
+
+message LoginResponse {
+    string token = 1;
+}
+
+message AuthorizeRequest {
+    string token = 1;
+}
+
+message AuthorizeResponse {
+    bool authorized = 1;
+}
