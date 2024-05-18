@@ -14,6 +14,10 @@ func New(db *gorm.DB) *UserMgmtRepository {
 	return &UserMgmtRepository{db: db}
 }
 
+func (r *UserMgmtRepository) InsertUser(user *models.User) error {
+	return r.db.Create(user).Error
+}
+
 func (r *UserMgmtRepository) GetUser(userId uuid.UUID) (*models.User, error) {
 	var user models.User
 	err := r.db.Where("id = ?", userId).First(&user).Error

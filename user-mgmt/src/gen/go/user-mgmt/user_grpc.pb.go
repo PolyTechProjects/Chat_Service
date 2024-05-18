@@ -22,6 +22,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UserMgmtClient interface {
+	AddUser(ctx context.Context, in *AddUserRequest, opts ...grpc.CallOption) (*UserResponse, error)
 	InfoUpdate(ctx context.Context, in *InfoUpdateRequest, opts ...grpc.CallOption) (*UserResponse, error)
 	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*UserResponse, error)
 	DeleteAccount(ctx context.Context, in *DeleteAccountRequest, opts ...grpc.CallOption) (*DummyResponse, error)
@@ -33,6 +34,15 @@ type userMgmtClient struct {
 
 func NewUserMgmtClient(cc grpc.ClientConnInterface) UserMgmtClient {
 	return &userMgmtClient{cc}
+}
+
+func (c *userMgmtClient) AddUser(ctx context.Context, in *AddUserRequest, opts ...grpc.CallOption) (*UserResponse, error) {
+	out := new(UserResponse)
+	err := c.cc.Invoke(ctx, "/user_mgmt.UserMgmt/AddUser", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *userMgmtClient) InfoUpdate(ctx context.Context, in *InfoUpdateRequest, opts ...grpc.CallOption) (*UserResponse, error) {
@@ -66,6 +76,7 @@ func (c *userMgmtClient) DeleteAccount(ctx context.Context, in *DeleteAccountReq
 // All implementations must embed UnimplementedUserMgmtServer
 // for forward compatibility
 type UserMgmtServer interface {
+	AddUser(context.Context, *AddUserRequest) (*UserResponse, error)
 	InfoUpdate(context.Context, *InfoUpdateRequest) (*UserResponse, error)
 	GetUser(context.Context, *GetUserRequest) (*UserResponse, error)
 	DeleteAccount(context.Context, *DeleteAccountRequest) (*DummyResponse, error)
@@ -76,6 +87,9 @@ type UserMgmtServer interface {
 type UnimplementedUserMgmtServer struct {
 }
 
+func (UnimplementedUserMgmtServer) AddUser(context.Context, *AddUserRequest) (*UserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddUser not implemented")
+}
 func (UnimplementedUserMgmtServer) InfoUpdate(context.Context, *InfoUpdateRequest) (*UserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InfoUpdate not implemented")
 }
@@ -96,6 +110,24 @@ type UnsafeUserMgmtServer interface {
 
 func RegisterUserMgmtServer(s grpc.ServiceRegistrar, srv UserMgmtServer) {
 	s.RegisterService(&UserMgmt_ServiceDesc, srv)
+}
+
+func _UserMgmt_AddUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserMgmtServer).AddUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/user_mgmt.UserMgmt/AddUser",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserMgmtServer).AddUser(ctx, req.(*AddUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _UserMgmt_InfoUpdate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -159,6 +191,10 @@ var UserMgmt_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "user_mgmt.UserMgmt",
 	HandlerType: (*UserMgmtServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "AddUser",
+			Handler:    _UserMgmt_AddUser_Handler,
+		},
 		{
 			MethodName: "InfoUpdate",
 			Handler:    _UserMgmt_InfoUpdate_Handler,

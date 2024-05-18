@@ -11,7 +11,6 @@ type User struct {
 	Avatar      string
 }
 
-func New(name string) *User {
-	id := uuid.New()
+func New(id uuid.UUID, name string) *User {
 	return &User{Id: id, Name: name, Description: "", Avatar: ""}
 }

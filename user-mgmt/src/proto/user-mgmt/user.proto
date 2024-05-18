@@ -5,11 +5,18 @@ package user_mgmt;
 option go_package = "example.com/user-mgmt/src/proto/user_mgmt";
 
 service UserMgmt {
+    rpc AddUser (AddUserRequest) returns (UserResponse) {}
+
     rpc InfoUpdate (InfoUpdateRequest) returns (UserResponse) {}
 
     rpc GetUser (GetUserRequest) returns (UserResponse) {}
 
     rpc DeleteAccount (DeleteAccountRequest) returns (DummyResponse) {}
+}
+
+message AddUserRequest {
+    string userId = 1;
+    string name = 2;
 }
 
 message GetUserRequest {

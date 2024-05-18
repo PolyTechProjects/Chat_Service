@@ -5,47 +5,61 @@ import (
 	"log/slog"
 	"net"
 
-	"example.com/user-mgmt/src/gen/go/sso"
 	user_mgmt "example.com/user-mgmt/src/gen/go/user-mgmt"
+	"example.com/user-mgmt/src/internal/client"
 	"example.com/user-mgmt/src/internal/service"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 )
 
-type GRPCServer struct {
+type UserMgmtGRPCServer struct {
 	gRPCServer *grpc.Server
 	user_mgmt.UnimplementedUserMgmtServer
 	userMgmtService *service.UserMgmtService
-	client          sso.AuthClient
+	authClient      *client.AuthGRPCClient
 }
 
-func New(userMgmtService *service.UserMgmtService, ssoUrl string) *GRPCServer {
-	conn, err := grpc.NewClient(ssoUrl, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic("failed to connect: " + err.Error())
-	}
-	client := sso.NewAuthClient(conn)
+func New(userMgmtService *service.UserMgmtService, authClient *client.AuthGRPCClient) *UserMgmtGRPCServer {
 	gRPCServcer := grpc.NewServer()
-	g := &GRPCServer{
+	g := &UserMgmtGRPCServer{
 		gRPCServer:      gRPCServcer,
 		userMgmtService: userMgmtService,
-		client:          client,
+		authClient:      authClient,
 	}
 	user_mgmt.RegisterUserMgmtServer(g.gRPCServer, g)
 	return g
 }
 
-func (s *GRPCServer) Start(l net.Listener) error {
+func (s *UserMgmtGRPCServer) Start(l net.Listener) error {
 	slog.Debug("Starting gRPC server")
 	slog.Debug(l.Addr().String())
 	return s.gRPCServer.Serve(l)
 }
 
-func (s *GRPCServer) InfoUpdate(ctx context.Context, req *user_mgmt.InfoUpdateRequest) (*user_mgmt.UserResponse, error) {
-	authResp, err := s.client.Authorize(ctx, &sso.AuthorizeRequest{Token: req.Token})
+func (s *UserMgmtGRPCServer) AddUser(ctx context.Context, req *user_mgmt.AddUserRequest) (*user_mgmt.UserResponse, error) {
+	userId, err := uuid.Parse(req.UserId)
+	if err != nil {
+		slog.Error(err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	user, err := s.userMgmtService.CreateUser(userId, req.Name)
+	if err != nil {
+		slog.Error(err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	resp := &user_mgmt.UserResponse{
+		UserId:      user.Id.String(),
+		Name:        user.Name,
+		Description: "",
+		Avatar:      "",
+	}
+	return resp, nil
+}
+
+func (s *UserMgmtGRPCServer) InfoUpdate(ctx context.Context, req *user_mgmt.InfoUpdateRequest) (*user_mgmt.UserResponse, error) {
+	authResp, err := s.authClient.PerformAuthorize(ctx, req.Token)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())

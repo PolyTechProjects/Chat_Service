@@ -1,39 +1,35 @@
 package config
 
 import (
-	"os"
-
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type Config struct {
-	Env        string     `yaml:"env"`
-	GRPCConfig GRPCConfig `yaml:"grpc"`
-	DB         DbConfig   `yaml:"db"`
+	App  AppConfig
+	Auth AuthConfig
+	Db   DbConfig
 }
 
-type GRPCConfig struct {
-	Port    int    `yaml:"port"`
-	Timeout string `yaml:"timeout"`
+type AppConfig struct {
+	InnerPort int `env:"APP_INNER_PORT"`
+}
+
+type AuthConfig struct {
+	AuthHost string `env:"AUTH_HOST"`
+	AuthPort string `env:"AUTH_PORT"`
 }
 
 type DbConfig struct {
-	Port    int    `yaml:"port"`
-	Host    string `yaml:"host"`
-	SslMode string `yaml:"sslmode"`
+	DatabaseName string `env:"DB_NAME"`
+	UserName     string `env:"DB_USER"`
+	Password     string `env:"DB_PASSWORD"`
+	Host         string `env:"DB_HOST"`
+	InnerPort    int    `env:"DB_INNER_PORT"`
 }
 
 func MustLoad() *Config {
-	path := os.Getenv("CONFIG_PATH")
-	if path == "" {
-		panic("Config Path is empty")
-	}
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		dir, err := os.Getwd()
-		panic("config file does not exist: " + path + " pwd: " + dir + err.Error())
-	}
 	var cfg Config
-	if err := cleanenv.ReadConfig(path, &cfg); err != nil {
+	if err := cleanenv.ReadEnv(&cfg); err != nil {
 		panic("failed to read config: " + err.Error())
 	}
 	return &cfg
