@@ -20,12 +20,13 @@ func Init(cfg *config.Config) {
 		panic(err)
 	}
 	str := fmt.Sprintf(
-		"postgres://%v:%v@%v:%v/%v",
+		"postgres://%v:%v@%v:%v/%v?sslmode=%v",
 		cfg.Db.UserName,
 		cfg.Db.Password,
 		cfg.Db.Host,
 		cfg.Db.InnerPort,
 		cfg.Db.DatabaseName,
+		cfg.Db.SslMode,
 	)
 	db, err := gorm.Open(
 		"postgres",
