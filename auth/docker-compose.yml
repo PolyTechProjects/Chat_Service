@@ -1,12 +1,10 @@
-version: '3.3'
-
 services:
   auth_app:
     build:
       context: .
       dockerfile: app.Dockerfile
     ports:
-      - "${APP_PORT}:8080"
+      - "${APP_PORT}:${APP_INNER_PORT}"
     depends_on:
       - auth_db
     networks:
@@ -15,7 +13,7 @@ services:
   auth_db:
     image: postgres:15.3
     ports:
-      - "${DB_PORT}:5432"
+      - "${DB_PORT}:${DB_INNER_PORT}"
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
@@ -25,5 +23,5 @@ services:
 
 networks:
   micro-proxy-net:
-    external:
-      name: microservice-network
+    external: true
+    name: microservice-network
