@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+	"log/slog"
 	"os"
 
 	"example.com/main/src/internal/repository"
@@ -24,18 +26,18 @@ func New(authRepository *repository.AuthRepository) *AuthService {
 	return &AuthService{AuthRepository: authRepository, jwtSecretKey: jwtSecretKey, keyFunc: keyFunc}
 }
 
-func (s *AuthService) Register(login string, username string, password string) (string, error) {
+func (s *AuthService) Register(login string, username string, password string) (string, uuid.UUID, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return "", err
+		return "", uuid.Nil, err
 	}
 	user, err := models.New(login, username, string(hash))
 	if err != nil {
-		return "", err
+		return "", uuid.Nil, err
 	}
 	err = s.AuthRepository.Save(user)
 	if err != nil {
-		return "", err
+		return "", uuid.Nil, err
 	}
 
 	payload := jwt.MapClaims{
@@ -44,9 +46,10 @@ func (s *AuthService) Register(login string, username string, password string) (
 	}
 	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, payload).SignedString(s.jwtSecretKey)
 	if err != nil {
-		return "", err
+		return "", uuid.Nil, err
 	}
-	return token, nil
+	slog.Info(fmt.Sprintf("User %v registered", user.Id))
+	return token, user.Id, nil
 }
 
 func (s *AuthService) Login(login string, password string) (string, error) {
@@ -67,6 +70,7 @@ func (s *AuthService) Login(login string, password string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	slog.Info(fmt.Sprintf("User %v authenticated", user.Id))
 	return token, nil
 }
 
@@ -88,4 +92,13 @@ func (s *AuthService) Authorize(tokenString string) error {
 	}
 
 	return nil
+}
+
+func (s *AuthService) ExtractUserId(tokenString string) (string, error) {
+	var claims jwt.MapClaims
+	_, err := jwt.ParseWithClaims(tokenString, &claims, s.keyFunc)
+	if err != nil {
+		return "", err
+	}
+	return claims["sub"].(string), nil
 }

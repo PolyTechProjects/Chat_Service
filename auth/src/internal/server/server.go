@@ -38,12 +38,16 @@ func (s *GRPCServer) Start(l net.Listener) error {
 }
 
 func (s *GRPCServer) Register(ctx context.Context, req *sso.RegisterRequest) (*sso.RegisterResponse, error) {
-	token, err := s.authService.Register(req.GetLogin(), req.GetUsername(), req.GetPassword())
+	token, userId, err := s.authService.Register(req.GetLogin(), req.GetUsername(), req.GetPassword())
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	s.userMgmtClient.PerformAddUser(ctx, req.GetLogin(), req.GetUsername())
+	_, err = s.userMgmtClient.PerformAddUser(ctx, userId.String(), req.GetUsername())
+	if err != nil {
+		slog.Error(err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
 	return &sso.RegisterResponse{Token: token}, nil
 }
 
@@ -63,4 +67,13 @@ func (s *GRPCServer) Authorize(ctx context.Context, req *sso.AuthorizeRequest) (
 		return nil, status.Error(codes.PermissionDenied, err.Error())
 	}
 	return &sso.AuthorizeResponse{Authorized: true}, nil
+}
+
+func (s *GRPCServer) ExtractUserId(ctx context.Context, req *sso.ExtractUserIdRequest) (*sso.ExtractUserIdResponse, error) {
+	userId, err := s.authService.ExtractUserId(req.GetToken())
+	if err != nil {
+		slog.Error(err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	return &sso.ExtractUserIdResponse{UserId: userId}, nil
 }

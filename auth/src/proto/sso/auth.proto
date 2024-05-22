@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package auth;
 
-option go_package = "example.com/main/src/proto/sso";
+option go_package = "example.com/user-mgmt/src/proto/sso";
 
 service Auth {
     rpc Register (RegisterRequest) returns (RegisterResponse) {}
@@ -10,6 +10,8 @@ service Auth {
     rpc Login (LoginRequest) returns (LoginResponse) {}
 
     rpc Authorize (AuthorizeRequest) returns (AuthorizeResponse) {}
+
+    rpc ExtractUserId (ExtractUserIdRequest) returns (ExtractUserIdResponse) {}
 }
 
 message RegisterRequest {
@@ -37,4 +39,12 @@ message AuthorizeRequest {
 
 message AuthorizeResponse {
     bool authorized = 1;
+}
+
+message ExtractUserIdRequest {
+    string token = 1;
+}
+
+message ExtractUserIdResponse {
+    string userId = 1;
 }
