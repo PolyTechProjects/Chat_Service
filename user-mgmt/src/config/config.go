@@ -6,18 +6,25 @@ import (
 )
 
 type Config struct {
-	App  AppConfig
-	Auth AuthConfig
-	Db   DbConfig
+	App   AppConfig
+	Auth  AuthConfig
+	Media MediaHandlerConfig
+	Db    DbConfig
 }
 
 type AppConfig struct {
-	InnerPort int `env:"APP_INNER_PORT"`
+	HttpInnerPort int `env:"APP_HTTP_INNER_PORT"`
+	GrpcInnerPort int `env:"APP_GRPC_INNER_PORT"`
 }
 
 type AuthConfig struct {
 	AuthHost string `env:"AUTH_HOST"`
 	AuthPort string `env:"AUTH_PORT"`
+}
+
+type MediaHandlerConfig struct {
+	MediaHandlerHost string `env:"MEDIA_HANDLER_HOST"`
+	MediaHandlerPort string `env:"MEDIA_HANDLER_PORT"`
 }
 
 type DbConfig struct {

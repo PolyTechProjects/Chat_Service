@@ -3,7 +3,6 @@ package database
 import (
 	"fmt"
 	"log/slog"
-	"os"
 
 	"example.com/media-handler/src/config"
 	"example.com/media-handler/src/internal/models"
@@ -19,15 +18,14 @@ func Init(cfg *config.Config) {
 	if err != nil {
 		panic(err)
 	}
-	slog.Info("Connecting to DB")
 	str := fmt.Sprintf(
-		"host=%v port=%v user=%v dbname=%v password=%v sslmode=%v",
-		cfg.Database.Host,
-		cfg.Database.Port,
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_NAME"),
-		os.Getenv("DB_PASSWORD"),
-		cfg.Database.Sslmode,
+		"postgres://%v:%v@%v:%v/%v?sslmode=%v",
+		cfg.Db.UserName,
+		cfg.Db.Password,
+		cfg.Db.Host,
+		cfg.Db.InnerPort,
+		cfg.Db.DatabaseName,
+		cfg.Db.SslMode,
 	)
 	slog.Info(str)
 	db, err := gorm.Open(
