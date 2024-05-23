@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 
+	"example.com/media-handler/src/config"
 	"example.com/media-handler/src/internal/models"
 	"example.com/media-handler/src/internal/repository"
 	"github.com/google/uuid"
@@ -21,64 +22,31 @@ type MediaHandlerService struct {
 	masterUrl              string
 }
 
-func New(mediaHandlerRepository *repository.MediaHandlerRepository, masterHost string, masterPort int) *MediaHandlerService {
+func New(mediaHandlerRepository *repository.MediaHandlerRepository, cfg *config.Config) *MediaHandlerService {
 	return &MediaHandlerService{
 		mediaHandlerRepository: mediaHandlerRepository,
-		masterUrl:              fmt.Sprintf("%s:%d", masterHost, masterPort),
+		masterUrl:              fmt.Sprintf("%s:%d", cfg.SeaweedFS.MasterIp, cfg.SeaweedFS.MasterPort),
 	}
 }
 
-func (m *MediaHandlerService) UploadMedia(messageId uuid.UUID, file multipart.File) (err error) {
-	assignResponse := &models.SeaweedFSAssignResponse{}
-	res, err := http.Get(fmt.Sprintf("http://%s/dir/assign", m.masterUrl))
+func (m *MediaHandlerService) UpdateAvatar(file *os.File, fileName string) (uuid.UUID, error) {
+	file.Seek(0, 0)
+	media, err := m.assignFileToSeaweedFS(file, fileName)
 	if err != nil {
-		return err
+		return uuid.Nil, err
 	}
-	json.NewDecoder(res.Body).Decode(assignResponse)
-	defer res.Body.Close()
+	slog.Info(media.FileId)
+	return media.ID, nil
+}
 
-	b := &bytes.Buffer{}
-	w := multipart.NewWriter(b)
-	tmpFile, err := os.CreateTemp("", "file_")
-	form, err := w.CreateFormFile("file", tmpFile.Name())
-	_, err = io.Copy(tmpFile, file)
-	tmpFile.Seek(0, io.SeekStart)
-	_, err = io.Copy(form, tmpFile)
-	w.Close()
-
-	addr := fmt.Sprintf("http://%s/%s", assignResponse.Url, assignResponse.Fid)
-	req, err := http.NewRequest("POST", addr, b)
-	req.Header.Set("Content-Type", w.FormDataContentType())
-	_, err = http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		cerr := tmpFile.Close()
-		if err == nil {
-			err = cerr
-		}
-		cerr = os.Remove(tmpFile.Name())
-		if err == nil {
-			err = cerr
-		}
-	}()
-
-	err = m.mediaHandlerRepository.CacheVolumeIp(strings.Split(assignResponse.Fid, ",")[0], assignResponse.Url)
-	if err != nil {
-		return err
-	}
-
-	id := uuid.New()
-	media := models.New(id, assignResponse.Fid)
-	err = m.mediaHandlerRepository.Save(media)
+func (m *MediaHandlerService) UploadMedia(messageId uuid.UUID, file multipart.File, fileHeader *multipart.FileHeader) (err error) {
+	media, err := m.assignFileToSeaweedFS(file, fileHeader.Filename)
 	if err != nil {
 		return err
 	}
 	mf := models.MessageIdXFileId{
 		MessageId: messageId,
-		FileId:    id,
+		FileId:    media.ID,
 	}
 	m.mediaHandlerRepository.PublishInFileLoadedChannel(&mf)
 	return nil
@@ -150,4 +118,51 @@ func (m *MediaHandlerService) lookUpForFileIdAndVolumeAddress(id uuid.UUID) (str
 	}
 
 	return media.FileId, url, nil
+}
+
+func (m *MediaHandlerService) assignFileToSeaweedFS(file io.Reader, fileName string) (*models.Media, error) {
+	assignResponse := &models.SeaweedFSAssignResponse{}
+	res, err := http.Get(fmt.Sprintf("http://%s/dir/assign", m.masterUrl))
+	if err != nil {
+		return nil, err
+	}
+	json.NewDecoder(res.Body).Decode(assignResponse)
+	defer res.Body.Close()
+
+	b := &bytes.Buffer{}
+	w := multipart.NewWriter(b)
+	form, err := w.CreateFormFile("file", fileName)
+	if err != nil {
+		return nil, err
+	}
+	_, err = io.Copy(form, file)
+	if err != nil {
+		return nil, err
+	}
+	w.Close()
+
+	addr := fmt.Sprintf("http://%s/%s", assignResponse.Url, assignResponse.Fid)
+	slog.Info(fmt.Sprintf("File URL: %v", addr))
+	req, err := http.NewRequest("POST", addr, b)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	_, err = http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	err = m.mediaHandlerRepository.CacheVolumeIp(strings.Split(assignResponse.Fid, ",")[0], assignResponse.Url)
+	if err != nil {
+		return nil, err
+	}
+
+	id := uuid.New()
+	media := models.New(id, assignResponse.Fid)
+	err = m.mediaHandlerRepository.Save(media)
+	if err != nil {
+		return nil, err
+	}
+	return media, nil
 }

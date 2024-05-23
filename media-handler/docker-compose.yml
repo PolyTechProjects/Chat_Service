@@ -4,14 +4,62 @@ services:
       context: .
       dockerfile: app.Dockerfile
     ports:
-      - "${APP_PORT}:8080"
+      - "${APP_HTTP_PORT}:${APP_HTTP_INNER_PORT}"
+      - "${APP_GRPC_PORT}:${APP_GRPC_INNER_PORT}"
     depends_on:
       - media_db
+    networks:
+      - micro-proxy-net
+
   media_db:
     image: postgres:15.3
     ports:
-      - "${DB_PORT}:5432"
+      - "${DB_PORT}:${DB_INNER_PORT}"
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
+    networks:
+      - micro-proxy-net
+
+  seaweedfs_master:
+    image: chrislusf/seaweedfs:latest
+    ports:
+      - "${SEAWEEDFS_MASTER_PORT}:9333"
+    networks:
+      - micro-proxy-net
+    command: "master -ip=seaweedfs_master"
+
+  seaweedfs_volume1:
+    image: chrislusf/seaweedfs:latest
+    ports:
+      - "10000:8080"
+    networks:
+      - micro-proxy-net
+    command: 'volume -mserver="seaweedfs_master:9333" -port=8080'
+    depends_on:
+      - seaweedfs_master
+
+  seaweedfs_volume2:
+    image: chrislusf/seaweedfs:latest
+    ports:
+      - "10001:8080"
+    networks:
+      - micro-proxy-net
+    command: 'volume -mserver="seaweedfs_master:9333" -port=8080'
+    depends_on:
+      - seaweedfs_master
+
+  redis:
+    image: bitnami/redis:latest
+    ports:
+      - "6379:6379"
+    networks:
+      - micro-proxy-net
+    environment:
+      - REDIS_PASSWORD=redis
+
+networks:
+  micro-proxy-net:
+    external: true
+    name: microservice-network

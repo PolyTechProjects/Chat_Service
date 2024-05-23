@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"strconv"
@@ -28,7 +29,7 @@ func Init() {
 		DB:       redisDb,
 	}
 	RedisClient = redis.NewClient(options)
-	slog.Info("Connected to Redis")
+	slog.Info(RedisClient.Ping(context.Background()).Result())
 }
 
 func Close() {

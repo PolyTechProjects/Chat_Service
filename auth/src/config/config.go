@@ -1,40 +1,41 @@
 package config
 
 import (
-	"os"
-	"time"
-
 	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	Env  string     `yaml:"env"`
-	GRPC GRPCConfig `yaml:"grpc"`
-	DB   DbConfig   `yaml:"db"`
+	App      AppConfig
+	UserMgmt UserMgmtConfig
+	Db       DbConfig
 }
 
-type GRPCConfig struct {
-	Port    int           `yaml:"port"`
-	Timeout time.Duration `yaml:"timeout"`
+type AppConfig struct {
+	InnerPort int `env:"APP_INNER_PORT"`
+}
+
+type UserMgmtConfig struct {
+	UserMgmtHost string `env:"USER_MGMT_HOST"`
+	UserMgmtPort string `env:"USER_MGMT_PORT"`
 }
 
 type DbConfig struct {
-	Host    string `yaml:"host"`
-	Port    string `yaml:"port"`
-	SslMode string `yaml:"sslmode"`
+	DatabaseName string `env:"DB_NAME"`
+	UserName     string `env:"DB_USER"`
+	Password     string `env:"DB_PASSWORD"`
+	Host         string `env:"DB_HOST"`
+	InnerPort    int    `env:"DB_INNER_PORT"`
+	SslMode      string `env:"DB_SSL_MODE"`
 }
 
 func MustLoad() *Config {
-	path := os.Getenv("CONFIG_PATH")
-	if path == "" {
-		panic("config path is empty")
-	}
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		dir, err := os.Getwd()
-		panic("config file does not exist: " + path + " pwd: " + dir + err.Error())
+	err := godotenv.Load()
+	if err != nil {
+		panic("failed to load .env file: " + err.Error())
 	}
 	var cfg Config
-	if err := cleanenv.ReadConfig(path, &cfg); err != nil {
+	if err := cleanenv.ReadEnv(&cfg); err != nil {
 		panic("failed to read config: " + err.Error())
 	}
 	return &cfg

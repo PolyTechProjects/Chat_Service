@@ -2,20 +2,22 @@ package app
 
 import (
 	"fmt"
-	"log/slog"
 	"net"
 
+	"example.com/main/src/config"
 	"example.com/main/src/internal/server"
 )
 
 type GRPCApp struct {
-	log        *slog.Logger
-	port       int
-	GRPCServer *server.GRPCServer
+	AuthServer *server.GRPCServer
+	Port       int
 }
 
-func New(log *slog.Logger, port int, gRPCServer *server.GRPCServer) *GRPCApp {
-	return &GRPCApp{log: log, port: port, GRPCServer: gRPCServer}
+func New(authServer *server.GRPCServer, cfg *config.Config) *GRPCApp {
+	return &GRPCApp{
+		AuthServer: authServer,
+		Port:       cfg.App.InnerPort,
+	}
 }
 
 func (a *GRPCApp) MustRun() {
@@ -25,11 +27,11 @@ func (a *GRPCApp) MustRun() {
 }
 
 func (a *GRPCApp) Run() error {
-	l, err := net.Listen("tcp", fmt.Sprintf(":%d", a.port))
+	l, err := net.Listen("tcp", fmt.Sprintf(":%d", a.Port))
 	if err != nil {
 		return err
 	}
-	if err = a.GRPCServer.Start(l); err != nil {
+	if err = a.AuthServer.Start(l); err != nil {
 		return err
 	}
 	return nil
