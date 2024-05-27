@@ -21,7 +21,7 @@ func main() {
 	cfg := config.MustLoad()
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	slog.SetDefault(log)
-	redis.Init()
+	redis.Init(cfg)
 	redisClient := redis.RedisClient
 	database.Init(cfg)
 	db := database.DB

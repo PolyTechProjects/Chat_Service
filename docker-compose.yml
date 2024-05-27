@@ -1,0 +1,14 @@
+services:
+  redis:
+    image: bitnami/redis:latest
+    ports:
+      - "${REDIS_PORT}:${REDIS_INNER_PORT}"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    networks:
+      - micro-proxy-net
+
+networks:
+  micro-proxy-net:
+    external: true
+    name: microservice-network

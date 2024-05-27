@@ -1,7 +1,8 @@
+docker compose up redis -d
 cd auth/ && docker compose up auth_db -d && cd ../
 cd user-mgmt/ && docker compose up user_mgmt_db -d && cd ../
 cd chat-app/ && docker compose up chat_db -d && cd ../
-cd media-handler/ && docker compose up media_db seaweedfs_master seaweedfs_volume1 seaweedfs_volume2 redis -d && cd../
+cd media-handler/ && docker compose up media_db seaweedfs_master seaweedfs_volume1 seaweedfs_volume2 -d && cd ../
 echo '----------------------------------'
 echo 'AUTH_POSTGRES' $(docker ps | grep -i "auth_db" | awk '{print $1}')
 echo 'USER_MGMT_POSTGRES' $(docker ps | grep -i "user_mgmt_db" | awk '{print $1}')

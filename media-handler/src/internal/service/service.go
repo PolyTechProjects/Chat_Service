@@ -42,13 +42,23 @@ func (m *MediaHandlerService) UpdateAvatar(file *os.File, fileName string) (uuid
 func (m *MediaHandlerService) UploadMedia(messageId uuid.UUID, file multipart.File, fileHeader *multipart.FileHeader) (err error) {
 	media, err := m.assignFileToSeaweedFS(file, fileHeader.Filename)
 	if err != nil {
+		slog.Error(err.Error())
 		return err
 	}
 	mf := models.MessageIdXFileId{
 		MessageId: messageId,
 		FileId:    media.ID,
 	}
-	m.mediaHandlerRepository.PublishInFileLoadedChannel(&mf)
+	bytes, err := json.Marshal(mf)
+	if err != nil {
+		slog.Error(err.Error())
+		return err
+	}
+	err = m.mediaHandlerRepository.PublishInFileLoadedChannel(bytes)
+	if err != nil {
+		slog.Error(err.Error())
+		return err
+	}
 	return nil
 }
 
