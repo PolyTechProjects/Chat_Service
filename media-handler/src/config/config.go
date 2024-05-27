@@ -11,6 +11,7 @@ type Config struct {
 	UserMgmt  UserMgmtConfig
 	Db        DbConfig
 	SeaweedFS SeaweedFSConfig
+	Redis     RedisConfig
 }
 
 type AppConfig struct {
@@ -40,6 +41,13 @@ type DbConfig struct {
 type SeaweedFSConfig struct {
 	MasterIp   string `env:"SEAWEEDFS_MASTER_HOST"`
 	MasterPort int    `env:"SEAWEEDFS_MASTER_PORT"`
+}
+
+type RedisConfig struct {
+	Db        int    `env:"REDIS_DB"`
+	Password  string `env:"REDIS_PASSWORD"`
+	Host      string `env:"REDIS_HOST"`
+	InnerPort int    `env:"REDIS_INNER_PORT"`
 }
 
 func MustLoad() *Config {

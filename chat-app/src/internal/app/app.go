@@ -6,44 +6,38 @@ import (
 	"net"
 	"net/http"
 
-	httpApp "example.com/chat-app/src/internal/server/http"
-	"example.com/chat-app/src/internal/server/websocket"
+	"example.com/chat-app/src/config"
+	"example.com/chat-app/src/internal/server"
 )
 
 type App struct {
-	log  *slog.Logger
-	port int
-	h    *httpApp.HttpService
-	ws   *websocket.WebsocketService
+	httpServer *server.HttpServer
+	httpPort   int
 }
 
-func New(log *slog.Logger, port int, h *httpApp.HttpService, ws *websocket.WebsocketService) *App {
+func New(httpServer *server.HttpServer, cfg *config.Config) *App {
 	return &App{
-		log:  log,
-		port: port,
-		h:    h,
-		ws:   ws,
+		httpServer: httpServer,
+		httpPort:   cfg.App.HttpInnerPort,
 	}
 }
 
 func (a *App) MustRun() {
 	if err := a.Run(); err != nil {
-		panic(err)
+		panic(err.Error())
 	}
 }
 
 func (a *App) Run() error {
-	const op = "webApp.Run"
-	log := a.log.With(slog.String("op", op), slog.Int("port", a.port))
-	l, err := net.Listen("tcp", fmt.Sprintf(":%d", a.port))
+	hl, err := net.Listen("tcp", fmt.Sprintf(":%d", a.httpPort))
 	if err != nil {
-		return fmt.Errorf("%s:%w", op, err)
+		return err
 	}
-	a.h.SetupServer()
-	a.ws.SetupServer()
-	log.Info("Web server is running", slog.String("addr", l.Addr().String()))
-	if err := http.Serve(l, nil); err != nil {
-		return fmt.Errorf("%s:%w", op, err)
+	slog.Debug("Starting HTTP server")
+	slog.Debug(hl.Addr().String())
+	a.httpServer.StartServer()
+	if err := http.Serve(hl, nil); err != nil {
+		return err
 	}
 
 	return nil

@@ -1,7 +1,0 @@
-env: local
-web:
-  port: 8080
-db:
-  port: 5432
-  host: chat_db
-  sslmode: disable

@@ -19,8 +19,8 @@ func New(db *gorm.DB, redis *redis.Client) *MediaHandlerRepository {
 	return &MediaHandlerRepository{db: db, redis: redis}
 }
 
-func (m *MediaHandlerRepository) PublishInFileLoadedChannel(mf *models.MessageIdXFileId) {
-	m.redis.Publish(context.Background(), "file-loaded-channel", mf)
+func (m *MediaHandlerRepository) PublishInFileLoadedChannel(message interface{}) error {
+	return m.redis.Publish(context.Background(), "file-loaded-channel", message).Err()
 }
 
 func (m *MediaHandlerRepository) CacheVolumeIp(volumeId string, volumeIp string) error {

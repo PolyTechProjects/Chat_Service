@@ -2,34 +2,28 @@ package redis
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
-	"os"
-	"strconv"
 
+	"example.com/media-handler/src/config"
 	"github.com/go-redis/redis/v8"
-	"github.com/joho/godotenv"
 )
 
 var RedisClient *redis.Client
 
-func Init() {
-	err := godotenv.Load()
-	if err != nil {
-		panic(err.Error())
-	}
-	redisDb, err := strconv.Atoi(os.Getenv("REDIS_DB"))
-	if err != nil {
-		panic(err.Error())
-	}
-	redisPass := os.Getenv("REDIS_PASSWORD")
-	redisAddr := os.Getenv("REDIS_ADDR")
+func Init(cfg *config.Config) {
+	redisAddr := fmt.Sprintf("%v:%v", cfg.Redis.Host, cfg.Redis.InnerPort)
 	options := &redis.Options{
-		Password: redisPass,
+		Password: cfg.Redis.Password,
 		Addr:     redisAddr,
-		DB:       redisDb,
+		DB:       cfg.Redis.Db,
 	}
 	RedisClient = redis.NewClient(options)
-	slog.Info(RedisClient.Ping(context.Background()).Result())
+	_, err := RedisClient.Ping(context.Background()).Result()
+	if err != nil {
+		panic(err.Error())
+	}
+	slog.Info("Connected to Redis")
 }
 
 func Close() {

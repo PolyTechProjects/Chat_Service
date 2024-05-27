@@ -23,11 +23,15 @@ type Message struct {
 	ChatRoomId uuid.UUID `gorm:"type:uuid;default:gen_random_uuid()"`
 	Body       string
 	CreatedAt  uint64
-	WithMedia  bool
+	WithMedia  int
 	Metadata   dto.Metadata `gorm:"serializer:json"`
 }
 
 func MapRequestToMessage(req *dto.MessageRequest) (*Message, error) {
+	messageUUID, err := uuid.Parse(req.MessageId)
+	if err != nil {
+		return nil, err
+	}
 	senderUUID, err := uuid.Parse(req.SenderId)
 	if err != nil {
 		return nil, err
@@ -37,6 +41,7 @@ func MapRequestToMessage(req *dto.MessageRequest) (*Message, error) {
 		return nil, err
 	}
 	return &Message{
+		Id:         messageUUID,
 		SenderId:   senderUUID,
 		ChatRoomId: chatRoomUUID,
 		Body:       req.Body,

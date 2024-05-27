@@ -28,7 +28,7 @@ func New(httpServer *server.HttpServer, gRPCServer *server.GRPCServer, cfg *conf
 
 func (a *App) MustRun() {
 	if err := a.Run(); err != nil {
-		panic(err)
+		panic(err.Error())
 	}
 }
 
