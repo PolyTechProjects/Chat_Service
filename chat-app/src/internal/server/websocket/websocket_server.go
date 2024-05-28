@@ -20,10 +20,10 @@ var broadcastChannel = make(chan *models.Message)
 var filePathsChannel = make(chan *models.MessageIdXFileId)
 
 type WebsocketService struct {
-	Repository *repository.Repository
+	Repository *repository.MessageRepository
 }
 
-func New(r *repository.Repository) *WebsocketService {
+func New(r *repository.MessageRepository) *WebsocketService {
 	return &WebsocketService{
 		Repository: r,
 	}
@@ -72,7 +72,7 @@ func (ws *WebsocketService) readMessages(wsConnection *websocket.Conn) {
 			return
 		}
 
-		if messageReq.WithMedia {
+		if messageReq.WithMedia == 1 {
 			for {
 				mf := <-filePathsChannel
 				if mf.MessageId == message.Id {

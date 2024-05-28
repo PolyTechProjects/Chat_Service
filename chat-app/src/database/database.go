@@ -3,7 +3,6 @@ package database
 import (
 	"fmt"
 	"log/slog"
-	"os"
 
 	"example.com/chat-app/src/config"
 	"example.com/chat-app/src/internal/models"
@@ -19,15 +18,14 @@ func Init(cfg *config.Config) {
 	if err != nil {
 		panic(err)
 	}
-	slog.Info("Connecting to DB")
 	str := fmt.Sprintf(
-		"host=%v port=%v user=%v dbname=%v password=%v sslmode=%v",
-		cfg.Database.Host,
-		cfg.Database.Port,
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_NAME"),
-		os.Getenv("DB_PASSWORD"),
-		cfg.Database.Sslmode,
+		"postgres://%v:%v@%v:%v/%v?sslmode=%v",
+		cfg.Db.UserName,
+		cfg.Db.Password,
+		cfg.Db.Host,
+		cfg.Db.InnerPort,
+		cfg.Db.DatabaseName,
+		cfg.Db.SslMode,
 	)
 	slog.Info(str)
 	db, err := gorm.Open(
@@ -35,8 +33,8 @@ func Init(cfg *config.Config) {
 		str,
 	)
 	if err != nil {
-		slog.Error("Error has occured while connecting to DB", err)
-		panic(err)
+		slog.Error(err.Error())
+		panic(err.Error())
 	}
 
 	db.AutoMigrate(&models.ChatRoomXUser{}, &models.Message{})

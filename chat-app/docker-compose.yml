@@ -4,12 +4,12 @@ services:
       context: .
       dockerfile: app.Dockerfile
     ports:
-      - "${APP_PORT}:8080"
+      - "${APP_HTTP_PORT}:${APP_HTTP_INNER_PORT}"
     depends_on:
       - chat_db
     networks:
-      - microservices_network
-    
+      - micro-proxy-net
+
   chat_db:
     image: postgres:15.3
     ports:
@@ -19,8 +19,9 @@ services:
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
     networks:
-      - microservices_network
+      - micro-proxy-net
 
 networks:
-  microservices_network:
+  micro-proxy-net:
     external: true
+    name: microservice-network

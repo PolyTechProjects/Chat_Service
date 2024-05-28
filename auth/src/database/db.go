@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
-	"os"
 
 	"example.com/main/src/config"
 	"example.com/main/src/models"
@@ -22,12 +21,12 @@ func Init(cfg *config.Config) {
 	}
 	str := fmt.Sprintf(
 		"postgres://%v:%v@%v:%v/%v?sslmode=%v",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		cfg.DB.Host,
-		cfg.DB.Port,
-		os.Getenv("DB_NAME"),
-		cfg.DB.SslMode,
+		cfg.Db.UserName,
+		cfg.Db.Password,
+		cfg.Db.Host,
+		cfg.Db.InnerPort,
+		cfg.Db.DatabaseName,
+		cfg.Db.SslMode,
 	)
 	db, err := gorm.Open(
 		"postgres",

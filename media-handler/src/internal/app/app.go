@@ -6,36 +6,57 @@ import (
 	"net"
 	"net/http"
 
+	"example.com/media-handler/src/config"
 	"example.com/media-handler/src/internal/server"
 )
 
 type App struct {
-	log        *slog.Logger
-	port       int
 	httpServer *server.HttpServer
+	gRPCServer *server.GRPCServer
+	httpPort   int
+	gRPCPort   int
 }
 
-func New(log *slog.Logger, port int, httpServer *server.HttpServer) *App {
-	return &App{port: port, log: log, httpServer: httpServer}
+func New(httpServer *server.HttpServer, gRPCServer *server.GRPCServer, cfg *config.Config) *App {
+	return &App{
+		httpServer: httpServer,
+		gRPCServer: gRPCServer,
+		httpPort:   cfg.App.HttpInnerPort,
+		gRPCPort:   cfg.App.GrpcInnerPort,
+	}
 }
 
 func (a *App) MustRun() {
 	if err := a.Run(); err != nil {
-		panic(err)
+		panic(err.Error())
 	}
 }
 
 func (a *App) Run() error {
-	const op = "app.Run"
-	log := a.log.With(slog.String("op", op), slog.Int("port", a.port))
-	l, err := net.Listen("tcp", fmt.Sprintf(":%d", a.port))
+	go a.RunHttpServer()
+	a.RunGRPCServer()
+	return nil
+}
+
+func (a *App) RunHttpServer() error {
+	hl, err := net.Listen("tcp", fmt.Sprintf(":%d", a.httpPort))
 	if err != nil {
 		return err
 	}
+	slog.Debug("Starting HTTP server")
+	slog.Debug(hl.Addr().String())
 	a.httpServer.StartServer()
-	log.Info("MediaHandlerServer is running", slog.String("address", l.Addr().String()))
-	if err := http.Serve(l, nil); err != nil {
+	if err := http.Serve(hl, nil); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (a *App) RunGRPCServer() error {
+	gl, err := net.Listen("tcp", fmt.Sprintf(":%d", a.gRPCPort))
+	if err != nil {
+		return err
+	}
+	a.gRPCServer.Start(gl)
 	return nil
 }
