@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"net"
 
-	"example.com/channel-management/src/gen/go/sso"
+	sso "example.com/channel-management/src/gen/go/channel-mgmt"
+	auth "example.com/channel-management/src/gen/go/sso"
 	"example.com/channel-management/src/internal/service"
-	auth "example.com/main/src/gen/go/sso"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -143,36 +143,6 @@ func (s *GRPCServer) KickUser(ctx context.Context, req *sso.KickUserRequest) (*s
 	}
 	slog.Info("Kick user controller successful", "channelID", req.ChannelId, "userID", req.UserId)
 	return &sso.KickUserResponse{}, nil
-}
-
-func (s *GRPCServer) SendMessage(ctx context.Context, req *sso.SendMessageRequest) (*sso.SendMessageResponse, error) {
-	slog.Info("Send message controller started")
-	if err := s.authorize(ctx); err != nil {
-		slog.Error("Authorization error", "error", err.Error())
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	err := s.service.SendMessage(ctx, req.ChannelId, req.UserId, req.Message, req.WithMedia)
-	if err != nil {
-		slog.Error("SendMessage error", "error", err.Error())
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	slog.Info("Send message controller successful", "channelID", req.ChannelId, "userID", req.UserId)
-	return &sso.SendMessageResponse{}, nil
-}
-
-func (s *GRPCServer) SendMedia(ctx context.Context, req *sso.SendMediaRequest) (*sso.SendMediaResponse, error) {
-	slog.Info("Send media controller started")
-	if err := s.authorize(ctx); err != nil {
-		slog.Error("Authorization error", "error", err.Error())
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	err := s.service.SendMedia(ctx, req.ChannelId, req.UserId, req.Media, req.MediaType)
-	if err != nil {
-		slog.Error("SendMedia error", "error", err.Error())
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	slog.Info("Send media controller successful", "channelID", req.ChannelId, "userID", req.UserId)
-	return &sso.SendMediaResponse{}, nil
 }
 
 func (s *GRPCServer) CanWrite(ctx context.Context, req *sso.CanWriteRequest) (*sso.CanWriteResponse, error) {

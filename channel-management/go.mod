@@ -3,9 +3,7 @@ module example.com/channel-management
 go 1.22.0
 
 require (
-	example.com/main v0.0.0
 	github.com/google/uuid v1.6.0
-	github.com/gorilla/websocket v1.5.1
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jinzhu/gorm v1.9.16
 	github.com/joho/godotenv v1.5.1
@@ -13,8 +11,6 @@ require (
 	google.golang.org/grpc v1.62.1
 	google.golang.org/protobuf v1.33.0
 )
-
-replace example.com/main => ../auth
 
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect

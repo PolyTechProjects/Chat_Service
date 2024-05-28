@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package sso;
+
+option go_package = "example.com/channel-management/src/proto/sso";
+
+service ChannelManagement {
+    rpc CreateChannel (CreateChannelRequest) returns (CreateChannelResponse) {}
+    rpc DeleteChannel (DeleteChannelRequest) returns (DeleteChannelResponse) {}
+    rpc UpdateChannel (UpdateChannelRequest) returns (UpdateChannelResponse) {}
+    rpc JoinChannel (JoinChannelRequest) returns (JoinChannelResponse) {}
+    rpc KickUser (KickUserRequest) returns (KickUserResponse) {}
+    rpc CanWrite (CanWriteRequest) returns (CanWriteResponse) {}
+    rpc MakeAdmin (MakeAdminRequest) returns (MakeAdminResponse) {}
+    rpc DeleteAdmin (DeleteAdminRequest) returns (DeleteAdminResponse) {}
+    rpc IsAdmin (IsAdminRequest) returns (IsAdminResponse) {}
+}
+
+message CreateChannelRequest {
+    string name = 1;
+    string description = 2;
+    string creator_id = 3;
+}
+
+message CreateChannelResponse {
+    string channel_id = 1;
+}
+
+message DeleteChannelRequest {
+    string channel_id = 1;
+    string user_id = 2;
+}
+
+message DeleteChannelResponse {}
+
+message UpdateChannelRequest {
+    string channel_id = 1;
+    string name = 2;
+    string description = 3;
+    string user_id = 4;
+}
+
+message UpdateChannelResponse {}
+
+message JoinChannelRequest {
+    string channel_id = 1;
+    string user_id = 2;
+}
+
+message JoinChannelResponse {}
+
+message KickUserRequest {
+    string channel_id = 1;
+    string user_id = 2;
+    string requesting_user_id = 3;
+}
+
+message KickUserResponse {}
+
+message CanWriteRequest {
+    string channel_id = 1;
+    string user_id = 2;
+}
+
+message CanWriteResponse {
+    bool can_write = 1;
+}
+
+message MakeAdminRequest {
+    string channel_id = 1;
+    string user_id = 2;
+    string requesting_user_id = 3;
+}
+
+message MakeAdminResponse {}
+
+message DeleteAdminRequest {
+    string channel_id = 1;
+    string user_id = 2;
+    string requesting_user_id = 3;
+}
+
+message DeleteAdminResponse {}
+
+message IsAdminRequest {
+    string channel_id = 1;
+    string user_id = 2;
+}
+
+message IsAdminResponse {
+    bool is_admin = 1;
+}

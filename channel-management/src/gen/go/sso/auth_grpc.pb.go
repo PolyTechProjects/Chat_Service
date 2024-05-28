@@ -19,10 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Auth_Register_FullMethodName      = "/auth.Auth/Register"
-	Auth_Login_FullMethodName         = "/auth.Auth/Login"
-	Auth_Authorize_FullMethodName     = "/auth.Auth/Authorize"
-	Auth_ExtractUserId_FullMethodName = "/auth.Auth/ExtractUserId"
+	Auth_Register_FullMethodName  = "/auth.Auth/Register"
+	Auth_Login_FullMethodName     = "/auth.Auth/Login"
+	Auth_Authorize_FullMethodName = "/auth.Auth/Authorize"
 )
 
 // AuthClient is the client API for Auth service.
@@ -32,7 +31,6 @@ type AuthClient interface {
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	Authorize(ctx context.Context, in *AuthorizeRequest, opts ...grpc.CallOption) (*AuthorizeResponse, error)
-	ExtractUserId(ctx context.Context, in *ExtractUserIdRequest, opts ...grpc.CallOption) (*ExtractUserIdResponse, error)
 }
 
 type authClient struct {
@@ -70,15 +68,6 @@ func (c *authClient) Authorize(ctx context.Context, in *AuthorizeRequest, opts .
 	return out, nil
 }
 
-func (c *authClient) ExtractUserId(ctx context.Context, in *ExtractUserIdRequest, opts ...grpc.CallOption) (*ExtractUserIdResponse, error) {
-	out := new(ExtractUserIdResponse)
-	err := c.cc.Invoke(ctx, Auth_ExtractUserId_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // AuthServer is the server API for Auth service.
 // All implementations must embed UnimplementedAuthServer
 // for forward compatibility
@@ -86,7 +75,6 @@ type AuthServer interface {
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	Authorize(context.Context, *AuthorizeRequest) (*AuthorizeResponse, error)
-	ExtractUserId(context.Context, *ExtractUserIdRequest) (*ExtractUserIdResponse, error)
 	mustEmbedUnimplementedAuthServer()
 }
 
@@ -102,9 +90,6 @@ func (UnimplementedAuthServer) Login(context.Context, *LoginRequest) (*LoginResp
 }
 func (UnimplementedAuthServer) Authorize(context.Context, *AuthorizeRequest) (*AuthorizeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Authorize not implemented")
-}
-func (UnimplementedAuthServer) ExtractUserId(context.Context, *ExtractUserIdRequest) (*ExtractUserIdResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ExtractUserId not implemented")
 }
 func (UnimplementedAuthServer) mustEmbedUnimplementedAuthServer() {}
 
@@ -173,24 +158,6 @@ func _Auth_Authorize_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Auth_ExtractUserId_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ExtractUserIdRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServer).ExtractUserId(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Auth_ExtractUserId_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServer).ExtractUserId(ctx, req.(*ExtractUserIdRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // Auth_ServiceDesc is the grpc.ServiceDesc for Auth service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -209,10 +176,6 @@ var Auth_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Authorize",
 			Handler:    _Auth_Authorize_Handler,
-		},
-		{
-			MethodName: "ExtractUserId",
-			Handler:    _Auth_ExtractUserId_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
