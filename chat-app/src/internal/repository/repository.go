@@ -15,7 +15,7 @@ func (r *Repository) SaveUserMessage(message *models.Message) error {
 	if r.DB == nil {
 		slog.Error("Database is not initialized")
 	}
-	err := r.DB.Begin().Create(*message).Commit().Error
+	err := r.DB.Begin().Create(&message).Commit().Error
 	return err
 }
 

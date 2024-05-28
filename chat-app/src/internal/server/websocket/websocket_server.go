@@ -101,7 +101,11 @@ func (ws *WebsocketService) broadcast() {
 		slog.Info("New message from " + fmt.Sprintf("%d", message.SenderId) + ":\t" + message.Body)
 
 		//Let's say that message.ChatRoomId is sent to ChatRoomMgmtService which will return List<UserId>
-		userIds := []string{"1", "2"}
+		userIds := []string{}
+		for userId, _ := range userIdXWsConnection {
+			userIds = append(userIds, userId)
+		}
+
 		for _, userId := range userIds {
 			wsConnection, ok := userIdXWsConnection[userId]
 			if ok {

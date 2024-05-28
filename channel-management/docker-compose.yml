@@ -1,16 +1,22 @@
+version: '3.3'
+
 services:
-  chat_app:
+  channel_management_app:
     build:
       context: .
       dockerfile: app.Dockerfile
     ports:
       - "${APP_PORT}:8080"
     depends_on:
-      - chat_db
+      - channel_management_db
+    environment:
+      - AUTH_ADDRESS=${AUTH_ADDRESS}
+      - CHAT_APP_ADDRESS=${CHAT_APP_ADDRESS}
+      - MEDIA_HANDLER_ADDRESS=${MEDIA_HANDLER_ADDRESS}
     networks:
       - microservices_network
-    
-  chat_db:
+
+  channel_management_db:
     image: postgres:15.3
     ports:
       - "${DB_PORT}:5432"

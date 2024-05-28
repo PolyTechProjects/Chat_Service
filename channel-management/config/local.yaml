@@ -4,5 +4,5 @@ grpc:
   timeout: 1h
 db:
   port: 5432
-  host: auth_db
+  host: channel_management_db
   sslmode: disable

@@ -9,6 +9,9 @@ services:
       - "${APP_PORT}:8080"
     depends_on:
       - auth_db
+    networks:
+      - microservices_network
+      
   auth_db:
     image: postgres:15.3
     ports:
@@ -17,3 +20,9 @@ services:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
+    networks:
+      - microservices_network
+
+networks:
+  microservices_network:
+    external: true
