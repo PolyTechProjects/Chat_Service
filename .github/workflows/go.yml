@@ -27,14 +27,47 @@ jobs:
       - name: Build Auth
         run: cd auth/ && ./build.sh && cd ../
 
+      - name: Upload Auth
+        uses: actions/upload-artifact@v3
+        with:
+          name: auth-app-build
+          path: auth/build/AuthApp-001-build
+
       - name: Build Chat
         run: cd chat-app/ && ./build.sh && cd ../
+
+      - name: Upload Chat
+        uses: actions/upload-artifact@v3
+        with:
+          name: chat-app-build
+          path: chat-app/build/ChatApp-001-build
 
       - name: Build Media Handler
         run: cd media-handler/ && ./build.sh && cd ../
 
+      - name: Upload Media Handler
+        uses: actions/upload-artifact@v3
+        with:
+          name: media-handler-build
+          path: media-handler/build/MediaHandler-001-build
+
       - name: Build User Management
         run: cd user-mgmt/ && ./build.sh && cd ../
+
+      - name: Upload User Management
+        uses: actions/upload-artifact@v3
+        with:
+          name: user-mgmt-build
+          path: user-mgmt/build/UserMgmt-001-build
+
+      - name: Build Notification
+        run: cd notification/ && ./build.sh && cd ../
+
+      - name: Upload Notification
+        uses: actions/upload-artifact@v3
+        with:
+          name: notification-build
+          path: notification/build/NotificationApp-001-build
 
   telegram-notification:
     needs: build

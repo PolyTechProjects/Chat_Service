@@ -18,8 +18,7 @@ type NotificationService struct {
 }
 
 func NewNotificationService(userIdXDeviceTokenRepository *repository.UserIdXDeviceTokenRepository, cfg *config.Config) *NotificationService {
-	slog.Info(cfg.Fcm.PathToPrivateKeyFile)
-	fcmClient, err := fcm.NewClient(context.Background(), fcm.WithCredentialsFile(cfg.Fcm.PathToPrivateKeyFile), fcm.WithProjectID(cfg.Fcm.ProjectId))
+	fcmClient, err := fcm.NewClient(context.Background(), fcm.WithCredentialsFile(cfg.Fcm.PathToPrivateKeyFile))
 	if err != nil {
 		slog.Error("failed to connect: " + err.Error())
 	}
