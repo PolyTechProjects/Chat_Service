@@ -4,6 +4,9 @@
 name: Build and Send Notification on master
 
 on:
+  push:
+    branches:
+      - "cd"
   pull_request:
     types:
       - closed
@@ -12,7 +15,7 @@ on:
 
 jobs:
   build:
-    if: github.event.pull_request.merged == true
+    #if: github.event.pull_request.merged == true
     
     runs-on: ubuntu-latest
     
@@ -73,10 +76,11 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-    - name: Send the build to telegram
-      uses: appleboy/telegram-action@master
-      with:
-        to: ${{ secrets.TELEGRAM_RELEASES_CHANNEL }}
-        token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        message: ГООООООООООООООООООЛ!!!
-        photo: test/goal.png
+      - uses: actions/checkout@v3
+      - name: Send the build to telegram
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_RELEASES_CHANNEL }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: ГООООООООООООООООООЛ!!!
+          photo: test/goal.png
