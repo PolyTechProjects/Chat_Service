@@ -26,14 +26,12 @@ message GetUserRequest {
 
 message InfoUpdateRequest {
     string token = 1;
-    string userId = 2;
     string name = 3;
     string description = 4;
 }
 
 message DeleteAccountRequest {
     string token = 1;
-    string userId = 2;
 }
 
 message UserResponse {
