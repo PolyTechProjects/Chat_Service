@@ -27,23 +27,188 @@ jobs:
       - name: Build Auth
         run: cd auth/ && ./build.sh && cd ../
 
+      - name: Upload Auth
+        uses: actions/upload-artifact@v3
+        with:
+          name: auth-app-build
+          path: auth/build/AuthApp-001-build
+
       - name: Build Chat
         run: cd chat-app/ && ./build.sh && cd ../
+
+      - name: Upload Chat
+        uses: actions/upload-artifact@v3
+        with:
+          name: chat-app-build
+          path: chat-app/build/ChatApp-001-build
 
       - name: Build Media Handler
         run: cd media-handler/ && ./build.sh && cd ../
 
+      - name: Upload Media Handler
+        uses: actions/upload-artifact@v3
+        with:
+          name: media-handler-build
+          path: media-handler/build/MediaHandlerApp-001-build
+
       - name: Build User Management
         run: cd user-mgmt/ && ./build.sh && cd ../
 
-  telegram-notification:
+      - name: Upload User Management
+        uses: actions/upload-artifact@v3
+        with:
+          name: user-mgmt-build
+          path: user-mgmt/build/UserMgmtApp-001-build
+
+      - name: Build Notification
+        run: cd notification/ && ./build.sh && cd ../
+
+      - name: Upload Notification
+        uses: actions/upload-artifact@v3
+        with:
+          name: notification-build
+          path: notification/build/NotificationApp-001-build
+
+  dockerize:
     needs: build
     runs-on: ubuntu-latest
     steps:
-    - name: Send the build to telegram
-      uses: appleboy/telegram-action@master
-      with:
-        to: ${{ secrets.TELEGRAM_RELEASES_CHANNEL }}
-        token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        message: ГООООООООООООООООООЛ!!!
-        photo: test/goal.png
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: kon1ch1wa
+          password: ${{ secrets.TOKEN_PUBLISH_PACKAGE }}
+      
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      ### Auth ###
+      - name: Download Auth
+        uses: actions/download-artifact@v3
+        with:
+          name: auth-app-build
+          path: auth/build
+      - name: Decode Auth.env
+        uses: mobiledevops/secret-to-file-action@v1
+        with:
+          base64-encoded-secret: ${{ secrets.AUTH_ENV }}
+          filename: ".env"
+          working-directory: "${{ github.workspace }}/auth"
+      - name: Build multiplatform Auth.env
+        uses: docker/build-push-action@v5
+        with:
+          context: ./auth
+          file: ./auth/app.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/polytechprojects/chat_service/auth:latest
+
+      ### Chat ###
+      - name: Download Chat
+        uses: actions/download-artifact@v3
+        with:
+          name: chat-app-build
+          path: chat-app/build
+      - name: Decode Chat.env
+        uses: mobiledevops/secret-to-file-action@v1
+        with:
+          base64-encoded-secret: ${{ secrets.CHAT_ENV }}
+          filename: ".env"
+          working-directory: "${{ github.workspace }}/chat-app"
+      - name: Build multiplatform Chat.env
+        uses: docker/build-push-action@v5
+        with:
+          context: ./chat-app
+          file: ./chat-app/app.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/polytechprojects/chat_service/chat-app:latest
+
+      ### Media Handler ###
+      - name: Download Media Handler
+        uses: actions/download-artifact@v3
+        with:
+          name: media-handler-build
+          path: media-handler/build
+      - name: Decode Media Handler.env
+        uses: mobiledevops/secret-to-file-action@v1
+        with:
+          base64-encoded-secret: ${{ secrets.MEDIA_ENV }}
+          filename: ".env"
+          working-directory: "${{ github.workspace }}/media-handler"
+      - name: Build multiplatform Media Handler
+        uses: docker/build-push-action@v5
+        with:
+          context: ./media-handler
+          file: ./media-handler/app.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/polytechprojects/chat_service/media-handler:latest
+
+      ### User Management ###
+      - name: Download User Management
+        uses: actions/download-artifact@v3
+        with:
+          name: user-mgmt-build
+          path: user-mgmt/build
+      - name: Decode User Management.env
+        uses: mobiledevops/secret-to-file-action@v1
+        with:
+          base64-encoded-secret: ${{ secrets.USER_MGMT_ENV }}
+          filename: ".env"
+          working-directory: "${{ github.workspace }}/user-mgmt"
+      - name: Build multiplatform User Management
+        uses: docker/build-push-action@v5
+        with:
+          context: ./user-mgmt
+          file: ./user-mgmt/app.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/polytechprojects/chat_service/user-mgmt:latest
+
+      ### Notification ###
+      - name: Download Notification
+        uses: actions/download-artifact@v3
+        with:
+          name: notification-build
+          path: notification/build
+      - name: Decode Notification.env
+        uses: mobiledevops/secret-to-file-action@v1
+        with:
+          base64-encoded-secret: ${{ secrets.NOTIFICATION_ENV }}
+          filename: ".env"
+          working-directory: "${{ github.workspace }}/notification"
+      - name: Decode service accounts json
+        uses: mobiledevops/secret-to-file-action@v1
+        with:
+          base64-encoded-secret: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          filename: "firebaseServiceAccount.json"
+          working-directory: "${{ github.workspace }}/notification"
+      - name: Build multiplatform Notification
+        uses: docker/build-push-action@v5
+        with:
+          context: ./notification
+          file: ./notification/app.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/polytechprojects/chat_service/notification:latest
+
+  telegram-notification:
+    needs: dockerize
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Send the build to telegram
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_RELEASES_CHANNEL }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: ГООООООООООООООООООЛ!!!
+          photo: test/goal.png

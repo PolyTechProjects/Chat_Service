@@ -1,0 +1,27 @@
+services:
+  notification_app:
+    build:
+      context: .
+      dockerfile: app.Dockerfile
+    ports:
+      - "${APP_GRPC_PORT}:${APP_GRPC_INNER_PORT}"
+    depends_on:
+      - notification_db
+    networks:
+      - micro-proxy-net
+
+  notification_db:
+    image: postgres:15.3
+    ports:
+      - "${DB_PORT}:${DB_INNER_PORT}"
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    networks:
+      - micro-proxy-net
+
+networks:
+  micro-proxy-net:
+    external: true
+    name: microservice-network
