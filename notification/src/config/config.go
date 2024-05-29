@@ -18,6 +18,7 @@ type AppConfig struct {
 }
 
 type FcmConfig struct {
+	ProjectId            string `env:"FCM_PROJECT_ID"`
 	PathToPrivateKeyFile string `env:"FCM_PATH_TO_PRIVATE_KEY_FILE"`
 }
 
