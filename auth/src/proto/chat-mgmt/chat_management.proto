@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package sso;
+
+option go_package = "example.com/chat-management/src/proto/chat-mgmt";
+
+service ChatManagement {
+    rpc CreateChat (CreateChatRequest) returns (CreateChatResponse) {}
+    rpc DeleteChat (DeleteChatRequest) returns (DeleteChatResponse) {}
+    rpc UpdateChat (UpdateChatRequest) returns (UpdateChatResponse) {}
+    rpc JoinChat (JoinChatRequest) returns (JoinChatResponse) {}
+    rpc KickUser (KickUserRequest) returns (KickUserResponse) {}
+    rpc CanWrite (CanWriteRequest) returns (CanWriteResponse) {}
+    rpc MakeAdmin (MakeAdminRequest) returns (MakeAdminResponse) {}
+    rpc DeleteAdmin (DeleteAdminRequest) returns (DeleteAdminResponse) {}
+    rpc IsAdmin (IsAdminRequest) returns (IsAdminResponse) {}
+}
+
+message CreateChatRequest {
+    string name = 1;
+    string description = 2;
+    string creator_id = 3;
+}
+
+message CreateChatResponse {
+    string chat_id = 1;
+}
+
+message DeleteChatRequest {
+    string chat_id = 1;
+    string user_id = 2;
+}
+
+message DeleteChatResponse {}
+
+message UpdateChatRequest {
+    string chat_id = 1;
+    string name = 2;
+    string description = 3;
+    string user_id = 4;
+}
+
+message UpdateChatResponse {}
+
+message JoinChatRequest {
+    string chat_id = 1;
+    string user_id = 2;
+}
+
+message JoinChatResponse {}
+
+message KickUserRequest {
+    string chat_id = 1;
+    string user_id = 2;
+    string requesting_user_id = 3;
+}
+
+message KickUserResponse {}
+
+message CanWriteRequest {
+    string chat_id = 1;
+    string user_id = 2;
+}
+
+message CanWriteResponse {
+    bool can_write = 1;
+}
+
+message MakeAdminRequest {
+    string chat_id = 1;
+    string user_id = 2;
+    string requesting_user_id = 3;
+}
+
+message MakeAdminResponse {}
+
+message DeleteAdminRequest {
+    string chat_id = 1;
+    string user_id = 2;
+    string requesting_user_id = 3;
+}
+
+message DeleteAdminResponse {}
+
+message IsAdminRequest {
+    string chat_id = 1;
+    string user_id = 2;
+}
+
+message IsAdminResponse {
+    bool is_admin = 1;
+}

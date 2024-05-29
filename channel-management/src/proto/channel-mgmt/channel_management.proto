@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package sso;
 
-option go_package = "example.com/channel-management/src/proto/sso";
+option go_package = "example.com/channel-management/src/proto/channel-mgmt";
 
 service ChannelManagement {
     rpc CreateChannel (CreateChannelRequest) returns (CreateChannelResponse) {}

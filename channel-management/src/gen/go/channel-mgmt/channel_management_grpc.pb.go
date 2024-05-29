@@ -4,7 +4,7 @@
 // - protoc             v5.26.1
 // source: channel-mgmt/channel_management.proto
 
-package sso
+package channel_mgmt
 
 import (
 	context "context"
