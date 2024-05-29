@@ -25,9 +25,9 @@ func Init(cfg *config.Config) {
 		os.Getenv("DB_USER"),
 		os.Getenv("DB_PASSWORD"),
 		cfg.Database.Host,
-		cfg.Database.Port,
+		cfg.Database.InnerPort,
 		os.Getenv("DB_NAME"),
-		cfg.Database.Sslmode,
+		cfg.Database.SslMode,
 	)
 	slog.Info(str)
 	db, err := gorm.Open(

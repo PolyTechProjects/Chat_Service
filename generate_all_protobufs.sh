@@ -1,6 +1,6 @@
-cd auth/ && bash generate_protobufs.sh && echo "---" && cd ../
-cd user-mgmt/ && bash generate_protobufs.sh && echo "---" && cd ../
-cd channel-management/ && bash generate_protobufs.sh && echo "---" && cd ../
-cd chat-management/ && bash generate_protobufs.sh && echo "---" && cd ../
-cd chat-app/ && bash generate_protobufs.sh && echo "---" && cd ../
-cd media-handler/ && bash generate_protobufs.sh && echo "---" && cd ../
+cd auth/ && bash tools/protogen.sh && echo "---" && cd ../
+cd user-mgmt/ && bash tools/protogen.sh && echo "---" && cd ../
+cd channel-management && bash tools/protogen.sh && echo "---" && cd ../
+cd chat-management/ && bash tools/protogen.sh && echo "---" && cd ../
+cd chat-app/ && bash tools/protogen.sh && echo "---" && cd ../
+cd media-handler/ && bash tools/protogen.sh && echo "---" && cd ../

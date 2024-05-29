@@ -1,8 +1,0 @@
-env: local
-grpc:
-  port: 8080
-  timeout: 1h
-db:
-  port: 5432
-  host: auth_db
-  sslmode: disable

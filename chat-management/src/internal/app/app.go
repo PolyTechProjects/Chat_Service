@@ -9,13 +9,12 @@ import (
 )
 
 type App struct {
-	log  *slog.Logger
 	port int
 	srv  *server.GRPCServer
 }
 
-func New(log *slog.Logger, port int, srv *server.GRPCServer) *App {
-	return &App{log: log, port: port, srv: srv}
+func New(port int, srv *server.GRPCServer) *App {
+	return &App{port: port, srv: srv}
 }
 
 func (a *App) MustRun() {
@@ -29,6 +28,6 @@ func (a *App) Run() error {
 	if err != nil {
 		return err
 	}
-	a.log.Info("Starting gRPC server", slog.String("address", l.Addr().String()))
+	slog.Info("Starting gRPC server", slog.String("address", l.Addr().String()))
 	return a.srv.Start(l)
 }
