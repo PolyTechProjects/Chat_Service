@@ -236,3 +236,18 @@ func (s *ChannelManagementService) IsAdmin(ctx context.Context, channelID, userI
 func (s *ChannelManagementService) isAdmin(ctx context.Context, channelID, userID string) (bool, error) {
 	return s.IsAdmin(ctx, channelID, userID)
 }
+
+func (s *ChannelManagementService) GetChanUsers(ctx context.Context, chanID string) ([]string, error) {
+	slog.Info("GetChanUsers called", "channelID", chanID)
+	chanUUID, err := uuid.Parse(chanID)
+	if err != nil {
+		slog.Error("Invalid channel ID", "error", err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	userIDs, err := s.repo.GetChanUsers(chanUUID)
+	if err != nil {
+		slog.Error("Failed to get channel users", "error", err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return userIDs, nil
+}

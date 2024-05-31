@@ -77,3 +77,16 @@ func (r *ChatRepository) IsMember(chatID, userID uuid.UUID) (bool, error) {
 	}
 	return true, nil
 }
+
+func (r *ChatRepository) GetChatUsers(chatId uuid.UUID) ([]string, error) {
+	var userChats []models.UserChat
+	err := r.db.Where("chat_id = ?", chatId).Find(&userChats).Error
+	if err != nil {
+		return nil, err
+	}
+	userIDs := make([]string, len(userChats))
+	for i, uc := range userChats {
+		userIDs[i] = uc.UserID.String()
+	}
+	return userIDs, nil
+}

@@ -236,3 +236,18 @@ func (s *ChatManagementService) IsAdmin(ctx context.Context, chatID, userID stri
 func (s *ChatManagementService) isAdmin(ctx context.Context, chatID, userID string) (bool, error) {
 	return s.IsAdmin(ctx, chatID, userID)
 }
+
+func (s *ChatManagementService) GetChatUsers(ctx context.Context, chatID string) ([]string, error) {
+	slog.Info("GetChatUsers called", "chatID", chatID)
+	chatUUID, err := uuid.Parse(chatID)
+	if err != nil {
+		slog.Error("Invalid chat ID", "error", err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	userIDs, err := s.repo.GetChatUsers(chatUUID)
+	if err != nil {
+		slog.Error("Failed to get chat users", "error", err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return userIDs, nil
+}

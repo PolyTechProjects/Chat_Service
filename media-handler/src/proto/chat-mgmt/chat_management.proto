@@ -9,11 +9,12 @@ service ChatManagement {
     rpc DeleteChat (DeleteChatRequest) returns (DeleteChatResponse) {}
     rpc UpdateChat (UpdateChatRequest) returns (UpdateChatResponse) {}
     rpc JoinChat (JoinChatRequest) returns (JoinChatResponse) {}
-    rpc KickUser (KickUserRequest) returns (KickUserResponse) {}
-    rpc CanWrite (CanWriteRequest) returns (CanWriteResponse) {}
-    rpc MakeAdmin (MakeAdminRequest) returns (MakeAdminResponse) {}
-    rpc DeleteAdmin (DeleteAdminRequest) returns (DeleteAdminResponse) {}
-    rpc IsAdmin (IsAdminRequest) returns (IsAdminResponse) {}
+    rpc KickUserChat (KickUserChatRequest) returns (KickUserChatResponse) {}
+    rpc CanWriteChat (CanWriteChatRequest) returns (CanWriteChatResponse) {}
+    rpc MakeChatAdmin (MakeChatAdminRequest) returns (MakeChatAdminResponse) {}
+    rpc DeleteChatAdmin (DeleteChatAdminRequest) returns (DeleteChatAdminResponse) {}
+    rpc IsChatAdmin (IsChatAdminRequest) returns (IsChatAdminResponse) {}
+    rpc GetChatUsers (GetChatUsersRequest) returns (GetChatUsersResponse) {}
 }
 
 message CreateChatRequest {
@@ -49,44 +50,52 @@ message JoinChatRequest {
 
 message JoinChatResponse {}
 
-message KickUserRequest {
+message KickUserChatRequest {
     string chat_id = 1;
     string user_id = 2;
     string requesting_user_id = 3;
 }
 
-message KickUserResponse {}
+message KickUserChatResponse {}
 
-message CanWriteRequest {
+message CanWriteChatRequest {
     string chat_id = 1;
     string user_id = 2;
 }
 
-message CanWriteResponse {
+message CanWriteChatResponse {
     bool can_write = 1;
 }
 
-message MakeAdminRequest {
+message MakeChatAdminRequest {
     string chat_id = 1;
     string user_id = 2;
     string requesting_user_id = 3;
 }
 
-message MakeAdminResponse {}
+message MakeChatAdminResponse {}
 
-message DeleteAdminRequest {
+message DeleteChatAdminRequest {
     string chat_id = 1;
     string user_id = 2;
     string requesting_user_id = 3;
 }
 
-message DeleteAdminResponse {}
+message DeleteChatAdminResponse {}
 
-message IsAdminRequest {
+message IsChatAdminRequest {
     string chat_id = 1;
     string user_id = 2;
 }
 
-message IsAdminResponse {
+message IsChatAdminResponse {
     bool is_admin = 1;
+}
+
+message GetChatUsersRequest {
+    string chat_id = 1;
+}
+
+message GetChatUsersResponse {
+    repeated string user_ids = 1;
 }

@@ -65,3 +65,16 @@ func (r *ChannelRepository) IsAdmin(channelID, userID uuid.UUID) (bool, error) {
 	}
 	return true, nil
 }
+
+func (r *ChannelRepository) GetChanUsers(channelId uuid.UUID) ([]string, error) {
+	var userChannels []models.UserChannel
+	err := r.db.Where("channel_id = ?", channelId).Find(&userChannels).Error
+	if err != nil {
+		return nil, err
+	}
+	userIDs := make([]string, len(userChannels))
+	for i, uc := range userChannels {
+		userIDs[i] = uc.UserID.String()
+	}
+	return userIDs, nil
+}

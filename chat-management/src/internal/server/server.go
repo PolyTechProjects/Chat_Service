@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net"
 
-	sso "example.com/chat-management/src/gen/go/chat-mgmt"
+	chatMgmt "example.com/chat-management/src/gen/go/chat-mgmt"
 	auth "example.com/chat-management/src/gen/go/sso"
 	"example.com/chat-management/src/internal/service"
 	"google.golang.org/grpc"
@@ -17,7 +17,7 @@ import (
 
 type GRPCServer struct {
 	gRPCServer *grpc.Server
-	sso.UnimplementedChatManagementServer
+	chatMgmt.UnimplementedChatManagementServer
 	service    *service.ChatManagementService
 	authClient auth.AuthClient
 }
@@ -34,7 +34,7 @@ func New(service *service.ChatManagementService, authAddress string) (*GRPCServe
 		service:    service,
 		authClient: authClient,
 	}
-	sso.RegisterChatManagementServer(gRPCServer, g)
+	chatMgmt.RegisterChatManagementServer(gRPCServer, g)
 	return g, nil
 }
 
@@ -70,7 +70,7 @@ func (s *GRPCServer) authorize(ctx context.Context) error {
 	return nil
 }
 
-func (s *GRPCServer) CreateChat(ctx context.Context, req *sso.CreateChatRequest) (*sso.CreateChatResponse, error) {
+func (s *GRPCServer) CreateChat(ctx context.Context, req *chatMgmt.CreateChatRequest) (*chatMgmt.CreateChatResponse, error) {
 	slog.Info("Create chat controller started")
 	if err := s.authorize(ctx); err != nil {
 		slog.Error("Authorization error", "error", err.Error())
@@ -82,10 +82,10 @@ func (s *GRPCServer) CreateChat(ctx context.Context, req *sso.CreateChatRequest)
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	slog.Info("Create chat controller successful", "chatID", chatID)
-	return &sso.CreateChatResponse{ChatId: chatID}, nil
+	return &chatMgmt.CreateChatResponse{ChatId: chatID}, nil
 }
 
-func (s *GRPCServer) DeleteChat(ctx context.Context, req *sso.DeleteChatRequest) (*sso.DeleteChatResponse, error) {
+func (s *GRPCServer) DeleteChat(ctx context.Context, req *chatMgmt.DeleteChatRequest) (*chatMgmt.DeleteChatResponse, error) {
 	slog.Info("Delete chat controller started")
 	if err := s.authorize(ctx); err != nil {
 		slog.Error("Authorization error", "error", err.Error())
@@ -97,10 +97,10 @@ func (s *GRPCServer) DeleteChat(ctx context.Context, req *sso.DeleteChatRequest)
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	slog.Info("Delete chat controller successful", "chatID", req.ChatId)
-	return &sso.DeleteChatResponse{}, nil
+	return &chatMgmt.DeleteChatResponse{}, nil
 }
 
-func (s *GRPCServer) UpdateChat(ctx context.Context, req *sso.UpdateChatRequest) (*sso.UpdateChatResponse, error) {
+func (s *GRPCServer) UpdateChat(ctx context.Context, req *chatMgmt.UpdateChatRequest) (*chatMgmt.UpdateChatResponse, error) {
 	slog.Info("Update chat controller started")
 	if err := s.authorize(ctx); err != nil {
 		slog.Error("Authorization error", "error", err.Error())
@@ -112,10 +112,10 @@ func (s *GRPCServer) UpdateChat(ctx context.Context, req *sso.UpdateChatRequest)
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	slog.Info("Update chat controller successful", "chatID", req.ChatId)
-	return &sso.UpdateChatResponse{}, nil
+	return &chatMgmt.UpdateChatResponse{}, nil
 }
 
-func (s *GRPCServer) JoinChat(ctx context.Context, req *sso.JoinChatRequest) (*sso.JoinChatResponse, error) {
+func (s *GRPCServer) JoinChat(ctx context.Context, req *chatMgmt.JoinChatRequest) (*chatMgmt.JoinChatResponse, error) {
 	slog.Info("Join chat controller started")
 	if err := s.authorize(ctx); err != nil {
 		slog.Error("Authorization error", "error", err.Error())
@@ -127,10 +127,10 @@ func (s *GRPCServer) JoinChat(ctx context.Context, req *sso.JoinChatRequest) (*s
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	slog.Info("Join chat controller successful", "chatID", req.ChatId, "userID", req.UserId)
-	return &sso.JoinChatResponse{}, nil
+	return &chatMgmt.JoinChatResponse{}, nil
 }
 
-func (s *GRPCServer) KickUser(ctx context.Context, req *sso.KickUserRequest) (*sso.KickUserResponse, error) {
+func (s *GRPCServer) KickUser(ctx context.Context, req *chatMgmt.KickUserChatRequest) (*chatMgmt.KickUserChatResponse, error) {
 	slog.Info("Kick user controller started")
 	if err := s.authorize(ctx); err != nil {
 		slog.Error("Authorization error", "error", err.Error())
@@ -142,10 +142,10 @@ func (s *GRPCServer) KickUser(ctx context.Context, req *sso.KickUserRequest) (*s
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	slog.Info("Kick user controller successful", "chatID", req.ChatId, "userID", req.UserId)
-	return &sso.KickUserResponse{}, nil
+	return &chatMgmt.KickUserChatResponse{}, nil
 }
 
-func (s *GRPCServer) CanWrite(ctx context.Context, req *sso.CanWriteRequest) (*sso.CanWriteResponse, error) {
+func (s *GRPCServer) CanWrite(ctx context.Context, req *chatMgmt.CanWriteChatRequest) (*chatMgmt.CanWriteChatResponse, error) {
 	slog.Info("CanWrite controller started")
 	if err := s.authorize(ctx); err != nil {
 		slog.Error("Authorization error", "error", err.Error())
@@ -157,10 +157,10 @@ func (s *GRPCServer) CanWrite(ctx context.Context, req *sso.CanWriteRequest) (*s
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	slog.Info("CanWrite controller successful", "chatID", req.ChatId, "userID", req.UserId)
-	return &sso.CanWriteResponse{CanWrite: canWrite}, nil
+	return &chatMgmt.CanWriteChatResponse{CanWrite: canWrite}, nil
 }
 
-func (s *GRPCServer) MakeAdmin(ctx context.Context, req *sso.MakeAdminRequest) (*sso.MakeAdminResponse, error) {
+func (s *GRPCServer) MakeAdmin(ctx context.Context, req *chatMgmt.MakeChatAdminRequest) (*chatMgmt.MakeChatAdminResponse, error) {
 	slog.Info("MakeAdmin controller started")
 	if err := s.authorize(ctx); err != nil {
 		slog.Error("Authorization error", "error", err.Error())
@@ -172,10 +172,10 @@ func (s *GRPCServer) MakeAdmin(ctx context.Context, req *sso.MakeAdminRequest) (
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	slog.Info("MakeAdmin controller successful", "chatID", req.ChatId, "userID", req.UserId)
-	return &sso.MakeAdminResponse{}, nil
+	return &chatMgmt.MakeChatAdminResponse{}, nil
 }
 
-func (s *GRPCServer) DeleteAdmin(ctx context.Context, req *sso.DeleteAdminRequest) (*sso.DeleteAdminResponse, error) {
+func (s *GRPCServer) DeleteAdmin(ctx context.Context, req *chatMgmt.DeleteChatAdminRequest) (*chatMgmt.DeleteChatAdminResponse, error) {
 	slog.Info("DeleteAdmin controller started")
 	if err := s.authorize(ctx); err != nil {
 		slog.Error("Authorization error", "error", err.Error())
@@ -187,10 +187,10 @@ func (s *GRPCServer) DeleteAdmin(ctx context.Context, req *sso.DeleteAdminReques
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	slog.Info("DeleteAdmin controller successful", "chatID", req.ChatId, "userID", req.UserId)
-	return &sso.DeleteAdminResponse{}, nil
+	return &chatMgmt.DeleteChatAdminResponse{}, nil
 }
 
-func (s *GRPCServer) IsAdmin(ctx context.Context, req *sso.IsAdminRequest) (*sso.IsAdminResponse, error) {
+func (s *GRPCServer) IsAdmin(ctx context.Context, req *chatMgmt.IsChatAdminRequest) (*chatMgmt.IsChatAdminResponse, error) {
 	slog.Info("IsAdmin controller started")
 	if err := s.authorize(ctx); err != nil {
 		slog.Error("Authorization error", "error", err.Error())
@@ -202,5 +202,20 @@ func (s *GRPCServer) IsAdmin(ctx context.Context, req *sso.IsAdminRequest) (*sso
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	slog.Info("IsAdmin controller successful", "chatID", req.ChatId, "userID", req.UserId)
-	return &sso.IsAdminResponse{IsAdmin: isAdmin}, nil
+	return &chatMgmt.IsChatAdminResponse{IsAdmin: isAdmin}, nil
+}
+
+func (s *GRPCServer) GetChatUsers(ctx context.Context, req *chatMgmt.GetChatUsersRequest) (*chatMgmt.GetChatUsersResponse, error) {
+	slog.Info("GetChatUsers controller started")
+	if err := s.authorize(ctx); err != nil {
+		slog.Error("Authorization error", "error", err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	userIDs, err := s.service.GetChatUsers(ctx, req.ChatId)
+	if err != nil {
+		slog.Error("GetChatUsers error", "error", err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	slog.Info("GetChatUsers controller successful", "chatID", req.ChatId)
+	return &chatMgmt.GetChatUsersResponse{UserIds: userIDs}, nil
 }

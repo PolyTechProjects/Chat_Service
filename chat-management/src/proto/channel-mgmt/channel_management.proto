@@ -9,11 +9,13 @@ service ChannelManagement {
     rpc DeleteChannel (DeleteChannelRequest) returns (DeleteChannelResponse) {}
     rpc UpdateChannel (UpdateChannelRequest) returns (UpdateChannelResponse) {}
     rpc JoinChannel (JoinChannelRequest) returns (JoinChannelResponse) {}
-    rpc KickUser (KickUserRequest) returns (KickUserResponse) {}
-    rpc CanWrite (CanWriteRequest) returns (CanWriteResponse) {}
-    rpc MakeAdmin (MakeAdminRequest) returns (MakeAdminResponse) {}
-    rpc DeleteAdmin (DeleteAdminRequest) returns (DeleteAdminResponse) {}
-    rpc IsAdmin (IsAdminRequest) returns (IsAdminResponse) {}
+    rpc KickUserChannel (KickUserChannelRequest) returns (KickUserChannelResponse) {}
+    rpc CanWriteChannel (CanWriteChannelRequest) returns (CanWriteChannelResponse) {}
+    rpc MakeChannelAdmin (MakeChannelAdminRequest) returns (MakeChannelAdminResponse) {}
+    rpc DeleteChannelAdmin (DeleteChannelAdminRequest) returns (DeleteChannelAdminResponse) {}
+    rpc IsChannelAdmin (IsChannelAdminRequest) returns (IsChannelAdminResponse) {}
+    rpc GetChanUsers (GetChanUsersRequest) returns (GetChanUsersResponse) {}
+    
 }
 
 message CreateChannelRequest {
@@ -49,44 +51,52 @@ message JoinChannelRequest {
 
 message JoinChannelResponse {}
 
-message KickUserRequest {
+message KickUserChannelRequest {
     string channel_id = 1;
     string user_id = 2;
     string requesting_user_id = 3;
 }
 
-message KickUserResponse {}
+message KickUserChannelResponse {}
 
-message CanWriteRequest {
+message CanWriteChannelRequest {
     string channel_id = 1;
     string user_id = 2;
 }
 
-message CanWriteResponse {
+message CanWriteChannelResponse {
     bool can_write = 1;
 }
 
-message MakeAdminRequest {
+message MakeChannelAdminRequest {
     string channel_id = 1;
     string user_id = 2;
     string requesting_user_id = 3;
 }
 
-message MakeAdminResponse {}
+message MakeChannelAdminResponse {}
 
-message DeleteAdminRequest {
+message DeleteChannelAdminRequest {
     string channel_id = 1;
     string user_id = 2;
     string requesting_user_id = 3;
 }
 
-message DeleteAdminResponse {}
+message DeleteChannelAdminResponse {}
 
-message IsAdminRequest {
+message IsChannelAdminRequest {
     string channel_id = 1;
     string user_id = 2;
 }
 
-message IsAdminResponse {
+message IsChannelAdminResponse {
     bool is_admin = 1;
+}
+
+message GetChanUsersRequest {
+    string channel_id = 1;
+}
+
+message GetChanUsersResponse {
+    repeated string user_ids = 1;
 }

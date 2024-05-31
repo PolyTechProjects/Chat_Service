@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net"
 
-	sso "example.com/channel-management/src/gen/go/channel-mgmt"
+	channelMgmt "example.com/channel-management/src/gen/go/channel-mgmt"
 	auth "example.com/channel-management/src/gen/go/sso"
 	"example.com/channel-management/src/internal/service"
 	"google.golang.org/grpc"
@@ -17,7 +17,7 @@ import (
 
 type GRPCServer struct {
 	gRPCServer *grpc.Server
-	sso.UnimplementedChannelManagementServer
+	channelMgmt.UnimplementedChannelManagementServer
 	service    *service.ChannelManagementService
 	authClient auth.AuthClient
 }
@@ -34,7 +34,7 @@ func New(service *service.ChannelManagementService, authAddress string) (*GRPCSe
 		service:    service,
 		authClient: authClient,
 	}
-	sso.RegisterChannelManagementServer(gRPCServer, g)
+	channelMgmt.RegisterChannelManagementServer(gRPCServer, g)
 	return g, nil
 }
 
@@ -70,7 +70,7 @@ func (s *GRPCServer) authorize(ctx context.Context) error {
 	return nil
 }
 
-func (s *GRPCServer) CreateChannel(ctx context.Context, req *sso.CreateChannelRequest) (*sso.CreateChannelResponse, error) {
+func (s *GRPCServer) CreateChannel(ctx context.Context, req *channelMgmt.CreateChannelRequest) (*channelMgmt.CreateChannelResponse, error) {
 	slog.Info("Create channel controller started")
 	if err := s.authorize(ctx); err != nil {
 		slog.Error("Authorization error", "error", err.Error())
@@ -82,10 +82,10 @@ func (s *GRPCServer) CreateChannel(ctx context.Context, req *sso.CreateChannelRe
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	slog.Info("Create channel controller successful", "channelID", channelID)
-	return &sso.CreateChannelResponse{ChannelId: channelID}, nil
+	return &channelMgmt.CreateChannelResponse{ChannelId: channelID}, nil
 }
 
-func (s *GRPCServer) DeleteChannel(ctx context.Context, req *sso.DeleteChannelRequest) (*sso.DeleteChannelResponse, error) {
+func (s *GRPCServer) DeleteChannel(ctx context.Context, req *channelMgmt.DeleteChannelRequest) (*channelMgmt.DeleteChannelResponse, error) {
 	slog.Info("Delete channel controller started")
 	if err := s.authorize(ctx); err != nil {
 		slog.Error("Authorization error", "error", err.Error())
@@ -97,10 +97,10 @@ func (s *GRPCServer) DeleteChannel(ctx context.Context, req *sso.DeleteChannelRe
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	slog.Info("Delete channel controller successful", "channelID", req.ChannelId)
-	return &sso.DeleteChannelResponse{}, nil
+	return &channelMgmt.DeleteChannelResponse{}, nil
 }
 
-func (s *GRPCServer) UpdateChannel(ctx context.Context, req *sso.UpdateChannelRequest) (*sso.UpdateChannelResponse, error) {
+func (s *GRPCServer) UpdateChannel(ctx context.Context, req *channelMgmt.UpdateChannelRequest) (*channelMgmt.UpdateChannelResponse, error) {
 	slog.Info("Update channel controller started")
 	if err := s.authorize(ctx); err != nil {
 		slog.Error("Authorization error", "error", err.Error())
@@ -112,10 +112,10 @@ func (s *GRPCServer) UpdateChannel(ctx context.Context, req *sso.UpdateChannelRe
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	slog.Info("Update channel controller successful", "channelID", req.ChannelId)
-	return &sso.UpdateChannelResponse{}, nil
+	return &channelMgmt.UpdateChannelResponse{}, nil
 }
 
-func (s *GRPCServer) JoinChannel(ctx context.Context, req *sso.JoinChannelRequest) (*sso.JoinChannelResponse, error) {
+func (s *GRPCServer) JoinChannel(ctx context.Context, req *channelMgmt.JoinChannelRequest) (*channelMgmt.JoinChannelResponse, error) {
 	slog.Info("Join channel controller started")
 	if err := s.authorize(ctx); err != nil {
 		slog.Error("Authorization error", "error", err.Error())
@@ -127,10 +127,10 @@ func (s *GRPCServer) JoinChannel(ctx context.Context, req *sso.JoinChannelReques
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	slog.Info("Join channel controller successful", "channelID", req.ChannelId, "userID", req.UserId)
-	return &sso.JoinChannelResponse{}, nil
+	return &channelMgmt.JoinChannelResponse{}, nil
 }
 
-func (s *GRPCServer) KickUser(ctx context.Context, req *sso.KickUserRequest) (*sso.KickUserResponse, error) {
+func (s *GRPCServer) KickUser(ctx context.Context, req *channelMgmt.KickUserChannelRequest) (*channelMgmt.KickUserChannelResponse, error) {
 	slog.Info("Kick user controller started")
 	if err := s.authorize(ctx); err != nil {
 		slog.Error("Authorization error", "error", err.Error())
@@ -142,10 +142,10 @@ func (s *GRPCServer) KickUser(ctx context.Context, req *sso.KickUserRequest) (*s
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	slog.Info("Kick user controller successful", "channelID", req.ChannelId, "userID", req.UserId)
-	return &sso.KickUserResponse{}, nil
+	return &channelMgmt.KickUserChannelResponse{}, nil
 }
 
-func (s *GRPCServer) CanWrite(ctx context.Context, req *sso.CanWriteRequest) (*sso.CanWriteResponse, error) {
+func (s *GRPCServer) CanWrite(ctx context.Context, req *channelMgmt.CanWriteChannelRequest) (*channelMgmt.CanWriteChannelResponse, error) {
 	slog.Info("CanWrite controller started")
 	if err := s.authorize(ctx); err != nil {
 		slog.Error("Authorization error", "error", err.Error())
@@ -157,10 +157,10 @@ func (s *GRPCServer) CanWrite(ctx context.Context, req *sso.CanWriteRequest) (*s
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	slog.Info("CanWrite controller successful", "channelID", req.ChannelId, "userID", req.UserId)
-	return &sso.CanWriteResponse{CanWrite: canWrite}, nil
+	return &channelMgmt.CanWriteChannelResponse{CanWrite: canWrite}, nil
 }
 
-func (s *GRPCServer) MakeAdmin(ctx context.Context, req *sso.MakeAdminRequest) (*sso.MakeAdminResponse, error) {
+func (s *GRPCServer) MakeAdmin(ctx context.Context, req *channelMgmt.MakeChannelAdminRequest) (*channelMgmt.MakeChannelAdminResponse, error) {
 	slog.Info("MakeAdmin controller started")
 	if err := s.authorize(ctx); err != nil {
 		slog.Error("Authorization error", "error", err.Error())
@@ -172,10 +172,10 @@ func (s *GRPCServer) MakeAdmin(ctx context.Context, req *sso.MakeAdminRequest) (
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	slog.Info("MakeAdmin controller successful", "channelID", req.ChannelId, "userID", req.UserId)
-	return &sso.MakeAdminResponse{}, nil
+	return &channelMgmt.MakeChannelAdminResponse{}, nil
 }
 
-func (s *GRPCServer) DeleteAdmin(ctx context.Context, req *sso.DeleteAdminRequest) (*sso.DeleteAdminResponse, error) {
+func (s *GRPCServer) DeleteAdmin(ctx context.Context, req *channelMgmt.DeleteChannelAdminRequest) (*channelMgmt.DeleteChannelAdminResponse, error) {
 	slog.Info("DeleteAdmin controller started")
 	if err := s.authorize(ctx); err != nil {
 		slog.Error("Authorization error", "error", err.Error())
@@ -187,10 +187,10 @@ func (s *GRPCServer) DeleteAdmin(ctx context.Context, req *sso.DeleteAdminReques
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	slog.Info("DeleteAdmin controller successful", "channelID", req.ChannelId, "userID", req.UserId)
-	return &sso.DeleteAdminResponse{}, nil
+	return &channelMgmt.DeleteChannelAdminResponse{}, nil
 }
 
-func (s *GRPCServer) IsAdmin(ctx context.Context, req *sso.IsAdminRequest) (*sso.IsAdminResponse, error) {
+func (s *GRPCServer) IsAdmin(ctx context.Context, req *channelMgmt.IsChannelAdminRequest) (*channelMgmt.IsChannelAdminResponse, error) {
 	slog.Info("IsAdmin controller started")
 	if err := s.authorize(ctx); err != nil {
 		slog.Error("Authorization error", "error", err.Error())
@@ -202,5 +202,20 @@ func (s *GRPCServer) IsAdmin(ctx context.Context, req *sso.IsAdminRequest) (*sso
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	slog.Info("IsAdmin controller successful", "channelID", req.ChannelId, "userID", req.UserId)
-	return &sso.IsAdminResponse{IsAdmin: isAdmin}, nil
+	return &channelMgmt.IsChannelAdminResponse{IsAdmin: isAdmin}, nil
+}
+
+func (s *GRPCServer) GetChanUsers(ctx context.Context, req *channelMgmt.GetChanUsersRequest) (*channelMgmt.GetChanUsersResponse, error) {
+	slog.Info("GetChanUsers controller started")
+	if err := s.authorize(ctx); err != nil {
+		slog.Error("Authorization error", "error", err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	userIDs, err := s.service.GetChanUsers(ctx, req.ChannelId)
+	if err != nil {
+		slog.Error("GetChanUsers error", "error", err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	slog.Info("GetChanUsers controller successful", "channelID", req.ChannelId)
+	return &channelMgmt.GetChanUsersResponse{UserIds: userIDs}, nil
 }
