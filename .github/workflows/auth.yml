@@ -5,8 +5,10 @@ name: Auth Service CI
 
 on:
   push:
+    branches:
+      - '!main'
     paths:
-      - 'auth/**'
+      - 'auth/**
 
 jobs:
   build:

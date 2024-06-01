@@ -106,7 +106,7 @@ jobs:
         with:
           context: ./auth
           file: ./auth/app.Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           tags: ghcr.io/polytechprojects/chat_service/auth:latest
 
@@ -127,7 +127,7 @@ jobs:
         with:
           context: ./chat-app
           file: ./chat-app/app.Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           tags: ghcr.io/polytechprojects/chat_service/chat-app:latest
 
@@ -148,7 +148,7 @@ jobs:
         with:
           context: ./media-handler
           file: ./media-handler/app.Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           tags: ghcr.io/polytechprojects/chat_service/media-handler:latest
 
@@ -169,7 +169,7 @@ jobs:
         with:
           context: ./user-mgmt
           file: ./user-mgmt/app.Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           tags: ghcr.io/polytechprojects/chat_service/user-mgmt:latest
 
@@ -196,7 +196,7 @@ jobs:
         with:
           context: ./notification
           file: ./notification/app.Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           tags: ghcr.io/polytechprojects/chat_service/notification:latest
 
@@ -210,5 +210,31 @@ jobs:
         with:
           to: ${{ secrets.TELEGRAM_RELEASES_CHANNEL }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: ГООООООООООООООООООЛ!!! (build)
+          photo: test/goal.png
+
+  deployment:
+    needs: dockerize
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Send the build to telegram
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_RELEASES_CHANNEL }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           message: ГООООООООООООООООООЛ!!!
+          photo: test/goal.png
+
+  telegram-deployment-notification:
+    needs: deployment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Send the build to telegram
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_RELEASES_CHANNEL }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: ГООООООООООООООООООЛ!!! (deployment)
           photo: test/goal.png

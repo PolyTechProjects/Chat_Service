@@ -5,6 +5,8 @@ name: User Mgmt Service CI
 
 on:
   push:
+    branches:
+      - '!main'
     paths:
       - 'user-mgmt/**'
 
