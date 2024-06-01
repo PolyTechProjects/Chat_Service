@@ -1,0 +1,27 @@
+services:
+  channel_management_app:
+    build:
+      context: .
+      dockerfile: app.Dockerfile
+    ports:
+      - "${APP_PORT}:${APP_INNER_PORT}"
+    depends_on:
+      - channel_management_db
+    networks:
+      - micro-proxy-net
+
+  channel_management_db:
+    image: postgres:15.3
+    ports:
+      - "${DB_PORT}:${DB_INNER_PORT}"
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    networks:
+      - micro-proxy-net
+
+networks:
+  micro-proxy-net:
+    external: true
+    name: microservice-network

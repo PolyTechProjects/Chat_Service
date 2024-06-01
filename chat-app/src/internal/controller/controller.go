@@ -52,16 +52,20 @@ func (m *MessageHistoryController) GetHistoryHandler(w http.ResponseWriter, r *h
 }
 
 type WebsocketController struct {
-	messageService   *service.MessageService
-	broadcastChannel chan *models.Message
-	authClient       *client.AuthGRPCClient
+	messageService    *service.MessageService
+	broadcastChannel  chan *models.Message
+	authClient        *client.AuthGRPCClient
+	channelMgmtClient *client.ChanMgmtGRPCClient
+	chatMgmtClient    *client.ChatMgmtGRPCClient
 }
 
-func NewWebsocketController(messageService *service.MessageService, authClient *client.AuthGRPCClient) *WebsocketController {
+func NewWebsocketController(messageService *service.MessageService, authClient *client.AuthGRPCClient, channelMgmtClient *client.ChanMgmtGRPCClient, chatMgmtClient *client.ChatMgmtGRPCClient) *WebsocketController {
 	return &WebsocketController{
-		messageService:   messageService,
-		broadcastChannel: make(chan *models.Message),
-		authClient:       authClient,
+		messageService:    messageService,
+		broadcastChannel:  make(chan *models.Message),
+		authClient:        authClient,
+		channelMgmtClient: channelMgmtClient,
+		chatMgmtClient:    chatMgmtClient,
 	}
 }
 
@@ -69,24 +73,28 @@ func (ws *WebsocketController) SendMessageHandler(w http.ResponseWriter, r *http
 	upgrader := websocket.Upgrader{}
 	wsConnection, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		slog.Error("Error has occured while trying to connect to websocket server.")
+		slog.Error("Error has occurred while trying to connect to websocket server.")
+		return
 	}
 
 	token := r.Header.Get("Authorization")
 	_, err = ws.authClient.PerformAuthorize(r.Context(), token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
 	}
 
 	extractResp, err := ws.authClient.PerformUserIdExtraction(r.Context(), token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
 	}
 	userId, err := uuid.Parse(extractResp.UserId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
-	ws.messageService.ReadMessages(userId, wsConnection, ws.broadcastChannel)
+	ws.messageService.ReadMessages(userId, wsConnection, ws.broadcastChannel, token)
 	wsConnection.Close()
 }
 
@@ -99,33 +107,56 @@ func (ws *WebsocketController) StartBroadcasting() {
 	err := subscriber.Ping(context.Background())
 	if err != nil {
 		slog.Error("Not Available message-channel")
+		return
 	}
 	slog.Info("Available message-channel")
 	for {
-		//message := <-ws.broadcastChannel
-		message, err := receiveMessageFromRedis(subscriber)
+		messageWithToken, err := receiveMessageFromRedis(subscriber)
 		if err != nil {
 			slog.Error(err.Error())
+			continue
 		}
 		slog.Info("Received message")
-		user1 := uuid.MustParse("cfd96643-34a3-466f-9be0-ab079af09419")
-		user2 := uuid.MustParse("e5b7fa6b-3f2b-45df-bd3d-88f99ab29e40")
-		user3 := uuid.MustParse("daf3f3e4-98ea-4456-add9-c12906b2f4c0")
-		//Let's say that message.ChatRoomId is sent to ChatRoomMgmtService which will return List<UserId>
-		userIds := []uuid.UUID{user1, user2, user3}
-		ws.messageService.Broadcast(userIds, message)
+
+		message := messageWithToken.Message
+		token := messageWithToken.Token
+
+		channelID := message.ChatRoomId
+		channelUsers, err := ws.channelMgmtClient.PerformGetChanUsers(channelID, token)
+		if err == nil && len(channelUsers) > 0 {
+			messageModel, err := models.MapRequestToMessage(&message)
+			if err != nil {
+				slog.Error("Error has occurred while mapping message to messageModel", err)
+				continue
+			}
+			ws.messageService.Broadcast(channelUsers, messageModel)
+			continue
+		}
+
+		chatUsers, err := ws.chatMgmtClient.PerformGetChatUsers(channelID, token)
+		if err == nil && len(chatUsers) > 0 {
+			messageModel, err := models.MapRequestToMessage(&message)
+			if err != nil {
+				slog.Error("Error has occurred while mapping message to messageModel", err)
+				continue
+			}
+			ws.messageService.Broadcast(chatUsers, messageModel)
+			continue
+		}
+
+		slog.Error("No users found in either channel or chat management for broadcasting")
 	}
 }
 
-func receiveMessageFromRedis(subscriber *redis.PubSub) (*models.Message, error) {
-	message := &models.Message{}
+func receiveMessageFromRedis(subscriber *redis.PubSub) (*dto.MessageWithToken, error) {
+	messageWithToken := &dto.MessageWithToken{}
 	slog.Info("Waiting for message")
 	channel := subscriber.Channel()
 	receivedMessage := <-channel
 	slog.Info(receivedMessage.Payload)
-	err := json.Unmarshal([]byte(receivedMessage.Payload), message)
+	err := json.Unmarshal([]byte(receivedMessage.Payload), messageWithToken)
 	if err != nil {
 		return nil, err
 	}
-	return message, nil
+	return messageWithToken, nil
 }
