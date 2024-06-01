@@ -13,7 +13,7 @@ services:
   chat_management_db:
     image: postgres:15.3
     ports:
-      - "${DB_PORT}:5432"
+      - "${DB_PORT}:${DB_INNER_PORT}"
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}

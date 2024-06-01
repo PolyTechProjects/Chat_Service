@@ -6,8 +6,14 @@ import (
 )
 
 type Config struct {
+	Auth     AuthConfig
 	Grpc     WebConfig
 	Database DatabaseConfig
+}
+
+type AuthConfig struct {
+	AuthHost string `env:"AUTH_APP_HOST"`
+	AuthPort string `env:"AUTH_APP_PORT"`
 }
 
 type WebConfig struct {

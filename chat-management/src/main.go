@@ -9,6 +9,7 @@ import (
 	"example.com/chat-management/src/config"
 	"example.com/chat-management/src/database"
 	"example.com/chat-management/src/internal/app"
+	"example.com/chat-management/src/internal/client"
 	"example.com/chat-management/src/internal/repository"
 	"example.com/chat-management/src/internal/server"
 	"example.com/chat-management/src/internal/service"
@@ -30,8 +31,12 @@ func main() {
 	log.Info("Creating service")
 	service := service.New(*repo)
 
-	log.Info("Creating gRPC server")
-	grpcServer, err := server.New(service, os.Getenv("AUTH_ADDRESS"))
+	slog.Info("Creating auth client")
+	authClient := client.NewAuthClient(cfg)
+
+	slog.Info("Creating gRPC server")
+	grpcServer, err := server.New(service, authClient)
+
 	if err != nil {
 		log.Error("Failed to create gRPC server", "error", err)
 		return

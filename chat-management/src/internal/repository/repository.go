@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"example.com/chat-management/src/internal/dto"
 	"example.com/chat-management/src/internal/models"
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm"
@@ -23,67 +24,66 @@ func (r *ChatRepository) DeleteChat(chatID uuid.UUID) error {
 	return r.db.Where("id = ?", chatID).Delete(&models.Chat{}).Error
 }
 
-func (r *ChatRepository) UpdateChat(chatID uuid.UUID, name, description string) error {
-	return r.db.Model(&models.Chat{}).Where("id = ?", chatID).Updates(map[string]interface{}{
-		"name":        name,
-		"description": description,
+func (r *ChatRepository) UpdateChat(request dto.UpdateChatRequest) error {
+	return r.db.Model(&models.Chat{}).Where("id = ?", request.ChatID).Updates(map[string]interface{}{
+		"name":        request.Name,
+		"description": request.Description,
 	}).Error
 }
 
-func (r *ChatRepository) AddUserToChat(chatID, userID uuid.UUID) error {
+func (r *ChatRepository) AddUserToChat(request dto.UserChatRequest) error {
 	userChat := models.UserChat{
-		ChatID: chatID,
-		UserID: userID,
+		ChatID: request.ChatID,
+		UserID: request.UserID,
 	}
 	return r.db.Create(&userChat).Error
 }
 
-func (r *ChatRepository) RemoveUserFromChat(chatID, userID uuid.UUID) error {
-	return r.db.Where("chat_id = ? AND user_id = ?", chatID, userID).Delete(&models.UserChat{}).Error
+func (r *ChatRepository) RemoveUserFromChat(request dto.UserChatRequest) error {
+	return r.db.Where("chat_id = ? AND user_id = ?", request.ChatID, request.UserID).Delete(&models.UserChat{}).Error
 }
 
-func (r *ChatRepository) AddAdmin(chatID, userID uuid.UUID) error {
+func (r *ChatRepository) AddAdmin(request dto.AdminRequest) error {
 	admin := models.Admin{
-		ChatID: chatID,
-		UserID: userID,
+		ChatID: request.ChatID,
+		UserID: request.UserID,
 	}
 	return r.db.Create(&admin).Error
 }
 
-func (r *ChatRepository) RemoveAdmin(chatID, userID uuid.UUID) error {
-	return r.db.Where("chat_id = ? AND user_id = ?", chatID, userID).Delete(&models.Admin{}).Error
+func (r *ChatRepository) RemoveAdmin(request dto.AdminRequest) error {
+	return r.db.Where("chat_id = ? AND user_id = ?", request.ChatID, request.UserID).Delete(&models.Admin{}).Error
 }
 
-func (r *ChatRepository) IsAdmin(chatID, userID uuid.UUID) (bool, error) {
+func (r *ChatRepository) IsAdmin(request dto.AdminRequest) (bool, error) {
 	var admin models.Admin
-	err := r.db.Where("chat_id = ? AND user_id = ?", chatID, userID).First(&admin).Error
+	err := r.db.Where("chat_id = ? AND user_id = ?", request.ChatID, request.UserID).First(&admin).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return false, nil
-		}
 		return false, err
 	}
 	return true, nil
 }
 
-func (r *ChatRepository) IsMember(chatID, userID uuid.UUID) (bool, error) {
+func (r *ChatRepository) IsMember(request dto.UserChatRequest) (bool, error) {
 	var userChat models.UserChat
-	err := r.db.Where("chat_id = ? AND user_id = ?", chatID, userID).First(&userChat).Error
+	err := r.db.Where("chat_id = ? AND user_id = ?", request.ChatID, request.UserID).First(&userChat).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return false, nil
-		}
 		return false, err
 	}
 	return true, nil
 }
 
-func (r *ChatRepository) GetChatUsers(chatId uuid.UUID) ([]string, error) {
+func (r *ChatRepository) GetChatUsers(chatID uuid.UUID) ([]string, error) {
 	var userChats []models.UserChat
-	err := r.db.Where("chat_id = ?", chatId).Find(&userChats).Error
+	err := r.db.Where("chat_id = ?", chatID).Find(&userChats).Error
 	if err != nil {
 		return nil, err
 	}
+
+	if len(userChats) == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+
 	userIDs := make([]string, len(userChats))
 	for i, uc := range userChats {
 		userIDs[i] = uc.UserID.String()

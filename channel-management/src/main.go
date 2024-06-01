@@ -9,6 +9,7 @@ import (
 	"example.com/channel-management/src/config"
 	"example.com/channel-management/src/database"
 	"example.com/channel-management/src/internal/app"
+	"example.com/channel-management/src/internal/client"
 	"example.com/channel-management/src/internal/repository"
 	"example.com/channel-management/src/internal/server"
 	"example.com/channel-management/src/internal/service"
@@ -30,8 +31,11 @@ func main() {
 	slog.Info("Creating service")
 	service := service.New(*repo)
 
+	slog.Info("Creating auth client")
+	authClient := client.NewAuthClient(cfg)
+
 	slog.Info("Creating gRPC server")
-	grpcServer, err := server.New(service, os.Getenv("AUTH_ADDRESS"))
+	grpcServer, err := server.New(service, authClient)
 	if err != nil {
 		slog.Error("Failed to create gRPC server", "error", err)
 		return

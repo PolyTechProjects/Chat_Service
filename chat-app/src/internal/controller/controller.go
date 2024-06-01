@@ -73,22 +73,26 @@ func (ws *WebsocketController) SendMessageHandler(w http.ResponseWriter, r *http
 	upgrader := websocket.Upgrader{}
 	wsConnection, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		slog.Error("Error has occured while trying to connect to websocket server.")
+		slog.Error("Error has occurred while trying to connect to websocket server.")
+		return
 	}
 
 	token := r.Header.Get("Authorization")
 	_, err = ws.authClient.PerformAuthorize(r.Context(), token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
 	}
 
 	extractResp, err := ws.authClient.PerformUserIdExtraction(r.Context(), token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
 	}
 	userId, err := uuid.Parse(extractResp.UserId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 	ws.messageService.ReadMessages(userId, wsConnection, ws.broadcastChannel, token)
 	wsConnection.Close()
@@ -98,40 +102,19 @@ func (ws *WebsocketController) StartListeningFileChannel() {
 	ws.messageService.ListenFileChannel()
 }
 
-// func (ws *WebsocketController) StartBroadcasting() {
-// 	subscriber := ws.messageService.SubscribeToMessageChannel()
-// 	err := subscriber.Ping(context.Background())
-// 	if err != nil {
-// 		slog.Error("Not Available message-channel")
-// 	}
-// 	slog.Info("Available message-channel")
-// 	for {
-// 		//message := <-ws.broadcastChannel
-// 		message, err := receiveMessageFromRedis(subscriber)
-// 		if err != nil {
-// 			slog.Error(err.Error())
-// 		}
-// 		slog.Info("Received message")
-// 		user1 := uuid.MustParse("cfd96643-34a3-466f-9be0-ab079af09419")
-// 		user2 := uuid.MustParse("e5b7fa6b-3f2b-45df-bd3d-88f99ab29e40")
-// 		user3 := uuid.MustParse("daf3f3e4-98ea-4456-add9-c12906b2f4c0")
-// 		//Let's say that message.ChatRoomId is sent to ChatRoomMgmtService which will return List<UserId>
-// 		userIds := []uuid.UUID{user1, user2, user3}
-// 		ws.messageService.Broadcast(userIds, message)
-// 	}
-// }
-
 func (ws *WebsocketController) StartBroadcasting() {
 	subscriber := ws.messageService.SubscribeToMessageChannel()
 	err := subscriber.Ping(context.Background())
 	if err != nil {
 		slog.Error("Not Available message-channel")
+		return
 	}
 	slog.Info("Available message-channel")
 	for {
 		messageWithToken, err := receiveMessageFromRedis(subscriber)
 		if err != nil {
 			slog.Error(err.Error())
+			continue
 		}
 		slog.Info("Received message")
 
@@ -140,23 +123,28 @@ func (ws *WebsocketController) StartBroadcasting() {
 
 		channelID := message.ChatRoomId
 		channelUsers, err := ws.channelMgmtClient.PerformGetChanUsers(channelID, token)
-		if err != nil {
-			slog.Error("Error fetching users from channel-management", err)
+		if err == nil && len(channelUsers) > 0 {
+			messageModel, err := models.MapRequestToMessage(&message)
+			if err != nil {
+				slog.Error("Error has occurred while mapping message to messageModel", err)
+				continue
+			}
+			ws.messageService.Broadcast(channelUsers, messageModel)
+			continue
 		}
+
 		chatUsers, err := ws.chatMgmtClient.PerformGetChatUsers(channelID, token)
-		if err != nil {
-			slog.Error("Error fetching users from chat-management", err)
+		if err == nil && len(chatUsers) > 0 {
+			messageModel, err := models.MapRequestToMessage(&message)
+			if err != nil {
+				slog.Error("Error has occurred while mapping message to messageModel", err)
+				continue
+			}
+			ws.messageService.Broadcast(chatUsers, messageModel)
+			continue
 		}
 
-		userIDs := mergeUserLists(channelUsers, chatUsers)
-
-		messageModel, err := models.MapRequestToMessage(&message)
-		if err != nil {
-			slog.Error("Error has occured while mapping message to messageModel", err)
-			slog.Error(err.Error())
-		}
-
-		ws.messageService.Broadcast(userIDs, messageModel)
+		slog.Error("No users found in either channel or chat management for broadcasting")
 	}
 }
 
@@ -171,19 +159,4 @@ func receiveMessageFromRedis(subscriber *redis.PubSub) (*dto.MessageWithToken, e
 		return nil, err
 	}
 	return messageWithToken, nil
-}
-
-func mergeUserLists(channelUsers, chatUsers []uuid.UUID) []uuid.UUID {
-	userSet := make(map[uuid.UUID]struct{})
-	for _, user := range channelUsers {
-		userSet[user] = struct{}{}
-	}
-	for _, user := range chatUsers {
-		userSet[user] = struct{}{}
-	}
-	var mergedUsers []uuid.UUID
-	for user := range userSet {
-		mergedUsers = append(mergedUsers, user)
-	}
-	return mergedUsers
 }

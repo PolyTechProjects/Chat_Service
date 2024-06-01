@@ -3,7 +3,6 @@ package database
 import (
 	"fmt"
 	"log/slog"
-	"os"
 
 	"example.com/chat-management/src/config"
 	"example.com/chat-management/src/internal/models"
@@ -22,11 +21,11 @@ func Init(cfg *config.Config) {
 	slog.Info("Connecting to DB")
 	str := fmt.Sprintf(
 		"postgres://%v:%v@%v:%v/%v?sslmode=%v",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
+		cfg.Database.UserName,
+		cfg.Database.Password,
 		cfg.Database.Host,
 		cfg.Database.InnerPort,
-		os.Getenv("DB_NAME"),
+		cfg.Database.DatabaseName,
 		cfg.Database.SslMode,
 	)
 	slog.Info(str)
