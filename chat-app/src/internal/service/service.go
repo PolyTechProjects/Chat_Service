@@ -87,7 +87,7 @@ func (m *MessageService) Broadcast(userIds []uuid.UUID, message *models.Message)
 	}
 }
 
-func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.Conn, broadcastChannel chan *models.Message) {
+func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.Conn, broadcastChannel chan *models.Message, token string) {
 	m.userIdXWsConnection[userId] = wsConnection
 
 	for {
@@ -133,7 +133,11 @@ func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.
 			break
 		}
 		slog.Info("Publish Message")
-		bytes, err := json.Marshal(message)
+		messageWithToken := dto.MessageWithToken{
+			Message: messageReq,
+			Token:   token,
+		}
+		bytes, err := json.Marshal(messageWithToken)
 		if err != nil {
 			slog.Error("Error has occured while marshalling message", err)
 			break

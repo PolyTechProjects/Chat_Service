@@ -30,7 +30,11 @@ func main() {
 	messageHistoryService := service.NewMessageHistoryService(messageRepository)
 	messageService := service.NewMessageService(messageRepository)
 	messageHistoryController := controller.NewMessageHistoryController(messageHistoryService)
-	webSocketController := controller.NewWebsocketController(messageService, authClient)
+
+	channelMgmtClient := client.NewChanMgmtClient(cfg)
+	chatMgmtClient := client.NewChatMgmtClient(cfg)
+
+	webSocketController := controller.NewWebsocketController(messageService, authClient, channelMgmtClient, chatMgmtClient)
 	server := server.NewHttpServer(messageHistoryController, webSocketController)
 	app := app.New(server, cfg)
 	go app.MustRun()

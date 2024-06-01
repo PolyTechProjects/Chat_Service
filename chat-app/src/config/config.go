@@ -6,10 +6,12 @@ import (
 )
 
 type Config struct {
-	App   AppConfig
-	Auth  AuthConfig
-	Db    DbConfig
-	Redis RedisConfig
+	App      AppConfig
+	Auth     AuthConfig
+	Db       DbConfig
+	Redis    RedisConfig
+	ChanMgmt ChanMgmtConfig
+	ChatMgmt ChatMgmtConfig
 }
 
 type AppConfig struct {
@@ -19,6 +21,16 @@ type AppConfig struct {
 type AuthConfig struct {
 	AuthHost string `env:"AUTH_HOST"`
 	AuthPort string `env:"AUTH_PORT"`
+}
+
+type ChanMgmtConfig struct {
+	ChanMgmtHost string `env:"CHANNEL_MGMT_HOST"`
+	ChanMgmtPort string `env:"CHANNEL_MGMT_PORT"`
+}
+
+type ChatMgmtConfig struct {
+	ChatMgmtHost string `env:"CHAT_MGMT_HOST"`
+	ChatMgmtPort string `env:"CHAT_MGMT_PORT"`
 }
 
 type DbConfig struct {
