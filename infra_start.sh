@@ -5,7 +5,7 @@ cd channel-management/ && docker compose up channel_management_db -d && cd ../
 cd chat-management/ && docker compose up chat_management_db -d && cd ../
 cd chat-app/ && docker compose up chat_db -d && cd ../
 cd media-handler/ && docker compose up media_db seaweedfs_master seaweedfs_volume1 seaweedfs_volume2 -d && cd ../
-cd notification/ && docker compose up notification_db && cd ../
+cd notification/ && docker compose up notification_db -d && cd ../
 echo '----------------------------------'
 echo 'AUTH_POSTGRES' $(docker ps | grep -i "auth_db" | awk '{print $1}')
 echo 'USER_MGMT_POSTGRES' $(docker ps | grep -i "user_mgmt_db" | awk '{print $1}')

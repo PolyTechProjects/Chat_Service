@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
 
 type ChatMgmtGRPCClient struct {
@@ -27,8 +28,10 @@ func NewChatMgmtClient(cfg *config.Config) *ChatMgmtGRPCClient {
 	return &ChatMgmtGRPCClient{chatMgmt.NewChatManagementClient(conn)}
 }
 
-func (chatMgmtClient *ChatMgmtGRPCClient) PerformGetChatUsers(chatID string) ([]uuid.UUID, error) {
-	resp, err := chatMgmtClient.GetChatUsers(context.Background(), &chatMgmt.GetChatUsersRequest{ChatId: chatID})
+func (chatMgmtClient *ChatMgmtGRPCClient) PerformGetChatUsers(chatID, token string) ([]uuid.UUID, error) {
+	md := metadata.Pairs("Authorization", token)
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+	resp, err := chatMgmtClient.GetChatUsers(ctx, &chatMgmt.GetChatUsersRequest{ChatId: chatID})
 	if err != nil {
 		return nil, err
 	}

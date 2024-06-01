@@ -90,7 +90,7 @@ func (ws *WebsocketController) SendMessageHandler(w http.ResponseWriter, r *http
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	ws.messageService.ReadMessages(userId, wsConnection, ws.broadcastChannel)
+	ws.messageService.ReadMessages(userId, wsConnection, ws.broadcastChannel, token)
 	wsConnection.Close()
 }
 
@@ -129,39 +129,48 @@ func (ws *WebsocketController) StartBroadcasting() {
 	}
 	slog.Info("Available message-channel")
 	for {
-		message, err := receiveMessageFromRedis(subscriber)
+		messageWithToken, err := receiveMessageFromRedis(subscriber)
 		if err != nil {
 			slog.Error(err.Error())
 		}
 		slog.Info("Received message")
 
-		channelID := message.ChatRoomId.String()
-		channelUsers, err := ws.channelMgmtClient.PerformGetChanUsers(channelID)
+		message := messageWithToken.Message
+		token := messageWithToken.Token
+
+		channelID := message.ChatRoomId
+		channelUsers, err := ws.channelMgmtClient.PerformGetChanUsers(channelID, token)
 		if err != nil {
 			slog.Error("Error fetching users from channel-management", err)
 		}
-		chatUsers, err := ws.chatMgmtClient.PerformGetChatUsers(channelID)
+		chatUsers, err := ws.chatMgmtClient.PerformGetChatUsers(channelID, token)
 		if err != nil {
 			slog.Error("Error fetching users from chat-management", err)
 		}
 
 		userIDs := mergeUserLists(channelUsers, chatUsers)
 
-		ws.messageService.Broadcast(userIDs, message)
+		messageModel, err := models.MapRequestToMessage(&message)
+		if err != nil {
+			slog.Error("Error has occured while mapping message to messageModel", err)
+			slog.Error(err.Error())
+		}
+
+		ws.messageService.Broadcast(userIDs, messageModel)
 	}
 }
 
-func receiveMessageFromRedis(subscriber *redis.PubSub) (*models.Message, error) {
-	message := &models.Message{}
+func receiveMessageFromRedis(subscriber *redis.PubSub) (*dto.MessageWithToken, error) {
+	messageWithToken := &dto.MessageWithToken{}
 	slog.Info("Waiting for message")
 	channel := subscriber.Channel()
 	receivedMessage := <-channel
 	slog.Info(receivedMessage.Payload)
-	err := json.Unmarshal([]byte(receivedMessage.Payload), message)
+	err := json.Unmarshal([]byte(receivedMessage.Payload), messageWithToken)
 	if err != nil {
 		return nil, err
 	}
-	return message, nil
+	return messageWithToken, nil
 }
 
 func mergeUserLists(channelUsers, chatUsers []uuid.UUID) []uuid.UUID {

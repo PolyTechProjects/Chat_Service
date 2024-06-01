@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
 
 type ChanMgmtGRPCClient struct {
@@ -27,8 +28,10 @@ func NewChanMgmtClient(cfg *config.Config) *ChanMgmtGRPCClient {
 	return &ChanMgmtGRPCClient{chanMgmt.NewChannelManagementClient(conn)}
 }
 
-func (chanMgmtClient *ChanMgmtGRPCClient) PerformGetChanUsers(channelID string) ([]uuid.UUID, error) {
-	resp, err := chanMgmtClient.GetChanUsers(context.Background(), &chanMgmt.GetChanUsersRequest{ChannelId: channelID})
+func (chanMgmtClient *ChanMgmtGRPCClient) PerformGetChanUsers(channelID, token string) ([]uuid.UUID, error) {
+	md := metadata.Pairs("Authorization", token)
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+	resp, err := chanMgmtClient.GetChanUsers(ctx, &chanMgmt.GetChanUsersRequest{ChannelId: channelID})
 	if err != nil {
 		return nil, err
 	}
