@@ -5,6 +5,8 @@ name: Notification Service CI
 
 on:
   push:
+    branches:
+      - '!main'
     paths:
       - 'notification/**'
 

@@ -5,6 +5,8 @@ name: Auth Service CI
 
 on:
   push:
+    branches:
+      - '!main'
     paths:
       - 'auth/**'
 
