@@ -60,6 +60,24 @@ jobs:
           name: user-mgmt-build
           path: user-mgmt/build/UserMgmtApp-001-build
 
+      - name: Build Chat Room Management
+        run: cd chat-management/ && ./build.sh && cd ../
+
+      - name: Upload Chat Room Management
+        uses: actions/upload-artifact@v3
+        with:
+          name: chat-management-build
+          path: chat-management/build/ChatManagementService-001-build
+
+      - name: Build Channel Management
+        run: cd channel-management/ && ./build.sh && cd ../
+
+      - name: Upload Channel Management
+        uses: actions/upload-artifact@v3
+        with:
+          name: channel-management-build
+          path: channel-management/build/ChannelManagementService-001-build
+
       - name: Build Notification
         run: cd notification/ && ./build.sh && cd ../
 
@@ -173,6 +191,48 @@ jobs:
           push: true
           tags: ghcr.io/polytechprojects/chat_service/user-mgmt:latest
 
+      ### Channel Management ###
+      - name: Download Channel Management
+        uses: actions/download-artifact@v3
+        with:
+          name: channel-management-build
+          path: channel-management/build
+      - name: Decode Channel Management.env
+        uses: mobiledevops/secret-to-file-action@v1
+        with:
+          base64-encoded-secret: ${{ secrets.CHANNEL_MGMT_ENV }}
+          filename: ".env"
+          working-directory: "${{ github.workspace }}/channel-management"
+      - name: Build multiplatform Channel Management
+        uses: docker/build-push-action@v5
+        with:
+          context: ./channel-management
+          file: ./channel-management/app.Dockerfile
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          tags: ghcr.io/polytechprojects/chat_service/channel-management:latest
+
+      ### Chat Room Management ###
+      - name: Download Chat Room Management
+        uses: actions/download-artifact@v3
+        with:
+          name: chat-management-build
+          path: chat-management/build
+      - name: Decode Chat Room Management.env
+        uses: mobiledevops/secret-to-file-action@v1
+        with:
+          base64-encoded-secret: ${{ secrets.CHAT_MGMT_ENV }}
+          filename: ".env"
+          working-directory: "${{ github.workspace }}/chat-management"
+      - name: Build multiplatform Chat Room Management
+        uses: docker/build-push-action@v5
+        with:
+          context: ./chat-management
+          file: ./chat-management/app.Dockerfile
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          tags: ghcr.io/polytechprojects/chat_service/chat-management:latest
+
       ### Notification ###
       - name: Download Notification
         uses: actions/download-artifact@v3
@@ -211,30 +271,4 @@ jobs:
           to: ${{ secrets.TELEGRAM_RELEASES_CHANNEL }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           message: ГООООООООООООООООООЛ!!! (build)
-          photo: test/goal.png
-
-  deployment:
-    needs: dockerize
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Send the build to telegram
-        uses: appleboy/telegram-action@master
-        with:
-          to: ${{ secrets.TELEGRAM_RELEASES_CHANNEL }}
-          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          message: ГООООООООООООООООООЛ!!!
-          photo: test/goal.png
-
-  telegram-deployment-notification:
-    needs: deployment
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Send the build to telegram
-        uses: appleboy/telegram-action@master
-        with:
-          to: ${{ secrets.TELEGRAM_RELEASES_CHANNEL }}
-          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          message: ГООООООООООООООООООЛ!!! (deployment)
           photo: test/goal.png
