@@ -68,20 +68,21 @@ func (m *MessageService) ListenFileChannel() {
 
 func (m *MessageService) Broadcast(userIds []uuid.UUID, message *models.Message) {
 	for _, userId := range userIds {
-		slog.Info(fmt.Sprintf("Checking if user %s is connected", userId))
+		slog.Debug(fmt.Sprintf("Checking if user %s is connected", userId))
 		wsConnection, ok := m.userIdXWsConnection[userId]
 		if ok {
-			slog.Info(fmt.Sprintf("User %s is connected", userId))
+			slog.Debug(fmt.Sprintf("User %s is connected", userId))
 			messageResp := models.MapMessageToResponse(message)
-			slog.Info("Sending message")
+			slog.Debug(fmt.Sprintf("Sending message to %s", userId))
 			err := wsConnection.WriteJSON(messageResp)
 			if err != nil {
-				slog.Error(err.Error())
+				slog.Error(fmt.Sprintf("Disconnect user %s due to error %v", userId, err.Error()))
 				wsConnection.Close()
 				delete(m.userIdXWsConnection, userId)
 			}
 		} else {
-			slog.Info(fmt.Sprintf("User %s is not connected", userId))
+			slog.Debug(fmt.Sprintf("User %s is not connected", userId))
+			slog.Debug(fmt.Sprintf("Trying to notify user %v", userId))
 			m.messageRepository.PublishToRedisChannel("notification", message)
 		}
 	}
@@ -89,6 +90,7 @@ func (m *MessageService) Broadcast(userIds []uuid.UUID, message *models.Message)
 
 func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.Conn, broadcastChannel chan *models.Message, token string) {
 	m.userIdXWsConnection[userId] = wsConnection
+	slog.Debug(fmt.Sprintf("Added wsConnection to %v", userId))
 
 	for {
 		_, payload, err := wsConnection.ReadMessage()
@@ -113,7 +115,7 @@ func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.
 
 		mediaReceived := 0
 		if messageReq.WithMedia > 0 {
-			slog.Info("Getting files")
+			slog.Debug("Getting files")
 			for messageReq.WithMedia != mediaReceived {
 				mf := <-m.fileLoadedChannel
 				if mf.MessageId == message.Id {
@@ -125,32 +127,38 @@ func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.
 					m.fileLoadedChannel <- mf
 				}
 			}
+			slog.Debug("Files received")
 		}
 
+		slog.Debug("Saving message")
 		err = m.messageRepository.SaveUserMessage(message)
 		if err != nil {
-			slog.Error("Error has occured while saving message", err)
+			slog.Error(fmt.Sprintf("Error has occured while saving message: %v", err.Error()))
 			break
 		}
-		slog.Info("Publish Message")
+		slog.Debug(fmt.Sprintf("Message Saved %v, %v", message.Id, message.Metadata.FilePath))
+
+		slog.Debug("Publishing Message")
 		messageWithToken := models.MessageWithToken{
 			Message: *message,
 			Token:   token,
 		}
 		bytes, err := json.Marshal(messageWithToken)
 		if err != nil {
-			slog.Error("Error has occured while marshalling message", err)
+			slog.Error(fmt.Sprintf("Error has occured while marshalling message: %v", err.Error()))
 			break
 		}
 		err = m.messageRepository.PublishToRedisChannel("message-channel", bytes)
 		if err != nil {
-			slog.Error("Error has occured while publishing message", err)
+			slog.Error(fmt.Sprintf("Error has occured while publishing message: %v", err.Error()))
 			break
 		}
-		//broadcastChannel <- message
+		slog.Debug(fmt.Sprintf("Message Published %v", bytes))
 	}
 
+	slog.Debug(fmt.Sprintf("Removing wsConnection from %v", userId))
 	delete(m.userIdXWsConnection, userId)
+	//hmmm
 }
 
 func (m *MessageService) SubscribeToMessageChannel() *redis.PubSub {

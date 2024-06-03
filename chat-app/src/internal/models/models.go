@@ -24,7 +24,7 @@ type Message struct {
 	Body       string
 	CreatedAt  uint64
 	WithMedia  int
-	Metadata   dto.Metadata `gorm:"serializer:json"`
+	Metadata   dto.Metadata `gorm:"type:jsonb"`
 }
 
 type MessageWithToken struct {
@@ -56,9 +56,11 @@ func MapRequestToMessage(req *dto.MessageRequest) (*Message, error) {
 }
 
 func MapMessageToResponse(message *Message) *dto.MessageResponse {
+	messageId := message.Id.String()
 	senderId := message.SenderId.String()
 	chatRoomId := message.ChatRoomId.String()
 	return &dto.MessageResponse{
+		MessageId:  messageId,
 		SenderId:   senderId,
 		ChatRoomId: chatRoomId,
 		Body:       message.Body,

@@ -5,8 +5,8 @@ name: Channel Management Service CI
 
 on:
   push:
-    branches:
-      - '!main'
+    branches-ignore:
+      - 'main'
     paths:
       - 'channel-management/**'
 
