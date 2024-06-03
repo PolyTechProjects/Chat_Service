@@ -121,26 +121,16 @@ func (ws *WebsocketController) StartBroadcasting() {
 		message := messageWithToken.Message
 		token := messageWithToken.Token
 
-		channelID := message.ChatRoomId
+		channelID := message.ChatRoomId.String()
 		channelUsers, err := ws.channelMgmtClient.PerformGetChanUsers(channelID, token)
 		if err == nil && len(channelUsers) > 0 {
-			messageModel, err := models.MapRequestToMessage(&message)
-			if err != nil {
-				slog.Error("Error has occurred while mapping message to messageModel", err)
-				continue
-			}
-			ws.messageService.Broadcast(channelUsers, messageModel)
+			ws.messageService.Broadcast(channelUsers, &message)
 			continue
 		}
 
 		chatUsers, err := ws.chatMgmtClient.PerformGetChatUsers(channelID, token)
 		if err == nil && len(chatUsers) > 0 {
-			messageModel, err := models.MapRequestToMessage(&message)
-			if err != nil {
-				slog.Error("Error has occurred while mapping message to messageModel", err)
-				continue
-			}
-			ws.messageService.Broadcast(chatUsers, messageModel)
+			ws.messageService.Broadcast(chatUsers, &message)
 			continue
 		}
 
@@ -148,8 +138,8 @@ func (ws *WebsocketController) StartBroadcasting() {
 	}
 }
 
-func receiveMessageFromRedis(subscriber *redis.PubSub) (*dto.MessageWithToken, error) {
-	messageWithToken := &dto.MessageWithToken{}
+func receiveMessageFromRedis(subscriber *redis.PubSub) (*models.MessageWithToken, error) {
+	messageWithToken := &models.MessageWithToken{}
 	slog.Info("Waiting for message")
 	channel := subscriber.Channel()
 	receivedMessage := <-channel

@@ -50,15 +50,6 @@ services:
     depends_on:
       - seaweedfs_master
 
-  redis:
-    image: bitnami/redis:latest
-    ports:
-      - "6379:6379"
-    networks:
-      - micro-proxy-net
-    environment:
-      - REDIS_PASSWORD=redis
-
 networks:
   micro-proxy-net:
     external: true
