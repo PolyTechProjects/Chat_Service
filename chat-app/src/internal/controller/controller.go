@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -76,6 +77,7 @@ func (ws *WebsocketController) SendMessageHandler(w http.ResponseWriter, r *http
 		slog.Error("Error has occurred while trying to connect to websocket server.")
 		return
 	}
+	slog.Debug("Connected to websocket server")
 
 	token := r.Header.Get("Authorization")
 	_, err = ws.authClient.PerformAuthorize(r.Context(), token)
@@ -83,12 +85,14 @@ func (ws *WebsocketController) SendMessageHandler(w http.ResponseWriter, r *http
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
+	slog.Debug("Authorized")
 
 	extractResp, err := ws.authClient.PerformUserIdExtraction(r.Context(), token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
+	slog.Debug(fmt.Sprintf("Extracted user id: %s", extractResp.UserId))
 	userId, err := uuid.Parse(extractResp.UserId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -119,6 +123,7 @@ func (ws *WebsocketController) StartBroadcasting() {
 		slog.Info("Received message")
 
 		message := messageWithToken.Message
+		slog.Debug(fmt.Sprintf("Message: %v", message))
 		token := messageWithToken.Token
 
 		channelID := message.ChatRoomId.String()
@@ -140,10 +145,10 @@ func (ws *WebsocketController) StartBroadcasting() {
 
 func receiveMessageFromRedis(subscriber *redis.PubSub) (*models.MessageWithToken, error) {
 	messageWithToken := &models.MessageWithToken{}
-	slog.Info("Waiting for message")
+	slog.Debug("Waiting for message")
 	channel := subscriber.Channel()
 	receivedMessage := <-channel
-	slog.Info(receivedMessage.Payload)
+	slog.Debug(receivedMessage.Payload)
 	err := json.Unmarshal([]byte(receivedMessage.Payload), messageWithToken)
 	if err != nil {
 		return nil, err
