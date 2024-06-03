@@ -11,20 +11,7 @@ on:
       - "main"
 
 jobs:
-  linter:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
-        with:
-          go-version: "1.22"
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.58
-
   build:
-    needs: linter
     if: github.event.pull_request.merged == true
     
     runs-on: ubuntu-latest

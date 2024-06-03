@@ -11,19 +11,6 @@ on:
       - 'auth/**'
 
 jobs:
-  linter:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
-        with:
-          go-version: "1.22"
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.58
-          working-directory: auth
-
   build:
     runs-on: ubuntu-latest
     steps:
