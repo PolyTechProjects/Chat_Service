@@ -154,7 +154,6 @@ func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.
 			break
 		}
 		slog.Debug(fmt.Sprintf("Message Published %v", bytes))
-		//broadcastChannel <- message
 	}
 
 	slog.Debug(fmt.Sprintf("Removing wsConnection from %v", userId))
