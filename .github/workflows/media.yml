@@ -5,8 +5,8 @@ name: Media Handler Service CI
 
 on:
   push:
-    branches:
-      - '!main'
+    branches-ignore:
+      - 'main'
     paths: 
       - 'media-handler/**'
 

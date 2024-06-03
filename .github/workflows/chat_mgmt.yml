@@ -5,8 +5,8 @@ name: Chat Management Service CI
 
 on:
   push:
-    branches:
-      - '!main'
+    branches-ignore:
+      - 'main'
     paths:
       - 'chat-management/**'
 
