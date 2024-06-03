@@ -27,6 +27,11 @@ type Message struct {
 	Metadata   dto.Metadata `gorm:"serializer:json"`
 }
 
+type MessageWithToken struct {
+	Message Message `json:"message"`
+	Token   string  `json:"token"`
+}
+
 func MapRequestToMessage(req *dto.MessageRequest) (*Message, error) {
 	messageUUID, err := uuid.Parse(req.MessageId)
 	if err != nil {

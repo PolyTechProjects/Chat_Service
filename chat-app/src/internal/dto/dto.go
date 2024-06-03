@@ -18,11 +18,6 @@ type MessageResponse struct {
 	Metadata   Metadata `json:"metadata"`
 }
 
-type MessageWithToken struct {
-	Message MessageRequest `json:"message"`
-	Token   string         `json:"token"`
-}
-
 type Metadata struct {
 	FilePath string `json:"filePath"`
 }

@@ -133,8 +133,8 @@ func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.
 			break
 		}
 		slog.Info("Publish Message")
-		messageWithToken := dto.MessageWithToken{
-			Message: messageReq,
+		messageWithToken := models.MessageWithToken{
+			Message: *message,
 			Token:   token,
 		}
 		bytes, err := json.Marshal(messageWithToken)
