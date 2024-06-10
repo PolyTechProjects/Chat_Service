@@ -19,8 +19,8 @@ func New(mediaHandlerService *service.MediaHandlerService, authClient *client.Au
 }
 
 func (m *MediaHandlerController) UploadMediaHandler(w http.ResponseWriter, r *http.Request) {
-	resp, err := m.authClient.PerformAuthorize(r.Context(), r.Header.Get("Authorization"))
-	if err != nil || !resp.Authorized {
+	_, err := m.authClient.PerformAuthorize(r.Context(), r)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
@@ -44,8 +44,8 @@ func (m *MediaHandlerController) UploadMediaHandler(w http.ResponseWriter, r *ht
 }
 
 func (m *MediaHandlerController) GetMediaHandler(w http.ResponseWriter, r *http.Request) {
-	resp, err := m.authClient.PerformAuthorize(r.Context(), r.Header.Get("Authorization"))
-	if err != nil || !resp.Authorized {
+	_, err := m.authClient.PerformAuthorize(r.Context(), r)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
@@ -64,8 +64,8 @@ func (m *MediaHandlerController) GetMediaHandler(w http.ResponseWriter, r *http.
 }
 
 func (m *MediaHandlerController) DeleteMediaHandler(w http.ResponseWriter, r *http.Request) {
-	resp, err := m.authClient.PerformAuthorize(r.Context(), r.Header.Get("Authorization"))
-	if err != nil || !resp.Authorized {
+	_, err := m.authClient.PerformAuthorize(r.Context(), r)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}

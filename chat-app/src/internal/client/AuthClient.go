@@ -6,13 +6,13 @@ import (
 	"log/slog"
 
 	"example.com/chat-app/src/config"
-	"example.com/chat-app/src/gen/go/sso"
+	"example.com/chat-app/src/gen/go/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 type AuthGRPCClient struct {
-	sso.AuthClient
+	auth.AuthClient
 }
 
 func NewAuthClient(cfg *config.Config) *AuthGRPCClient {
@@ -23,13 +23,9 @@ func NewAuthClient(cfg *config.Config) *AuthGRPCClient {
 	}
 	slog.Info("Connected to Auth")
 	slog.Info(connectionUrl)
-	return &AuthGRPCClient{sso.NewAuthClient(conn)}
+	return &AuthGRPCClient{auth.NewAuthClient(conn)}
 }
 
-func (authClient *AuthGRPCClient) PerformAuthorize(ctx context.Context, token string) (*sso.AuthorizeResponse, error) {
-	return authClient.Authorize(ctx, &sso.AuthorizeRequest{Token: token})
-}
-
-func (authClient *AuthGRPCClient) PerformUserIdExtraction(ctx context.Context, token string) (*sso.ExtractUserIdResponse, error) {
-	return authClient.ExtractUserId(ctx, &sso.ExtractUserIdRequest{Token: token})
+func (authClient *AuthGRPCClient) PerformAuthorize(ctx context.Context, accessToken string, refreshToken string) (*auth.AuthorizeResponse, error) {
+	return authClient.Authorize(ctx, &auth.AuthorizeRequest{AccessToken: accessToken, RefreshToken: refreshToken})
 }

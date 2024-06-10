@@ -6,14 +6,14 @@ import (
 	"log/slog"
 
 	"example.com/notification/src/config"
-	"example.com/notification/src/gen/go/sso"
-	user_mgmt "example.com/notification/src/gen/go/user-mgmt"
+	"example.com/notification/src/gen/go/auth"
+	userMgmt "example.com/notification/src/gen/go/user_mgmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 type AuthClient struct {
-	sso.AuthClient
+	auth.AuthClient
 }
 
 func NewAuthClient(cfg *config.Config) *AuthClient {
@@ -24,15 +24,15 @@ func NewAuthClient(cfg *config.Config) *AuthClient {
 	}
 	slog.Info("Connected to Auth")
 	slog.Info(connectionUrl)
-	return &AuthClient{sso.NewAuthClient(conn)}
+	return &AuthClient{auth.NewAuthClient(conn)}
 }
 
-func (authClient *AuthClient) PerformAuthorize(ctx context.Context, token string) (*sso.AuthorizeResponse, error) {
-	return authClient.Authorize(ctx, &sso.AuthorizeRequest{Token: token})
+func (authClient *AuthClient) PerformAuthorize(ctx context.Context, accessToken string, refreshToken string) (*auth.AuthorizeResponse, error) {
+	return authClient.Authorize(ctx, &auth.AuthorizeRequest{AccessToken: accessToken, RefreshToken: refreshToken})
 }
 
 type UserMgmtClient struct {
-	user_mgmt.UserMgmtClient
+	userMgmt.UserMgmtClient
 }
 
 func NewUserMgmtClient(cfg *config.Config) *UserMgmtClient {
@@ -41,9 +41,9 @@ func NewUserMgmtClient(cfg *config.Config) *UserMgmtClient {
 	if err != nil {
 		panic("failed to connect: " + err.Error())
 	}
-	return &UserMgmtClient{user_mgmt.NewUserMgmtClient(conn)}
+	return &UserMgmtClient{userMgmt.NewUserMgmtClient(conn)}
 }
 
-func (c *UserMgmtClient) PerformGetUser(ctx context.Context, token string, userId string) (*user_mgmt.UserResponse, error) {
-	return c.UserMgmtClient.GetUser(ctx, &user_mgmt.GetUserRequest{Token: token, UserId: userId})
+func (c *UserMgmtClient) PerformGetUser(ctx context.Context, token string, userId string) (*userMgmt.UserResponse, error) {
+	return c.UserMgmtClient.GetUser(ctx, &userMgmt.GetUserRequest{Token: token, UserId: userId})
 }

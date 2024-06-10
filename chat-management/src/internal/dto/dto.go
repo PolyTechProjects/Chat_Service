@@ -1,29 +1,42 @@
 package dto
 
-import "github.com/google/uuid"
+import (
+	"example.com/chat-management/src/internal/models"
+	"github.com/google/uuid"
+)
 
 type CreateChatRequest struct {
 	Name        string
 	Description string
-	CreatorID   string
+	CreatorId   string
 }
 
 type UpdateChatRequest struct {
-	ChatID      uuid.UUID
+	ChatId      uuid.UUID
 	Name        string
 	Description string
 }
 
 type UserChatRequest struct {
-	ChatID uuid.UUID
-	UserID uuid.UUID
+	ChatId uuid.UUID
+	UserId uuid.UUID
 }
 
 type AdminRequest struct {
-	ChatID uuid.UUID
-	UserID uuid.UUID
+	ChatId uuid.UUID
+	UserId uuid.UUID
 }
 
 type ChatResponse struct {
-	ChatID string
+	ChatId string
+}
+
+type GetChatRequest struct {
+	ChatId uuid.UUID
+}
+
+type GetChatResponse struct {
+	Chat   *models.Chat
+	Users  []string
+	Admins []string
 }

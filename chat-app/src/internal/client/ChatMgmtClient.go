@@ -6,7 +6,7 @@ import (
 	"log/slog"
 
 	"example.com/chat-app/src/config"
-	chatMgmt "example.com/chat-app/src/gen/go/chat-mgmt"
+	chatMgmt "example.com/chat-app/src/gen/go/chat_mgmt"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -28,8 +28,9 @@ func NewChatMgmtClient(cfg *config.Config) *ChatMgmtGRPCClient {
 	return &ChatMgmtGRPCClient{chatMgmt.NewChatManagementClient(conn)}
 }
 
-func (chatMgmtClient *ChatMgmtGRPCClient) PerformGetChatUsers(chatID, token string) ([]uuid.UUID, error) {
-	md := metadata.Pairs("Authorization", token)
+func (chatMgmtClient *ChatMgmtGRPCClient) PerformGetChatUsers(chatID, accessToken string, refreshToken string) ([]uuid.UUID, error) {
+	md := metadata.Pairs("authorization", accessToken)
+	md.Append("x-refresh-token", refreshToken)
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
 	resp, err := chatMgmtClient.GetChatUsers(ctx, &chatMgmt.GetChatUsersRequest{ChatId: chatID})
 	if err != nil {

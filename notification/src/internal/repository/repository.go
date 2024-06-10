@@ -23,6 +23,15 @@ func (udtr *UserIdXDeviceTokenRepository) GetByUserId(userId uuid.UUID) ([]*mode
 	return userIdXDeviceTokens, nil
 }
 
+func (udtr *UserIdXDeviceTokenRepository) GetByUserIds(userId []uuid.UUID) ([]*models.UserIdXDeviceToken, error) {
+	var userIdXDeviceTokens []*models.UserIdXDeviceToken
+	err := udtr.db.Where("user_id IN (?)", userId).Find(&userIdXDeviceTokens).Error
+	if err != nil {
+		return nil, err
+	}
+	return userIdXDeviceTokens, nil
+}
+
 func (udtr *UserIdXDeviceTokenRepository) BindDeviceTokenToUser(userIdXDeviceToken *models.UserIdXDeviceToken) error {
 	return udtr.db.Create(userIdXDeviceToken).Error
 }

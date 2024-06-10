@@ -5,97 +5,114 @@ package chat_mgmt;
 option go_package = "example.com/proto/chat_mgmt";
 
 service ChatManagement {
-    rpc CreateChat (CreateChatRequest) returns (CreateChatResponse) {}
+    rpc CreateChat (CreateChatRequest) returns (ChatRoomResponse) {}
     rpc DeleteChat (DeleteChatRequest) returns (DeleteChatResponse) {}
-    rpc UpdateChat (UpdateChatRequest) returns (UpdateChatResponse) {}
-    rpc JoinChat (JoinChatRequest) returns (JoinChatResponse) {}
-    rpc KickUserChat (KickUserChatRequest) returns (KickUserChatResponse) {}
-    rpc CanWriteChat (CanWriteChatRequest) returns (CanWriteChatResponse) {}
-    rpc MakeChatAdmin (MakeChatAdminRequest) returns (MakeChatAdminResponse) {}
-    rpc DeleteChatAdmin (DeleteChatAdminRequest) returns (DeleteChatAdminResponse) {}
-    rpc IsChatAdmin (IsChatAdminRequest) returns (IsChatAdminResponse) {}
-    rpc GetChatUsers (GetChatUsersRequest) returns (GetChatUsersResponse) {}
+    rpc UpdateChat (UpdateChatRequest) returns (ChatRoomResponse) {}
+    rpc JoinChat (JoinChatRequest) returns (ChatRoomResponse) {}
+    rpc LeaveChat (LeaveChatRequest) returns (ChatRoomResponse) {}
+    rpc InviteUser (InviteUserRequest) returns (ChatRoomResponse) {}
+    rpc KickUser (KickUserRequest) returns (ChatRoomResponse) {}
+    rpc CanWriteChat (CanWriteRequest) returns (CanWriteResponse) {}
+    rpc MakeChatAdmin (MakeAdminRequest) returns (ChatRoomWithAdminsResponse) {}
+    rpc DeleteChatAdmin (DeleteAdminRequest) returns (ChatRoomWithAdminsResponse) {}
+    rpc IsChatAdmin (IsAdminRequest) returns (IsAdminResponse) {}
+    rpc GetChatUsers (GetUsersRequest) returns (GetUsersResponse) {}
+}
+
+message ChatRoomResponse {
+    string chatId = 1;
+    string creatorId = 2;
+    repeated string participantsIds = 3;
+    string name = 4;
+    string description = 5;
+}
+
+message ChatRoomWithAdminsResponse {
+    string chatId = 1;
+    string creatorId = 2;
+    repeated string participantsIds = 3;
+    string name = 4;
+    string description = 5;
+    repeated string adminsIds = 6;
 }
 
 message CreateChatRequest {
     string name = 1;
     string description = 2;
-    string creator_id = 3;
-}
-
-message CreateChatResponse {
-    string chat_id = 1;
+    string creatorId = 3;
+    repeated string participantsIds = 4;
 }
 
 message DeleteChatRequest {
-    string chat_id = 1;
-    string user_id = 2;
+    string chatId = 1;
+    string userId = 2;
 }
 
 message DeleteChatResponse {}
 
 message UpdateChatRequest {
-    string chat_id = 1;
+    string chatId = 1;
     string name = 2;
     string description = 3;
-    string user_id = 4;
+    string userId = 4;
 }
-
-message UpdateChatResponse {}
 
 message JoinChatRequest {
-    string chat_id = 1;
-    string user_id = 2;
+    string chatId = 1;
+    string userId = 2;
 }
 
-message JoinChatResponse {}
-
-message KickUserChatRequest {
-    string chat_id = 1;
-    string user_id = 2;
-    string requesting_user_id = 3;
+message LeaveChatRequest {
+    string chatId = 1;
+    string userId = 2;
 }
 
-message KickUserChatResponse {}
-
-message CanWriteChatRequest {
-    string chat_id = 1;
-    string user_id = 2;
+message InviteUserRequest {
+    string chatId = 1;
+    string userId = 2;
+    string requestingUserId = 3;
 }
 
-message CanWriteChatResponse {
-    bool can_write = 1;
+message KickUserRequest {
+    string chatId = 1;
+    string userId = 2;
+    string requestingUserId = 3;
 }
 
-message MakeChatAdminRequest {
-    string chat_id = 1;
-    string user_id = 2;
-    string requesting_user_id = 3;
+message CanWriteRequest {
+    string chatId = 1;
+    string userId = 2;
 }
 
-message MakeChatAdminResponse {}
-
-message DeleteChatAdminRequest {
-    string chat_id = 1;
-    string user_id = 2;
-    string requesting_user_id = 3;
+message CanWriteResponse {
+    bool canWrite = 1;
 }
 
-message DeleteChatAdminResponse {}
-
-message IsChatAdminRequest {
-    string chat_id = 1;
-    string user_id = 2;
+message MakeAdminRequest {
+    string chatId = 1;
+    string userId = 2;
+    string requestingUserId = 3;
 }
 
-message IsChatAdminResponse {
-    bool is_admin = 1;
+message DeleteAdminRequest {
+    string chatId = 1;
+    string userId = 2;
+    string requestingUserId = 3;
 }
 
-message GetChatUsersRequest {
-    string chat_id = 1;
+message IsAdminRequest {
+    string chatId = 1;
+    string userId = 2;
 }
 
-message GetChatUsersResponse {
-    repeated string user_ids = 1;
+message IsAdminResponse {
+    bool isAdmin = 1;
+}
+
+message GetUsersRequest {
+    string chatId = 1;
+}
+
+message GetUsersResponse {
+    repeated string userIds = 1;
 }

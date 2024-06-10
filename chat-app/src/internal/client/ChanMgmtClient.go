@@ -6,7 +6,7 @@ import (
 	"log/slog"
 
 	"example.com/chat-app/src/config"
-	chanMgmt "example.com/chat-app/src/gen/go/channel-mgmt"
+	chanMgmt "example.com/chat-app/src/gen/go/channel_mgmt"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -28,8 +28,9 @@ func NewChanMgmtClient(cfg *config.Config) *ChanMgmtGRPCClient {
 	return &ChanMgmtGRPCClient{chanMgmt.NewChannelManagementClient(conn)}
 }
 
-func (chanMgmtClient *ChanMgmtGRPCClient) PerformGetChanUsers(channelID, token string) ([]uuid.UUID, error) {
-	md := metadata.Pairs("Authorization", token)
+func (chanMgmtClient *ChanMgmtGRPCClient) PerformGetChanUsers(channelID, accessToken string, refreshToken string) ([]uuid.UUID, error) {
+	md := metadata.Pairs("authorization", accessToken)
+	md.Append("x-refresh-token", refreshToken)
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
 	resp, err := chanMgmtClient.GetChanUsers(ctx, &chanMgmt.GetChanUsersRequest{ChannelId: channelID})
 	if err != nil {
