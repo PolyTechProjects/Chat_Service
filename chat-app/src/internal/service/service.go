@@ -159,6 +159,7 @@ func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.
 
 	slog.Debug(fmt.Sprintf("Removing wsConnection from %v", userId))
 	delete(m.userIdXWsConnection, userId)
+	//hmmm
 }
 
 func (m *MessageService) SubscribeToMessageChannel() *redis.PubSub {
