@@ -44,6 +44,6 @@ func NewUserMgmtClient(cfg *config.Config) *UserMgmtClient {
 	return &UserMgmtClient{userMgmt.NewUserMgmtClient(conn)}
 }
 
-func (c *UserMgmtClient) PerformGetUser(ctx context.Context, token string, userId string) (*userMgmt.UserResponse, error) {
-	return c.UserMgmtClient.GetUser(ctx, &userMgmt.GetUserRequest{Token: token, UserId: userId})
+func (c *UserMgmtClient) PerformGetUser(ctx context.Context, userId string) (*userMgmt.UserResponse, error) {
+	return c.UserMgmtClient.GetUser(ctx, &userMgmt.GetUserRequest{UserId: userId})
 }

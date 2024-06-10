@@ -32,7 +32,7 @@ func (chatMgmtClient *ChatMgmtGRPCClient) PerformGetChatUsers(chatID, accessToke
 	md := metadata.Pairs("authorization", accessToken)
 	md.Append("x-refresh-token", refreshToken)
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
-	resp, err := chatMgmtClient.GetChatUsers(ctx, &chatMgmt.GetChatUsersRequest{ChatId: chatID})
+	resp, err := chatMgmtClient.GetChatUsers(ctx, &chatMgmt.GetUsersRequest{ChatId: chatID})
 	if err != nil {
 		return nil, err
 	}

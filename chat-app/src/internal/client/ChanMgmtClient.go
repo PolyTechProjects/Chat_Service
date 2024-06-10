@@ -32,7 +32,7 @@ func (chanMgmtClient *ChanMgmtGRPCClient) PerformGetChanUsers(channelID, accessT
 	md := metadata.Pairs("authorization", accessToken)
 	md.Append("x-refresh-token", refreshToken)
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
-	resp, err := chanMgmtClient.GetChanUsers(ctx, &chanMgmt.GetChanUsersRequest{ChannelId: channelID})
+	resp, err := chanMgmtClient.GetUsersInChannel(ctx, &chanMgmt.GetUsersRequest{ChannelId: channelID})
 	if err != nil {
 		return nil, err
 	}

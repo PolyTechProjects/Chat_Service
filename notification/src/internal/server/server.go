@@ -41,7 +41,7 @@ func (s *NotificationServer) Start(l net.Listener) error {
 }
 
 func (s *NotificationServer) NotifyUser(ctx context.Context, req *notification.NotifyUserRequest) (*notification.NotifyUserResponse, error) {
-	user, err := s.userMgmtClient.PerformGetUser(ctx, req.GetToken(), req.GetReceiverUserId())
+	user, err := s.userMgmtClient.PerformGetUser(ctx, req.GetReceiverUserId())
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.NotFound, err.Error())
