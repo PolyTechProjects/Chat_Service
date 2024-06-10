@@ -22,6 +22,39 @@ func New(repo repository.ChannelRepository) *ChannelManagementService {
 	}
 }
 
+func (s *ChannelManagementService) GetChannel(ctx context.Context, req *dto.GetChannelRequest) (*dto.GetChannelResponse, error) {
+	slog.Info("GetChannel called", "channelID", req.ChannelId)
+	channel, err := s.repo.FindById(req.ChannelId)
+	if err != nil {
+		slog.Error("Failed to get channel", "error", err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	users, err := s.repo.GetChanUsers(req.ChannelId)
+	if err != nil {
+		slog.Error("Failed to get channel users", "error", err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	getResp := &dto.GetChannelResponse{
+		Channel: channel,
+		Users:   users,
+	}
+	return getResp, nil
+}
+
+func (s *ChannelManagementService) GetChannelWithAdmins(ctx context.Context, req *dto.GetChannelRequest) (*dto.GetChannelResponse, error) {
+	getResp, err := s.GetChannel(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	admins, err := s.repo.GetChannelAdmins(req.ChannelId)
+	if err != nil {
+		slog.Error("Failed to get channel users", "error", err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	getResp.Admins = admins
+	return getResp, nil
+}
+
 func (s *ChannelManagementService) CreateChannel(ctx context.Context, name, description, creatorID string) (string, error) {
 	slog.Info("CreateChannel called", "name", name, "description", description, "creatorID", creatorID)
 	creatorUUID, err := uuid.Parse(creatorID)
@@ -32,7 +65,7 @@ func (s *ChannelManagementService) CreateChannel(ctx context.Context, name, desc
 	channelDTO := dto.CreateChannelDTO{
 		Name:        name,
 		Description: description,
-		CreatorID:   creatorUUID,
+		CreatorId:   creatorUUID,
 	}
 	channelID, err := s.repo.SaveChannel(channelDTO)
 	if err != nil {
@@ -41,12 +74,12 @@ func (s *ChannelManagementService) CreateChannel(ctx context.Context, name, desc
 	}
 
 	// Add creator as a user and admin
-	err = s.repo.AddUserToChannel(dto.AddUserDTO{ChannelID: channelID, UserID: creatorUUID})
+	err = s.repo.AddUserToChannel(dto.AddUserDTO{ChannelId: channelID, UserId: creatorUUID})
 	if err != nil {
 		slog.Error("Failed to add user to channel", "error", err.Error())
 		return "", status.Error(codes.InvalidArgument, err.Error())
 	}
-	err = s.repo.AddAdmin(dto.AdminDTO{ChannelID: channelID, UserID: creatorUUID})
+	err = s.repo.AddAdmin(dto.AdminDTO{ChannelId: channelID, UserId: creatorUUID})
 	if err != nil {
 		slog.Error("Failed to add admin to channel", "error", err.Error())
 		return "", status.Error(codes.InvalidArgument, err.Error())
@@ -88,7 +121,7 @@ func (s *ChannelManagementService) UpdateChannel(ctx context.Context, channelID,
 		return status.Error(codes.InvalidArgument, err.Error())
 	}
 	updateDTO := dto.UpdateChannelDTO{
-		ID:          channelUUID,
+		Id:          channelUUID,
 		Name:        name,
 		Description: description,
 	}
@@ -114,8 +147,8 @@ func (s *ChannelManagementService) JoinChannel(ctx context.Context, channelID, u
 		return status.Error(codes.InvalidArgument, err.Error())
 	}
 	addUserDTO := dto.AddUserDTO{
-		ChannelID: channelUUID,
-		UserID:    userUUID,
+		ChannelId: channelUUID,
+		UserId:    userUUID,
 	}
 	err = s.repo.AddUserToChannel(addUserDTO)
 	if err != nil {
@@ -143,8 +176,8 @@ func (s *ChannelManagementService) KickUser(ctx context.Context, channelID, user
 		return status.Error(codes.InvalidArgument, err.Error())
 	}
 	removeUserDTO := dto.RemoveUserDTO{
-		ChannelID: channelUUID,
-		UserID:    userUUID,
+		ChannelId: channelUUID,
+		UserId:    userUUID,
 	}
 	err = s.repo.RemoveUserFromChannel(removeUserDTO)
 	if err != nil {
@@ -192,8 +225,8 @@ func (s *ChannelManagementService) MakeAdmin(ctx context.Context, channelID, use
 		return status.Error(codes.InvalidArgument, err.Error())
 	}
 	addAdminDTO := dto.AdminDTO{
-		ChannelID: channelUUID,
-		UserID:    userUUID,
+		ChannelId: channelUUID,
+		UserId:    userUUID,
 	}
 	err = s.repo.AddAdmin(addAdminDTO)
 	if err != nil {
@@ -221,8 +254,8 @@ func (s *ChannelManagementService) DeleteAdmin(ctx context.Context, channelID, u
 		return status.Error(codes.InvalidArgument, err.Error())
 	}
 	removeAdminDTO := dto.AdminDTO{
-		ChannelID: channelUUID,
-		UserID:    userUUID,
+		ChannelId: channelUUID,
+		UserId:    userUUID,
 	}
 	err = s.repo.RemoveAdmin(removeAdminDTO)
 	if err != nil {

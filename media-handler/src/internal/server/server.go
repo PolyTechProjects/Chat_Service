@@ -69,6 +69,12 @@ func (s *GRPCServer) StoreImage(stream media.MediaHandler_StoreImageServer) erro
 	defer file.Close()
 
 	ctx := stream.Context()
+	_, err = s.authClient.PerformAuthorize(ctx, nil)
+	if err != nil {
+		slog.Error(err.Error())
+		return status.Error(codes.PermissionDenied, err.Error())
+	}
+
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -77,15 +83,6 @@ func (s *GRPCServer) StoreImage(stream media.MediaHandler_StoreImageServer) erro
 		if err != nil {
 			slog.Error(err.Error())
 			return status.Error(codes.InvalidArgument, err.Error())
-		}
-
-		authResp, err := s.authClient.PerformAuthorize(ctx, req.Token)
-		if err != nil {
-			slog.Error(err.Error())
-			return status.Error(codes.PermissionDenied, err.Error())
-		}
-		if !authResp.Authorized {
-			return status.Error(codes.PermissionDenied, "Unauthorized")
 		}
 
 		file.Write(req.Data)

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"example.com/main/src/config"
-	user_mgmt "example.com/main/src/gen/go/user-mgmt"
+	"example.com/main/src/gen/go/user_mgmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

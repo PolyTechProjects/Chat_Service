@@ -6,16 +6,19 @@ import (
 	"io"
 	"log/slog"
 	"mime/multipart"
+	"net/http"
+	"strings"
 
 	"example.com/user-mgmt/src/config"
+	"example.com/user-mgmt/src/gen/go/auth"
 	"example.com/user-mgmt/src/gen/go/media"
-	"example.com/user-mgmt/src/gen/go/sso"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
 
 type AuthGRPCClient struct {
-	sso.AuthClient
+	auth.AuthClient
 }
 
 func NewAuthClient(cfg *config.Config) *AuthGRPCClient {
@@ -26,15 +29,25 @@ func NewAuthClient(cfg *config.Config) *AuthGRPCClient {
 	}
 	slog.Info("Connected to Auth")
 	slog.Info(connectionUrl)
-	return &AuthGRPCClient{sso.NewAuthClient(conn)}
+	return &AuthGRPCClient{auth.NewAuthClient(conn)}
 }
 
-func (authClient *AuthGRPCClient) PerformAuthorize(ctx context.Context, token string) (*sso.AuthorizeResponse, error) {
-	return authClient.Authorize(ctx, &sso.AuthorizeRequest{Token: token})
-}
-
-func (authClient *AuthGRPCClient) PerformUserIdExtraction(ctx context.Context, token string) (*sso.ExtractUserIdResponse, error) {
-	return authClient.ExtractUserId(ctx, &sso.ExtractUserIdRequest{Token: token})
+func (authClient *AuthGRPCClient) PerformAuthorize(ctx context.Context, r *http.Request) (*auth.AuthorizeResponse, error) {
+	var accessToken, refreshToken string
+	if r == nil {
+		accessToken = metadata.ValueFromIncomingContext(ctx, "authorization")[0]
+		refreshToken = metadata.ValueFromIncomingContext(ctx, "x-refresh-token")[0]
+	} else {
+		ctx = r.Context()
+		authHeader := r.Header.Get("Authorization")
+		accessToken = strings.Split(authHeader, " ")[1]
+		cookie, err := r.Cookie("X-Refresh-Token")
+		if err != nil {
+			return nil, err
+		}
+		refreshToken = cookie.Value
+	}
+	return authClient.Authorize(ctx, &auth.AuthorizeRequest{AccessToken: accessToken, RefreshToken: refreshToken})
 }
 
 type MediaHandlerGRPCClient struct {

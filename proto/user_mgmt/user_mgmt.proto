@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package user_mgmt;
+
+option go_package = "example.com/proto/user_mgmt";
+
+service UserMgmt {
+    rpc AddUser (AddUserRequest) returns (UserResponse) {}
+
+    rpc InfoUpdate (InfoUpdateRequest) returns (UserResponse) {}
+
+    rpc GetUser (GetUserRequest) returns (UserResponse) {}
+
+    rpc DeleteAccount (DeleteAccountRequest) returns (DummyResponse) {}
+}
+
+message AddUserRequest {
+    string userId = 1;
+    string name = 2;
+}
+
+message GetUserRequest {
+    reserved 1;
+    string userId = 2;
+}
+
+message InfoUpdateRequest {
+    reserved 1;
+    string userId = 2;
+    string name = 3;
+    string description = 4;
+}
+
+message DeleteAccountRequest {
+    reserved 1;
+    string userId = 2;
+}
+
+message UserResponse {
+    string userId = 1;
+    string name = 2;
+    string description = 3;
+    string avatar = 5;
+}
+
+message DummyResponse {
+}

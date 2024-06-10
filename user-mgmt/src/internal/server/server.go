@@ -7,7 +7,7 @@ import (
 	"net"
 	"net/http"
 
-	user_mgmt "example.com/user-mgmt/src/gen/go/user-mgmt"
+	userMgmt "example.com/user-mgmt/src/gen/go/user_mgmt"
 	"example.com/user-mgmt/src/internal/client"
 	"example.com/user-mgmt/src/internal/controller"
 	"example.com/user-mgmt/src/internal/service"
@@ -31,7 +31,7 @@ func (h *HttpServer) StartServer() {
 
 type UserMgmtGRPCServer struct {
 	gRPCServer *grpc.Server
-	user_mgmt.UnimplementedUserMgmtServer
+	userMgmt.UnimplementedUserMgmtServer
 	userMgmtService *service.UserMgmtService
 	authClient      *client.AuthGRPCClient
 }
@@ -43,7 +43,7 @@ func NewGRPCServer(userMgmtService *service.UserMgmtService, authClient *client.
 		userMgmtService: userMgmtService,
 		authClient:      authClient,
 	}
-	user_mgmt.RegisterUserMgmtServer(g.gRPCServer, g)
+	userMgmt.RegisterUserMgmtServer(g.gRPCServer, g)
 	return g
 }
 
@@ -53,7 +53,7 @@ func (s *UserMgmtGRPCServer) Start(l net.Listener) error {
 	return s.gRPCServer.Serve(l)
 }
 
-func (s *UserMgmtGRPCServer) AddUser(ctx context.Context, req *user_mgmt.AddUserRequest) (*user_mgmt.UserResponse, error) {
+func (s *UserMgmtGRPCServer) AddUser(ctx context.Context, req *userMgmt.AddUserRequest) (*userMgmt.UserResponse, error) {
 	slog.Info(fmt.Sprintf("Add User %v", req.UserId))
 	userId, err := uuid.Parse(req.UserId)
 	if err != nil {
@@ -65,7 +65,7 @@ func (s *UserMgmtGRPCServer) AddUser(ctx context.Context, req *user_mgmt.AddUser
 		slog.Error(err.Error())
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	resp := &user_mgmt.UserResponse{
+	resp := &userMgmt.UserResponse{
 		UserId:      user.Id.String(),
 		Name:        user.Name,
 		Description: "",
@@ -74,22 +74,17 @@ func (s *UserMgmtGRPCServer) AddUser(ctx context.Context, req *user_mgmt.AddUser
 	return resp, nil
 }
 
-func (s *UserMgmtGRPCServer) InfoUpdate(ctx context.Context, req *user_mgmt.InfoUpdateRequest) (*user_mgmt.UserResponse, error) {
-	authResp, err := s.authClient.PerformAuthorize(ctx, req.Token)
+func (s *UserMgmtGRPCServer) InfoUpdate(ctx context.Context, req *userMgmt.InfoUpdateRequest) (*userMgmt.UserResponse, error) {
+	authResp, err := s.authClient.PerformAuthorize(ctx, nil)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())
 	}
-	if !authResp.Authorized {
+	if authResp.UserId != req.GetUserId() {
 		return nil, status.Error(codes.PermissionDenied, "Unauthorized")
 	}
 
-	extractResp, err := s.authClient.PerformUserIdExtraction(ctx, req.Token)
-	if err != nil {
-		slog.Error(err.Error())
-		return nil, status.Error(codes.PermissionDenied, err.Error())
-	}
-	userId, err := uuid.Parse(extractResp.UserId)
+	userId, err := uuid.Parse(req.GetUserId())
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -100,7 +95,7 @@ func (s *UserMgmtGRPCServer) InfoUpdate(ctx context.Context, req *user_mgmt.Info
 		slog.Error(err.Error())
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	resp := &user_mgmt.UserResponse{
+	resp := &userMgmt.UserResponse{
 		UserId:      user.Id.String(),
 		Name:        user.Name,
 		Description: user.Description,
@@ -109,17 +104,17 @@ func (s *UserMgmtGRPCServer) InfoUpdate(ctx context.Context, req *user_mgmt.Info
 	return resp, nil
 }
 
-func (s *UserMgmtGRPCServer) GetUser(ctx context.Context, req *user_mgmt.GetUserRequest) (*user_mgmt.UserResponse, error) {
-	authResp, err := s.authClient.PerformAuthorize(ctx, req.Token)
+func (s *UserMgmtGRPCServer) GetUser(ctx context.Context, req *userMgmt.GetUserRequest) (*userMgmt.UserResponse, error) {
+	authResp, err := s.authClient.PerformAuthorize(ctx, nil)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())
 	}
-	if !authResp.Authorized {
+	if authResp.UserId != req.GetUserId() {
 		return nil, status.Error(codes.PermissionDenied, "Unauthorized")
 	}
 
-	userId, err := uuid.Parse(req.UserId)
+	userId, err := uuid.Parse(req.GetUserId())
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -130,7 +125,7 @@ func (s *UserMgmtGRPCServer) GetUser(ctx context.Context, req *user_mgmt.GetUser
 		slog.Error(err.Error())
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	resp := &user_mgmt.UserResponse{
+	resp := &userMgmt.UserResponse{
 		UserId:      user.Id.String(),
 		Name:        user.Name,
 		Description: user.Description,
@@ -139,22 +134,17 @@ func (s *UserMgmtGRPCServer) GetUser(ctx context.Context, req *user_mgmt.GetUser
 	return resp, nil
 }
 
-func (s *UserMgmtGRPCServer) DeleteAccount(ctx context.Context, req *user_mgmt.DeleteAccountRequest) (*user_mgmt.DummyResponse, error) {
-	authResp, err := s.authClient.PerformAuthorize(ctx, req.Token)
+func (s *UserMgmtGRPCServer) DeleteAccount(ctx context.Context, req *userMgmt.DeleteAccountRequest) (*userMgmt.DummyResponse, error) {
+	authResp, err := s.authClient.PerformAuthorize(ctx, nil)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())
 	}
-	if !authResp.Authorized {
+	if authResp.UserId != req.GetUserId() {
 		return nil, status.Error(codes.PermissionDenied, "Unauthorized")
 	}
 
-	extractResp, err := s.authClient.PerformUserIdExtraction(ctx, req.Token)
-	if err != nil {
-		slog.Error(err.Error())
-		return nil, status.Error(codes.PermissionDenied, err.Error())
-	}
-	userId, err := uuid.Parse(extractResp.UserId)
+	userId, err := uuid.Parse(req.GetUserId())
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -165,5 +155,5 @@ func (s *UserMgmtGRPCServer) DeleteAccount(ctx context.Context, req *user_mgmt.D
 		slog.Error(err.Error())
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	return &user_mgmt.DummyResponse{}, nil
+	return &userMgmt.DummyResponse{}, nil
 }

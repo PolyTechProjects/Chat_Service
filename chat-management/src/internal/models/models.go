@@ -6,20 +6,20 @@ import (
 )
 
 type Chat struct {
-	ID          uuid.UUID `gorm:"type:uuid;default:gen_random_uuid()"`
+	Id          uuid.UUID `gorm:"type:uuid;default:gen_random_uuid()"`
 	Name        string
 	Description string
-	CreatorID   string
+	CreatorId   string
 }
 
 type UserChat struct {
 	gorm.Model
-	ChatID uuid.UUID `gorm:"type:uuid"`
-	UserID uuid.UUID `gorm:"type:uuid"`
+	ChatId uuid.UUID `gorm:"type:uuid"`
+	UserId uuid.UUID `gorm:"type:uuid"`
 }
 
 type Admin struct {
 	gorm.Model
-	ChatID uuid.UUID `gorm:"type:uuid"`
-	UserID uuid.UUID `gorm:"type:uuid"`
+	ChatId uuid.UUID `gorm:"type:uuid"`
+	UserId uuid.UUID `gorm:"type:uuid"`
 }

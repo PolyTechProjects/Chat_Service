@@ -88,7 +88,7 @@ func (m *MessageService) Broadcast(userIds []uuid.UUID, message *models.Message)
 	}
 }
 
-func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.Conn, broadcastChannel chan *models.Message, token string) {
+func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.Conn, broadcastChannel chan *models.Message, accessToken string, refreshToken string) {
 	m.userIdXWsConnection[userId] = wsConnection
 	slog.Debug(fmt.Sprintf("Added wsConnection to %v", userId))
 
@@ -139,11 +139,12 @@ func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.
 		slog.Debug(fmt.Sprintf("Message Saved %v, %v", message.Id, message.Metadata.FilePath))
 
 		slog.Debug("Publishing Message")
-		messageWithToken := models.MessageWithToken{
-			Message: *message,
-			Token:   token,
+		messageWithTokens := models.MessageWithTokens{
+			Message:      *message,
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
 		}
-		bytes, err := json.Marshal(messageWithToken)
+		bytes, err := json.Marshal(messageWithTokens)
 		if err != nil {
 			slog.Error(fmt.Sprintf("Error has occured while marshalling message: %v", err.Error()))
 			break

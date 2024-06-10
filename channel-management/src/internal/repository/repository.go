@@ -16,18 +16,24 @@ func NewChannelRepository(db *gorm.DB) *ChannelRepository {
 	return &ChannelRepository{db: db}
 }
 
+func (r *ChannelRepository) FindById(channelID uuid.UUID) (*models.Channel, error) {
+	var channel models.Channel
+	err := r.db.Where("id = ?", channelID).First(&channel).Error
+	return &channel, err
+}
+
 func (r *ChannelRepository) SaveChannel(channel dto.CreateChannelDTO) (uuid.UUID, error) {
 	channelModel := models.Channel{
-		ID:          uuid.New(),
+		Id:          uuid.New(),
 		Name:        channel.Name,
 		Description: channel.Description,
-		CreatorID:   channel.CreatorID.String(),
+		CreatorId:   channel.CreatorId.String(),
 	}
 	err := r.db.Create(&channelModel).Error
 	if err != nil {
 		return uuid.Nil, err
 	}
-	return channelModel.ID, nil
+	return channelModel.Id, nil
 }
 
 func (r *ChannelRepository) DeleteChannel(channelID uuid.UUID) error {
@@ -35,7 +41,7 @@ func (r *ChannelRepository) DeleteChannel(channelID uuid.UUID) error {
 }
 
 func (r *ChannelRepository) UpdateChannel(channel dto.UpdateChannelDTO) error {
-	return r.db.Model(&models.Channel{}).Where("id = ?", channel.ID).Updates(map[string]interface{}{
+	return r.db.Model(&models.Channel{}).Where("id = ?", channel.Id).Updates(map[string]interface{}{
 		"name":        channel.Name,
 		"description": channel.Description,
 	}).Error
@@ -43,26 +49,26 @@ func (r *ChannelRepository) UpdateChannel(channel dto.UpdateChannelDTO) error {
 
 func (r *ChannelRepository) AddUserToChannel(user dto.AddUserDTO) error {
 	userChannel := models.UserChannel{
-		ChannelID: user.ChannelID,
-		UserID:    user.UserID,
+		ChannelId: user.ChannelId,
+		UserId:    user.UserId,
 	}
 	return r.db.Create(&userChannel).Error
 }
 
 func (r *ChannelRepository) RemoveUserFromChannel(user dto.RemoveUserDTO) error {
-	return r.db.Where("channel_id = ? AND user_id = ?", user.ChannelID, user.UserID).Delete(&models.UserChannel{}).Error
+	return r.db.Where("channel_id = ? AND user_id = ?", user.ChannelId, user.UserId).Delete(&models.UserChannel{}).Error
 }
 
 func (r *ChannelRepository) AddAdmin(admin dto.AdminDTO) error {
 	adminModel := models.Admin{
-		ChannelID: admin.ChannelID,
-		UserID:    admin.UserID,
+		ChannelId: admin.ChannelId,
+		UserId:    admin.UserId,
 	}
 	return r.db.Create(&adminModel).Error
 }
 
 func (r *ChannelRepository) RemoveAdmin(admin dto.AdminDTO) error {
-	return r.db.Where("channel_id = ? AND user_id = ?", admin.ChannelID, admin.UserID).Delete(&models.Admin{}).Error
+	return r.db.Where("channel_id = ? AND user_id = ?", admin.ChannelId, admin.UserId).Delete(&models.Admin{}).Error
 }
 
 func (r *ChannelRepository) IsAdmin(channelID, userID uuid.UUID) (bool, error) {
@@ -87,7 +93,25 @@ func (r *ChannelRepository) GetChanUsers(channelId uuid.UUID) ([]string, error) 
 
 	userIDs := make([]string, len(userChannels))
 	for i, uc := range userChannels {
-		userIDs[i] = uc.UserID.String()
+		userIDs[i] = uc.UserId.String()
 	}
 	return userIDs, nil
+}
+
+func (r *ChannelRepository) GetChannelAdmins(channelID uuid.UUID) ([]string, error) {
+	var admins []models.Admin
+	err := r.db.Where("channel_id = ?", channelID).Find(&admins).Error
+	if err != nil {
+		return nil, err
+	}
+
+	if len(admins) == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	userIds := make([]string, len(admins))
+	for i, a := range admins {
+		userIds[i] = a.UserId.String()
+	}
+	return userIds, nil
 }

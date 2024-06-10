@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -40,7 +41,7 @@ func (s *NotificationServer) Start(l net.Listener) error {
 }
 
 func (s *NotificationServer) NotifyUser(ctx context.Context, req *notification.NotifyUserRequest) (*notification.NotifyUserResponse, error) {
-	user, err := s.userMgmtClient.PerformGetUser(ctx, req.GetToken(), req.GetReceiverUserId())
+	user, err := s.userMgmtClient.PerformGetUser(ctx, req.GetReceiverUserId())
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.NotFound, err.Error())
@@ -50,12 +51,14 @@ func (s *NotificationServer) NotifyUser(ctx context.Context, req *notification.N
 }
 
 func (s *NotificationServer) BindDeviceToUser(ctx context.Context, req *notification.BindDeviceRequest) (*notification.BindDeviceResponse, error) {
-	authResp, err := s.authClient.PerformAuthorize(ctx, req.GetToken())
+	accessToken := metadata.ValueFromIncomingContext(ctx, "authorization")[0]
+	refreshToken := metadata.ValueFromIncomingContext(ctx, "x-refresh-token")[0]
+	authResp, err := s.authClient.PerformAuthorize(ctx, accessToken, refreshToken)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())
 	}
-	if !authResp.Authorized {
+	if authResp.UserId != req.GetUserId() {
 		return nil, status.Error(codes.PermissionDenied, "Unauthorized")
 	}
 
@@ -68,12 +71,14 @@ func (s *NotificationServer) BindDeviceToUser(ctx context.Context, req *notifica
 }
 
 func (s *NotificationServer) UnbindDeviceFromUser(ctx context.Context, req *notification.UnbindDeviceRequest) (*notification.UnbindDeviceResponse, error) {
-	authResp, err := s.authClient.PerformAuthorize(ctx, req.GetToken())
+	accessToken := metadata.ValueFromIncomingContext(ctx, "authorization")[0]
+	refreshToken := metadata.ValueFromIncomingContext(ctx, "x-refresh-token")[0]
+	authResp, err := s.authClient.PerformAuthorize(ctx, accessToken, refreshToken)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())
 	}
-	if !authResp.Authorized {
+	if authResp.UserId != req.GetUserId() {
 		return nil, status.Error(codes.PermissionDenied, "Unauthorized")
 	}
 
@@ -86,12 +91,14 @@ func (s *NotificationServer) UnbindDeviceFromUser(ctx context.Context, req *noti
 }
 
 func (s *NotificationServer) DeleteUser(ctx context.Context, req *notification.DeleteUserRequest) (*notification.DeleteUserResponse, error) {
-	authResp, err := s.authClient.PerformAuthorize(ctx, req.GetToken())
+	accessToken := metadata.ValueFromIncomingContext(ctx, "authorization")[0]
+	refreshToken := metadata.ValueFromIncomingContext(ctx, "x-refresh-token")[0]
+	authResp, err := s.authClient.PerformAuthorize(ctx, accessToken, refreshToken)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())
 	}
-	if !authResp.Authorized {
+	if authResp.UserId != req.GetUserId() {
 		return nil, status.Error(codes.PermissionDenied, "Unauthorized")
 	}
 
@@ -104,12 +111,14 @@ func (s *NotificationServer) DeleteUser(ctx context.Context, req *notification.D
 }
 
 func (s *NotificationServer) UpdateOldDeviceOnUser(ctx context.Context, req *notification.UpdateOldDeviceRequest) (*notification.UpdateOldDeviceResponse, error) {
-	authResp, err := s.authClient.PerformAuthorize(ctx, req.GetToken())
+	accessToken := metadata.ValueFromIncomingContext(ctx, "authorization")[0]
+	refreshToken := metadata.ValueFromIncomingContext(ctx, "x-refresh-token")[0]
+	authResp, err := s.authClient.PerformAuthorize(ctx, accessToken, refreshToken)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())
 	}
-	if !authResp.Authorized {
+	if authResp.UserId != req.GetUserId() {
 		return nil, status.Error(codes.PermissionDenied, "Unauthorized")
 	}
 

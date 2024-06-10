@@ -79,26 +79,30 @@ func (ws *WebsocketController) SendMessageHandler(w http.ResponseWriter, r *http
 	}
 	slog.Debug("Connected to websocket server")
 
-	token := r.Header.Get("Authorization")
-	_, err = ws.authClient.PerformAuthorize(r.Context(), token)
+	header := r.Header.Get("Authorization")
+	accessToken := strings.Split(header, " ")[1]
+
+	cookie, err := r.Cookie("X-Refresh-Token")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	refreshToken := cookie.Value
+
+	authorizeResp, err := ws.authClient.PerformAuthorize(r.Context(), accessToken, refreshToken)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 	slog.Debug("Authorized")
 
-	extractResp, err := ws.authClient.PerformUserIdExtraction(r.Context(), token)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-	slog.Debug(fmt.Sprintf("Extracted user id: %s", extractResp.UserId))
-	userId, err := uuid.Parse(extractResp.UserId)
+	slog.Debug(fmt.Sprintf("Extracted user id: %s", authorizeResp.UserId))
+	userId, err := uuid.Parse(authorizeResp.UserId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	ws.messageService.ReadMessages(userId, wsConnection, ws.broadcastChannel, token)
+	ws.messageService.ReadMessages(userId, wsConnection, ws.broadcastChannel, accessToken, refreshToken)
 	wsConnection.Close()
 }
 
@@ -115,25 +119,26 @@ func (ws *WebsocketController) StartBroadcasting() {
 	}
 	slog.Info("Available message-channel")
 	for {
-		messageWithToken, err := receiveMessageFromRedis(subscriber)
+		messageWithTokens, err := receiveMessageFromRedis(subscriber)
 		if err != nil {
 			slog.Error(err.Error())
 			continue
 		}
 		slog.Info("Received message")
 
-		message := messageWithToken.Message
+		message := messageWithTokens.Message
 		slog.Debug(fmt.Sprintf("Message: %v", message))
-		token := messageWithToken.Token
+		accessToken := messageWithTokens.AccessToken
+		refreshToken := messageWithTokens.RefreshToken
 
-		channelID := message.ChatRoomId.String()
-		channelUsers, err := ws.channelMgmtClient.PerformGetChanUsers(channelID, token)
+		entityId := message.ChatRoomId.String()
+		channelUsers, err := ws.channelMgmtClient.PerformGetChanUsers(entityId, accessToken, refreshToken)
 		if err == nil && len(channelUsers) > 0 {
 			ws.messageService.Broadcast(channelUsers, &message)
 			continue
 		}
 
-		chatUsers, err := ws.chatMgmtClient.PerformGetChatUsers(channelID, token)
+		chatUsers, err := ws.chatMgmtClient.PerformGetChatUsers(entityId, accessToken, refreshToken)
 		if err == nil && len(chatUsers) > 0 {
 			ws.messageService.Broadcast(chatUsers, &message)
 			continue
@@ -143,15 +148,15 @@ func (ws *WebsocketController) StartBroadcasting() {
 	}
 }
 
-func receiveMessageFromRedis(subscriber *redis.PubSub) (*models.MessageWithToken, error) {
-	messageWithToken := &models.MessageWithToken{}
+func receiveMessageFromRedis(subscriber *redis.PubSub) (*models.MessageWithTokens, error) {
+	messageWithTokens := &models.MessageWithTokens{}
 	slog.Debug("Waiting for message")
 	channel := subscriber.Channel()
 	receivedMessage := <-channel
 	slog.Debug(receivedMessage.Payload)
-	err := json.Unmarshal([]byte(receivedMessage.Payload), messageWithToken)
+	err := json.Unmarshal([]byte(receivedMessage.Payload), messageWithTokens)
 	if err != nil {
 		return nil, err
 	}
-	return messageWithToken, nil
+	return messageWithTokens, nil
 }

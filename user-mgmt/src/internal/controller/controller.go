@@ -22,8 +22,8 @@ func New(userMgmtService *service.UserMgmtService, authClient *client.AuthGRPCCl
 
 func (c *UserMgmtController) UpdateAvatarHandler(w http.ResponseWriter, r *http.Request) {
 	token := r.Header.Get("Authorization")
-	authResp, err := c.authClient.PerformAuthorize(r.Context(), token)
-	if err != nil || !authResp.Authorized {
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
@@ -39,13 +39,7 @@ func (c *UserMgmtController) UpdateAvatarHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	slog.Info("Extracting User Id")
-	userIdResp, err := c.authClient.PerformUserIdExtraction(r.Context(), token)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-	userId, err := uuid.Parse(userIdResp.UserId)
+	userId, err := uuid.Parse(authResp.UserId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

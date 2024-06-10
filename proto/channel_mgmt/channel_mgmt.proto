@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package channel_mgmt;
+
+option go_package = "example.com/proto/channel_mgmt";
+
+service ChannelManagement {
+    rpc CreateChannel (CreateChannelRequest) returns (ChannelResponse) {}
+    rpc DeleteChannel (DeleteChannelRequest) returns (DeleteChannelResponse) {}
+    rpc UpdateChannel (UpdateChannelRequest) returns (ChannelResponse) {}
+    rpc JoinChannel (JoinChannelRequest) returns (ChannelResponse) {}
+    rpc LeaveChannel (LeaveChannelRequest) returns (ChannelResponse) {}
+    rpc InviteUser (InviteUserRequest) returns (ChannelResponse) {}
+    rpc KickUser (KickUserRequest) returns (ChannelResponse) {}
+    rpc CanWriteToChannel (CanWriteRequest) returns (CanWriteResponse) {}
+    rpc MakeChannelAdmin (MakeAdminRequest) returns (ChannelWithAdminsResponse) {}
+    rpc DeleteChannelAdmin (DeleteAdminRequest) returns (ChannelWithAdminsResponse) {}
+    rpc IsChannelAdmin (IsAdminRequest) returns (IsAdminResponse) {}
+    rpc GetUsersInChannel (GetUsersRequest) returns (GetUsersResponse) {}
+}
+
+message ChannelResponse {
+    string channelId = 1;
+    string creatorId = 2;
+    repeated string participantsIds = 3;
+    string name = 4;
+    string description = 5;
+}
+
+message ChannelWithAdminsResponse {
+    string channelId = 1;
+    string creatorId = 2;
+    repeated string participantsIds = 3;
+    string name = 4;
+    string description = 5;
+    repeated string adminsIds = 6;
+}
+
+message CreateChannelRequest {
+    string name = 1;
+    string description = 2;
+    string creatorId = 3;
+    repeated string participantsIds = 4;
+}
+
+message DeleteChannelRequest {
+    string channelId = 1;
+    string userId = 2;
+}
+
+message DeleteChannelResponse {}
+
+message UpdateChannelRequest {
+    string channelId = 1;
+    string name = 2;
+    string description = 3;
+    string userId = 4;
+}
+
+message JoinChannelRequest {
+    string channelId = 1;
+    string userId = 2;
+}
+
+message LeaveChannelRequest {
+    string channelId = 1;
+    string userId = 2;
+}
+
+message InviteUserRequest {
+    string channelId = 1;
+    string userId = 2;
+    string requestingUserId = 3;
+}
+
+message KickUserRequest {
+    string channelId = 1;
+    string userId = 2;
+    string requestingUserId = 3;
+}
+
+message CanWriteRequest {
+    string channelId = 1;
+    string userId = 2;
+}
+
+message CanWriteResponse {
+    bool canWrite = 1;
+}
+
+message MakeAdminRequest {
+    string channelId = 1;
+    string userId = 2;
+    string requestingUserId = 3;
+}
+
+message DeleteAdminRequest {
+    string channelId = 1;
+    string userId = 2;
+    string requestingUserId = 3;
+}
+
+message IsAdminRequest {
+    string channelId = 1;
+    string userId = 2;
+}
+
+message IsAdminResponse {
+    bool isAdmin = 1;
+}
+
+message GetUsersRequest {
+    string channelId = 1;
+}
+
+message GetUsersResponse {
+    repeated string userIds = 1;
+}

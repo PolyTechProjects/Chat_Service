@@ -6,20 +6,20 @@ import (
 )
 
 type Channel struct {
-	ID          uuid.UUID `gorm:"type:uuid;default:gen_random_uuid()"`
+	Id          uuid.UUID `gorm:"type:uuid;default:gen_random_uuid()"`
 	Name        string
 	Description string
-	CreatorID   string
+	CreatorId   string
 }
 
 type UserChannel struct {
 	gorm.Model
-	ChannelID uuid.UUID `gorm:"type:uuid"`
-	UserID    uuid.UUID `gorm:"type:uuid"`
+	ChannelId uuid.UUID `gorm:"type:uuid"`
+	UserId    uuid.UUID `gorm:"type:uuid"`
 }
 
 type Admin struct {
 	gorm.Model
-	ChannelID uuid.UUID `gorm:"type:uuid"`
-	UserID    uuid.UUID `gorm:"type:uuid"`
+	ChannelId uuid.UUID `gorm:"type:uuid"`
+	UserId    uuid.UUID `gorm:"type:uuid"`
 }

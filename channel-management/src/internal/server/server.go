@@ -2,13 +2,18 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net"
 
-	channelMgmt "example.com/channel-management/src/gen/go/channel-mgmt"
+	channelMgmt "example.com/channel-management/src/gen/go/channel_mgmt"
 	"example.com/channel-management/src/internal/client"
+	"example.com/channel-management/src/internal/dto"
 	"example.com/channel-management/src/internal/service"
+	"github.com/google/uuid"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type GRPCServer struct {
@@ -35,28 +40,62 @@ func (s *GRPCServer) Start(l net.Listener) error {
 	return s.gRPCServer.Serve(l)
 }
 
-func (s *GRPCServer) CreateChannel(ctx context.Context, req *channelMgmt.CreateChannelRequest) (*channelMgmt.CreateChannelResponse, error) {
+func (s *GRPCServer) CreateChannel(ctx context.Context, req *channelMgmt.CreateChannelRequest) (*channelMgmt.ChannelResponse, error) {
 	slog.Info("Create channel controller started")
-	if err := s.authClient.PerformAuthorize(ctx); err != nil {
-		slog.Error("Authorization error", "error", err.Error())
+	authResp, err := s.authClient.PerformAuthorize(ctx)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Authorization error: %v", err.Error()))
 		return nil, err
 	}
+	if authResp.UserId != req.CreatorId {
+		err = fmt.Errorf("authorization error: %v and %v are not same", authResp.UserId, req.CreatorId)
+		slog.Error(err.Error())
+		return nil, status.Error(codes.PermissionDenied, err.Error())
+	}
+
 	channelID, err := s.service.CreateChannel(ctx, req.Name, req.Description, req.CreatorId)
 	if err != nil {
 		slog.Error("CreateChannel error", "error", err.Error())
 		return nil, err
 	}
 	slog.Info("Create channel controller successful", "channelID", channelID)
-	return &channelMgmt.CreateChannelResponse{ChannelId: channelID}, nil
+
+	channelId, err := uuid.Parse(channelID)
+	if err != nil {
+		slog.Error("Invalid channel Id", "error", err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	getReq := &dto.GetChannelRequest{
+		ChannelId: channelId,
+	}
+	channel, err := s.service.GetChannel(ctx, getReq)
+	if err != nil {
+		slog.Error("GetChat error", "error", err.Error())
+		return nil, err
+	}
+	return &channelMgmt.ChannelResponse{
+		ChannelId:       channel.Channel.Id.String(),
+		CreatorId:       channel.Channel.CreatorId,
+		Name:            channel.Channel.Name,
+		Description:     channel.Channel.Description,
+		ParticipantsIds: channel.Users,
+	}, nil
 }
 
 func (s *GRPCServer) DeleteChannel(ctx context.Context, req *channelMgmt.DeleteChannelRequest) (*channelMgmt.DeleteChannelResponse, error) {
 	slog.Info("Delete channel controller started")
-	if err := s.authClient.PerformAuthorize(ctx); err != nil {
-		slog.Error("Authorization error", "error", err.Error())
+	authResp, err := s.authClient.PerformAuthorize(ctx)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Authorization error: %v", err.Error()))
 		return nil, err
 	}
-	err := s.service.DeleteChannel(ctx, req.ChannelId, req.UserId)
+	if authResp.UserId != req.UserId {
+		err = fmt.Errorf("authorization error: %v and %v are not same", authResp.UserId, req.UserId)
+		slog.Error(err.Error())
+		return nil, status.Error(codes.PermissionDenied, err.Error())
+	}
+
+	err = s.service.DeleteChannel(ctx, req.ChannelId, req.UserId)
 	if err != nil {
 		slog.Error("DeleteChannel error", "error", err.Error())
 		return nil, err
@@ -65,122 +104,275 @@ func (s *GRPCServer) DeleteChannel(ctx context.Context, req *channelMgmt.DeleteC
 	return &channelMgmt.DeleteChannelResponse{}, nil
 }
 
-func (s *GRPCServer) UpdateChannel(ctx context.Context, req *channelMgmt.UpdateChannelRequest) (*channelMgmt.UpdateChannelResponse, error) {
+func (s *GRPCServer) UpdateChannel(ctx context.Context, req *channelMgmt.UpdateChannelRequest) (*channelMgmt.ChannelResponse, error) {
 	slog.Info("Update channel controller started")
-	if err := s.authClient.PerformAuthorize(ctx); err != nil {
-		slog.Error("Authorization error", "error", err.Error())
+	authResp, err := s.authClient.PerformAuthorize(ctx)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Authorization error: %v", err.Error()))
 		return nil, err
 	}
-	err := s.service.UpdateChannel(ctx, req.ChannelId, req.Name, req.Description, req.UserId)
+	if authResp.UserId != req.UserId {
+		err = fmt.Errorf("authorization error: %v and %v are not same", authResp.UserId, req.UserId)
+		slog.Error(err.Error())
+		return nil, status.Error(codes.PermissionDenied, err.Error())
+	}
+
+	err = s.service.UpdateChannel(ctx, req.ChannelId, req.Name, req.Description, req.UserId)
 	if err != nil {
 		slog.Error("UpdateChannel error", "error", err.Error())
 		return nil, err
 	}
 	slog.Info("Update channel controller successful", "channelID", req.ChannelId)
-	return &channelMgmt.UpdateChannelResponse{}, nil
-}
 
-func (s *GRPCServer) JoinChannel(ctx context.Context, req *channelMgmt.JoinChannelRequest) (*channelMgmt.JoinChannelResponse, error) {
-	slog.Info("Join channel controller started")
-	if err := s.authClient.PerformAuthorize(ctx); err != nil {
-		slog.Error("Authorization error", "error", err.Error())
+	channelId, err := uuid.Parse(req.ChannelId)
+	if err != nil {
+		slog.Error("Invalid channel Id", "error", err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	getReq := &dto.GetChannelRequest{
+		ChannelId: channelId,
+	}
+	channel, err := s.service.GetChannel(ctx, getReq)
+	if err != nil {
+		slog.Error("GetChat error", "error", err.Error())
 		return nil, err
 	}
-	err := s.service.JoinChannel(ctx, req.ChannelId, req.UserId)
+	return &channelMgmt.ChannelResponse{
+		ChannelId:       channel.Channel.Id.String(),
+		CreatorId:       channel.Channel.CreatorId,
+		Name:            channel.Channel.Name,
+		Description:     channel.Channel.Description,
+		ParticipantsIds: channel.Users,
+	}, nil
+}
+
+func (s *GRPCServer) JoinChannel(ctx context.Context, req *channelMgmt.JoinChannelRequest) (*channelMgmt.ChannelResponse, error) {
+	slog.Info("Join channel controller started")
+	authResp, err := s.authClient.PerformAuthorize(ctx)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Authorization error: %v", err.Error()))
+		return nil, err
+	}
+	if authResp.UserId != req.UserId {
+		err = fmt.Errorf("authorization error: %v and %v are not same", authResp.UserId, req.UserId)
+		slog.Error(err.Error())
+		return nil, status.Error(codes.PermissionDenied, err.Error())
+	}
+
+	err = s.service.JoinChannel(ctx, req.ChannelId, req.UserId)
 	if err != nil {
 		slog.Error("JoinChannel error", "error", err.Error())
 		return nil, err
 	}
 	slog.Info("Join channel controller successful", "channelID", req.ChannelId, "userID", req.UserId)
-	return &channelMgmt.JoinChannelResponse{}, nil
-}
 
-func (s *GRPCServer) KickUser(ctx context.Context, req *channelMgmt.KickUserChannelRequest) (*channelMgmt.KickUserChannelResponse, error) {
-	slog.Info("Kick user controller started")
-	if err := s.authClient.PerformAuthorize(ctx); err != nil {
-		slog.Error("Authorization error", "error", err.Error())
+	channelId, err := uuid.Parse(req.ChannelId)
+	if err != nil {
+		slog.Error("Invalid channel Id", "error", err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	getReq := &dto.GetChannelRequest{
+		ChannelId: channelId,
+	}
+	channel, err := s.service.GetChannel(ctx, getReq)
+	if err != nil {
+		slog.Error("GetChat error", "error", err.Error())
 		return nil, err
 	}
-	err := s.service.KickUser(ctx, req.ChannelId, req.UserId, req.RequestingUserId)
+	return &channelMgmt.ChannelResponse{
+		ChannelId:       channel.Channel.Id.String(),
+		CreatorId:       channel.Channel.CreatorId,
+		Name:            channel.Channel.Name,
+		Description:     channel.Channel.Description,
+		ParticipantsIds: channel.Users,
+	}, nil
+}
+
+func (s *GRPCServer) KickUser(ctx context.Context, req *channelMgmt.KickUserRequest) (*channelMgmt.ChannelResponse, error) {
+	slog.Info("Kick user controller started")
+	authResp, err := s.authClient.PerformAuthorize(ctx)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Authorization error: %v", err.Error()))
+		return nil, err
+	}
+	if authResp.UserId != req.UserId {
+		err = fmt.Errorf("authorization error: %v and %v are not same", authResp.UserId, req.UserId)
+		slog.Error(err.Error())
+		return nil, status.Error(codes.PermissionDenied, err.Error())
+	}
+
+	err = s.service.KickUser(ctx, req.ChannelId, req.UserId, req.RequestingUserId)
 	if err != nil {
 		slog.Error("KickUser error", "error", err.Error())
 		return nil, err
 	}
 	slog.Info("Kick user controller successful", "channelID", req.ChannelId, "userID", req.UserId)
-	return &channelMgmt.KickUserChannelResponse{}, nil
-}
 
-func (s *GRPCServer) CanWrite(ctx context.Context, req *channelMgmt.CanWriteChannelRequest) (*channelMgmt.CanWriteChannelResponse, error) {
-	slog.Info("CanWrite controller started")
-	if err := s.authClient.PerformAuthorize(ctx); err != nil {
-		slog.Error("Authorization error", "error", err.Error())
+	channelId, err := uuid.Parse(req.ChannelId)
+	if err != nil {
+		slog.Error("Invalid channel Id", "error", err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	getReq := &dto.GetChannelRequest{
+		ChannelId: channelId,
+	}
+	channel, err := s.service.GetChannel(ctx, getReq)
+	if err != nil {
+		slog.Error("GetChat error", "error", err.Error())
 		return nil, err
 	}
+	return &channelMgmt.ChannelResponse{
+		ChannelId:       channel.Channel.Id.String(),
+		CreatorId:       channel.Channel.CreatorId,
+		Name:            channel.Channel.Name,
+		Description:     channel.Channel.Description,
+		ParticipantsIds: channel.Users,
+	}, nil
+}
+
+func (s *GRPCServer) CanWrite(ctx context.Context, req *channelMgmt.CanWriteRequest) (*channelMgmt.CanWriteResponse, error) {
+	slog.Info("CanWrite controller started")
+	authResp, err := s.authClient.PerformAuthorize(ctx)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Authorization error: %v", err.Error()))
+		return nil, err
+	}
+	if authResp.UserId != req.UserId {
+		err = fmt.Errorf("authorization error: %v and %v are not same", authResp.UserId, req.UserId)
+		slog.Error(err.Error())
+		return nil, status.Error(codes.PermissionDenied, err.Error())
+	}
+
 	canWrite, err := s.service.CanWrite(ctx, req.ChannelId, req.UserId)
 	if err != nil {
 		slog.Error("CanWrite error", "error", err.Error())
 		return nil, err
 	}
 	slog.Info("CanWrite controller successful", "channelID", req.ChannelId, "userID", req.UserId)
-	return &channelMgmt.CanWriteChannelResponse{CanWrite: canWrite}, nil
+	return &channelMgmt.CanWriteResponse{CanWrite: canWrite}, nil
 }
 
-func (s *GRPCServer) MakeAdmin(ctx context.Context, req *channelMgmt.MakeChannelAdminRequest) (*channelMgmt.MakeChannelAdminResponse, error) {
+func (s *GRPCServer) MakeAdmin(ctx context.Context, req *channelMgmt.MakeAdminRequest) (*channelMgmt.ChannelWithAdminsResponse, error) {
 	slog.Info("MakeAdmin controller started")
-	if err := s.authClient.PerformAuthorize(ctx); err != nil {
-		slog.Error("Authorization error", "error", err.Error())
+	authResp, err := s.authClient.PerformAuthorize(ctx)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Authorization error: %v", err.Error()))
 		return nil, err
 	}
-	err := s.service.MakeAdmin(ctx, req.ChannelId, req.UserId, req.RequestingUserId)
+	if authResp.UserId != req.UserId {
+		err = fmt.Errorf("authorization error: %v and %v are not same", authResp.UserId, req.UserId)
+		slog.Error(err.Error())
+		return nil, status.Error(codes.PermissionDenied, err.Error())
+	}
+
+	err = s.service.MakeAdmin(ctx, req.ChannelId, req.UserId, req.RequestingUserId)
 	if err != nil {
 		slog.Error("MakeAdmin error", "error", err.Error())
 		return nil, err
 	}
 	slog.Info("MakeAdmin controller successful", "channelID", req.ChannelId, "userID", req.UserId)
-	return &channelMgmt.MakeChannelAdminResponse{}, nil
-}
 
-func (s *GRPCServer) DeleteAdmin(ctx context.Context, req *channelMgmt.DeleteChannelAdminRequest) (*channelMgmt.DeleteChannelAdminResponse, error) {
-	slog.Info("DeleteAdmin controller started")
-	if err := s.authClient.PerformAuthorize(ctx); err != nil {
-		slog.Error("Authorization error", "error", err.Error())
+	channelId, err := uuid.Parse(req.ChannelId)
+	if err != nil {
+		slog.Error("Invalid channel Id", "error", err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	getReq := &dto.GetChannelRequest{
+		ChannelId: channelId,
+	}
+	channel, err := s.service.GetChannelWithAdmins(ctx, getReq)
+	if err != nil {
+		slog.Error("GetChatWithAdmins error", "error", err.Error())
 		return nil, err
 	}
-	err := s.service.DeleteAdmin(ctx, req.ChannelId, req.UserId, req.RequestingUserId)
+	return &channelMgmt.ChannelWithAdminsResponse{
+		ChannelId:       channel.Channel.Id.String(),
+		CreatorId:       channel.Channel.CreatorId,
+		Name:            channel.Channel.Name,
+		Description:     channel.Channel.Description,
+		ParticipantsIds: channel.Users,
+		AdminsIds:       channel.Admins,
+	}, nil
+}
+
+func (s *GRPCServer) DeleteAdmin(ctx context.Context, req *channelMgmt.DeleteAdminRequest) (*channelMgmt.ChannelWithAdminsResponse, error) {
+	slog.Info("DeleteAdmin controller started")
+	authResp, err := s.authClient.PerformAuthorize(ctx)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Authorization error: %v", err.Error()))
+		return nil, err
+	}
+	if authResp.UserId != req.UserId {
+		err = fmt.Errorf("authorization error: %v and %v are not same", authResp.UserId, req.UserId)
+		slog.Error(err.Error())
+		return nil, status.Error(codes.PermissionDenied, err.Error())
+	}
+
+	err = s.service.DeleteAdmin(ctx, req.ChannelId, req.UserId, req.RequestingUserId)
 	if err != nil {
 		slog.Error("DeleteAdmin error", "error", err.Error())
 		return nil, err
 	}
 	slog.Info("DeleteAdmin controller successful", "channelID", req.ChannelId, "userID", req.UserId)
-	return &channelMgmt.DeleteChannelAdminResponse{}, nil
-}
 
-func (s *GRPCServer) IsAdmin(ctx context.Context, req *channelMgmt.IsChannelAdminRequest) (*channelMgmt.IsChannelAdminResponse, error) {
-	slog.Info("IsAdmin controller started")
-	if err := s.authClient.PerformAuthorize(ctx); err != nil {
-		slog.Error("Authorization error", "error", err.Error())
+	channelId, err := uuid.Parse(req.ChannelId)
+	if err != nil {
+		slog.Error("Invalid channel Id", "error", err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	getReq := &dto.GetChannelRequest{
+		ChannelId: channelId,
+	}
+	channel, err := s.service.GetChannelWithAdmins(ctx, getReq)
+	if err != nil {
+		slog.Error("GetChatWithAdmins error", "error", err.Error())
 		return nil, err
 	}
+	return &channelMgmt.ChannelWithAdminsResponse{
+		ChannelId:       channel.Channel.Id.String(),
+		CreatorId:       channel.Channel.CreatorId,
+		Name:            channel.Channel.Name,
+		Description:     channel.Channel.Description,
+		ParticipantsIds: channel.Users,
+		AdminsIds:       channel.Admins,
+	}, nil
+}
+
+func (s *GRPCServer) IsAdmin(ctx context.Context, req *channelMgmt.IsAdminRequest) (*channelMgmt.IsAdminResponse, error) {
+	slog.Info("IsAdmin controller started")
+	authResp, err := s.authClient.PerformAuthorize(ctx)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Authorization error: %v", err.Error()))
+		return nil, err
+	}
+	if authResp.UserId != req.UserId {
+		err = fmt.Errorf("authorization error: %v and %v are not same", authResp.UserId, req.UserId)
+		slog.Error(err.Error())
+		return nil, status.Error(codes.PermissionDenied, err.Error())
+	}
+
 	isAdmin, err := s.service.IsAdmin(ctx, req.ChannelId, req.UserId)
 	if err != nil {
 		slog.Error("IsAdmin error", "error", err.Error())
 		return nil, err
 	}
 	slog.Info("IsAdmin controller successful", "channelID", req.ChannelId, "userID", req.UserId)
-	return &channelMgmt.IsChannelAdminResponse{IsAdmin: isAdmin}, nil
+	return &channelMgmt.IsAdminResponse{IsAdmin: isAdmin}, nil
 }
 
-func (s *GRPCServer) GetChanUsers(ctx context.Context, req *channelMgmt.GetChanUsersRequest) (*channelMgmt.GetChanUsersResponse, error) {
+func (s *GRPCServer) GetChanUsers(ctx context.Context, req *channelMgmt.GetUsersRequest) (*channelMgmt.GetUsersResponse, error) {
 	slog.Info("GetChanUsers controller started")
-	if err := s.authClient.PerformAuthorize(ctx); err != nil {
-		slog.Error("Authorization error", "error", err.Error())
+	_, err := s.authClient.PerformAuthorize(ctx)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Authorization error: %v", err.Error()))
 		return nil, err
 	}
+
 	userIDs, err := s.service.GetChanUsers(ctx, req.ChannelId)
 	if err != nil {
 		slog.Error("GetChanUsers error", "error", err.Error())
 		return nil, err
 	}
 	slog.Info("GetChanUsers controller successful", "channelID", req.ChannelId)
-	return &channelMgmt.GetChanUsersResponse{UserIds: userIDs}, nil
+	return &channelMgmt.GetUsersResponse{UserIds: userIDs}, nil
 }

@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/nyaruka/phonenumbers"
@@ -32,4 +33,21 @@ func New(login string, name string, pass string) (*User, error) {
 	}
 
 	return &user, nil
+}
+
+type RefreshToken struct {
+	Id        uuid.UUID `gorm:"primary_key;type:uuid;default:gen_random_uuid()"`
+	UserId    uuid.UUID `gorm:"unique;not null"`
+	Value     string    `gorm:"not null;check:value <> ''"`
+	ExpiredAt time.Time `gorm:"not null"`
+}
+
+func NewRefreshToken(userId uuid.UUID, value string) *RefreshToken {
+	refreshToken := RefreshToken{
+		Id:        uuid.New(),
+		UserId:    userId,
+		Value:     value,
+		ExpiredAt: time.Now().Add(time.Hour * 24 * 30),
+	}
+	return &refreshToken
 }

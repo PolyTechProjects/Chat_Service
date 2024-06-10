@@ -27,9 +27,10 @@ type Message struct {
 	Metadata   dto.Metadata `gorm:"type:jsonb"`
 }
 
-type MessageWithToken struct {
-	Message Message `json:"message"`
-	Token   string  `json:"token"`
+type MessageWithTokens struct {
+	Message      Message `json:"message"`
+	AccessToken  string  `json:"access_token"`
+	RefreshToken string  `json:"refresh_token"`
 }
 
 func MapRequestToMessage(req *dto.MessageRequest) (*Message, error) {
