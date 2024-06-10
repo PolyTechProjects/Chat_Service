@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "example.com/proto/auth";
+
+service Auth {
+    rpc Register (RegisterRequest) returns (RegisterResponse) {}
+
+    rpc Login (LoginRequest) returns (LoginResponse) {}
+
+    rpc Authorize (AuthorizeRequest) returns (AuthorizeResponse) {}
+}
+
+message RegisterRequest {
+    string username = 1;
+    string password = 2;
+    string login = 3;
+}
+
+message RegisterResponse {
+    reserved 1;
+    string accessToken = 2;
+    string refreshToken = 3;
+    string userId = 4;
+}
+
+message LoginRequest {
+    reserved 1, 3;
+    string password = 2;
+    string login = 4;
+}
+
+message LoginResponse {
+    reserved 1;
+    string accessToken = 2;
+    string refreshToken = 3;
+}
+
+message AuthorizeRequest {
+    reserved 1;
+    string userId = 2;
+    string accessToken = 3;
+    string refreshToken = 4;
+}
+
+message AuthorizeResponse {
+    reserved 1;
+    string accessToken = 2;
+    string userId = 3;
+}

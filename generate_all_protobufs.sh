@@ -1,7 +1,9 @@
-cd auth/ && bash tools/protogen.sh && echo "auth" && cd ../
-cd user-mgmt/ && bash tools/protogen.sh && echo "user-mgmt" && cd ../
-cd channel-management && bash tools/protogen.sh && echo "channel-management" && cd ../
-cd chat-management/ && bash tools/protogen.sh && echo "chat-management" && cd ../
-cd chat-app/ && bash tools/protogen.sh && echo "chat-app" && cd ../
-cd notification/ && bash tools/protogen.sh && echo "notification" && cd ../
-cd media-handler/ && bash tools/protogen.sh && echo "media-handler" && cd ../
+for dir in ./proto/*;
+do
+    for code_dir in $(ls -d */ | cut -f1 -d'/' | grep -iv "proto");
+    do
+        mkdir -p ./$code_dir/src/gen/go
+        protoc -I=./proto/ $dir/*.proto --go_out=./$code_dir/src/gen/go --go_opt=paths=source_relative --go-grpc_out=./$code_dir/src/gen/go --go-grpc_opt=paths=source_relative;
+        echo "Generating code for $dir in $code_dir"
+    done
+done

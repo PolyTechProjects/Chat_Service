@@ -35,3 +35,12 @@ func (r *AuthRepository) FindByLogin(login string) (*models.User, error) {
 	}
 	return &user, nil
 }
+
+func (r *AuthRepository) FindTokenByUserId(userId uuid.UUID) (*models.RefreshToken, error) {
+	var token models.RefreshToken
+	err := r.db.Where("user_id = ?", userId).Find(&token).Error
+	if err != nil {
+		return nil, err
+	}
+	return &token, nil
+}
