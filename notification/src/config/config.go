@@ -11,6 +11,7 @@ type Config struct {
 	UserMgmt UserMgmtConfig
 	Fcm      FcmConfig
 	Db       DbConfig
+	Redis    RedisConfig
 }
 
 type AppConfig struct {
@@ -39,6 +40,13 @@ type DbConfig struct {
 	Host         string `env:"DB_HOST"`
 	InnerPort    int    `env:"DB_INNER_PORT"`
 	SslMode      string `env:"DB_SSL_MODE"`
+}
+
+type RedisConfig struct {
+	Host      string `env:"REDIS_HOST"`
+	InnerPort int    `env:"REDIS_INNER_PORT"`
+	Db        int    `env:"REDIS_DB"`
+	Password  string `env:"REDIS_PASSWORD"`
 }
 
 func MustLoad() *Config {

@@ -13,6 +13,7 @@ import (
 	"example.com/notification/src/internal/repository"
 	"example.com/notification/src/internal/server"
 	"example.com/notification/src/internal/service"
+	"example.com/notification/src/redis"
 )
 
 func main() {
@@ -21,7 +22,9 @@ func main() {
 	slog.SetDefault(log)
 	database.Init(cfg)
 	db := database.DB
-	repository := repository.NewUserIdXDeviceTokenRepository(db)
+	redis.Init(cfg)
+	redis := redis.RedisClient
+	repository := repository.NewUserIdXDeviceTokenRepository(db, redis)
 	service := service.NewNotificationService(repository, cfg)
 	client := client.NewUserMgmtClient(cfg)
 	server := server.NewNotificationServer(service, client)

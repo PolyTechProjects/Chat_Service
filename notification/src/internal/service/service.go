@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"example.com/notification/src/config"
@@ -9,6 +10,7 @@ import (
 	"example.com/notification/src/models"
 	"firebase.google.com/go/v4/messaging"
 	"github.com/appleboy/go-fcm"
+	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 )
 
@@ -28,10 +30,13 @@ func NewNotificationService(userIdXDeviceTokenRepository *repository.UserIdXDevi
 	}
 }
 
-func (ns *NotificationService) NotifyUser(receiverUserId string, messageTimestamp string, messageBody string, name string, avatar string) error {
+func (ns *NotificationService) SubscribeToRedisChannel(channelName string) *redis.PubSub {
+	return ns.userIdXDeviceTokenRepository.SubscribeToRedisChannel(channelName)
+}
+
+func (ns *NotificationService) NotifyUsers(receiversIds []uuid.UUID, messageTimestamp uint64, messageBody string, name string, avatar string) error {
 	slog.Info("Sending notification")
-	userUUID, _ := uuid.Parse(receiverUserId)
-	users, _ := ns.userIdXDeviceTokenRepository.GetByUserId(userUUID)
+	users, _ := ns.userIdXDeviceTokenRepository.GetByUserIds(receiversIds)
 	deviceTokens := make([]string, 0)
 	for _, user := range users {
 		deviceTokens = append(deviceTokens, user.DeviceToken)
@@ -43,7 +48,7 @@ func (ns *NotificationService) NotifyUser(receiverUserId string, messageTimestam
 		},
 		Tokens: deviceTokens,
 		Data: map[string]string{
-			"message_timestamp": messageTimestamp,
+			"message_timestamp": fmt.Sprintf("%v", messageTimestamp),
 			"message_body":      messageBody,
 			"name":              name,
 			"avatar":            avatar,

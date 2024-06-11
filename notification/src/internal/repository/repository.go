@@ -1,17 +1,24 @@
 package repository
 
 import (
+	"context"
+
 	"example.com/notification/src/models"
+	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm"
 )
 
 type UserIdXDeviceTokenRepository struct {
-	db *gorm.DB
+	db    *gorm.DB
+	redis *redis.Client
 }
 
-func NewUserIdXDeviceTokenRepository(db *gorm.DB) *UserIdXDeviceTokenRepository {
-	return &UserIdXDeviceTokenRepository{db: db}
+func NewUserIdXDeviceTokenRepository(db *gorm.DB, redis *redis.Client) *UserIdXDeviceTokenRepository {
+	return &UserIdXDeviceTokenRepository{
+		db:    db,
+		redis: redis,
+	}
 }
 
 func (udtr *UserIdXDeviceTokenRepository) GetByUserId(userId uuid.UUID) ([]*models.UserIdXDeviceToken, error) {
@@ -46,4 +53,12 @@ func (udtr *UserIdXDeviceTokenRepository) DeleteUser(userId uuid.UUID) error {
 
 func (udtr *UserIdXDeviceTokenRepository) UpdateDeviceTokensByUserId(userId uuid.UUID, oldDeviceToken string, newDeviceToken string) error {
 	return udtr.db.Where("user_id = ? AND device_token = ?", userId, oldDeviceToken).Update("device_token", newDeviceToken).Error
+}
+
+func (udtr *UserIdXDeviceTokenRepository) SubscribeToRedisChannel(channelName string) *redis.PubSub {
+	return udtr.redis.Subscribe(context.Background(), channelName)
+}
+
+func (udtr *UserIdXDeviceTokenRepository) PublishToRedisChannel(channelName string, message interface{}) error {
+	return udtr.redis.Publish(context.Background(), channelName, message).Err()
 }

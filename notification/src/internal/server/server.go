@@ -2,12 +2,15 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net"
 
 	"example.com/notification/src/gen/go/notification"
+	userMgmt "example.com/notification/src/gen/go/user_mgmt"
 	"example.com/notification/src/internal/client"
 	"example.com/notification/src/internal/service"
+	"example.com/notification/src/models"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -37,17 +40,45 @@ func NewNotificationServer(notificationService *service.NotificationService, use
 func (s *NotificationServer) Start(l net.Listener) error {
 	slog.Debug("Starting notification gRPC server")
 	slog.Debug(l.Addr().String())
+	slog.Debug("Listening notification channel")
+	go s.ListenNotificationChannel()
 	return s.gRPCServer.Serve(l)
 }
 
-func (s *NotificationServer) NotifyUser(ctx context.Context, req *notification.NotifyUserRequest) (*notification.NotifyUserResponse, error) {
-	user, err := s.userMgmtClient.PerformGetUser(ctx, req.GetReceiverUserId())
+func (s *NotificationServer) ListenNotificationChannel() {
+	var subscriber = s.notificationService.SubscribeToRedisChannel("notification")
+	err := subscriber.Ping(context.Background())
 	if err != nil {
-		slog.Error(err.Error())
-		return nil, status.Error(codes.NotFound, err.Error())
+		slog.Error("Not Available notification")
 	}
-	s.notificationService.NotifyUser(req.GetReceiverUserId(), req.GetMessageTimestamp(), req.GetMessageBody(), user.Name, user.Avatar)
-	return &notification.NotifyUserResponse{}, nil
+	slog.Info("Available notification")
+	for {
+		channel := subscriber.Channel()
+		message := <-channel
+		slog.Info(message.Payload)
+		readyMessage := &models.ReadyMessage{}
+		err = json.Unmarshal([]byte(message.Payload), readyMessage)
+		if err != nil {
+			slog.Error(err.Error())
+			break
+		}
+		user, err := s.userMgmtClient.GetUser(context.Background(), &userMgmt.GetUserRequest{UserId: readyMessage.Message.SenderId.String()})
+		if err != nil {
+			slog.Error(err.Error())
+			break
+		}
+		err = s.notificationService.NotifyUsers(
+			readyMessage.ReceiversIds,
+			readyMessage.Message.CreatedAt,
+			readyMessage.Message.Body,
+			user.Name,
+			user.Avatar,
+		)
+		if err != nil {
+			slog.Error(err.Error())
+			break
+		}
+	}
 }
 
 func (s *NotificationServer) BindDeviceToUser(ctx context.Context, req *notification.BindDeviceRequest) (*notification.BindDeviceResponse, error) {
