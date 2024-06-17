@@ -67,13 +67,16 @@ func (s *AuthService) Login(login string, password string) (string, string, erro
 	}
 
 	refreshTokenValueString := fmt.Sprintf("%v:%v:%v", user.Id, user.Login, time.Now().Unix())
+	slog.Debug(fmt.Sprintf("refreshTokenValueString: %v", refreshTokenValueString))
 	refreshTokenValue, err := bcrypt.GenerateFromPassword([]byte(refreshTokenValueString), bcrypt.DefaultCost)
 	if err != nil {
 		return "", "", err
 	}
 	refreshToken := models.NewRefreshToken(user.Id, string(refreshTokenValue))
+	slog.Debug(fmt.Sprintf("refreshToken: %v", refreshToken))
 
 	accessToken, err := s.generateAccessToken(user.Id, user.Name)
+	slog.Debug(fmt.Sprintf("accessToken: %v", accessToken))
 	if err != nil {
 		return "", "", err
 	}
@@ -98,7 +101,7 @@ func (s *AuthService) Authorize(accessToken string, refreshToken string) (string
 		return "", uuid.Nil, err
 	}
 
-	if claims["exp"].(int64) < time.Now().Unix() {
+	if claims["exp"].(float64) < float64(time.Now().Unix()) {
 		accessToken, err = s.refreshAccessToken(refreshToken, user.Id)
 		if err != nil {
 			return "", uuid.Nil, err

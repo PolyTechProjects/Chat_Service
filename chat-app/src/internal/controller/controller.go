@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	e "errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"example.com/chat-app/src/internal/client"
 	"example.com/chat-app/src/internal/dto"
+	"example.com/chat-app/src/internal/errors"
 	"example.com/chat-app/src/internal/models"
 	"example.com/chat-app/src/internal/service"
 	"github.com/go-redis/redis/v8"
@@ -78,20 +80,23 @@ func (ws *WebsocketController) SendMessageHandler(w http.ResponseWriter, r *http
 		return
 	}
 	slog.Debug("Connected to websocket server")
+	defer wsConnection.Close()
 
 	header := r.Header.Get("Authorization")
-	accessToken := strings.Split(header, " ")[1]
+	accessToken := strings.Split(header, "Bearer ")[1]
 
 	cookie, err := r.Cookie("X-Refresh-Token")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		slog.Error("X-Refresh-Token cookie not found")
+		wsConnection.WriteJSON(models.ErrorMessageResponse{Error: "X-Refresh-Token cookie not found"})
 		return
 	}
 	refreshToken := cookie.Value
 
 	authorizeResp, err := ws.authClient.PerformAuthorize(r.Context(), accessToken, refreshToken)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		slog.Error(err.Error())
+		wsConnection.WriteJSON(models.ErrorMessageResponse{Error: err.Error()})
 		return
 	}
 	slog.Debug("Authorized")
@@ -99,11 +104,21 @@ func (ws *WebsocketController) SendMessageHandler(w http.ResponseWriter, r *http
 	slog.Debug(fmt.Sprintf("Extracted user id: %s", authorizeResp.UserId))
 	userId, err := uuid.Parse(authorizeResp.UserId)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		slog.Error(err.Error())
+		wsConnection.WriteJSON(models.ErrorMessageResponse{Error: err.Error()})
 		return
 	}
-	ws.messageService.ReadMessages(userId, wsConnection, ws.broadcastChannel, accessToken, refreshToken)
-	wsConnection.Close()
+	err = ws.messageService.ReadMessages(userId, wsConnection, ws.broadcastChannel, accessToken, refreshToken)
+	if err != nil {
+		if e.Is(err, errors.ErrDatabaseInternalError) {
+			slog.Debug(fmt.Sprintf("%v: %v", http.StatusInternalServerError, err.Error()))
+			wsConnection.WriteJSON(models.ErrorMessageResponse{Error: err.Error()})
+			return
+		}
+		slog.Debug(fmt.Sprintf("%v: %v", http.StatusBadRequest, err.Error()))
+		wsConnection.WriteJSON(models.ErrorMessageResponse{Error: err.Error()})
+		return
+	}
 }
 
 func (ws *WebsocketController) StartListeningFileChannel() {
@@ -134,13 +149,25 @@ func (ws *WebsocketController) StartBroadcasting() {
 		entityId := message.ChatRoomId.String()
 		channelUsers, err := ws.channelMgmtClient.PerformGetChanUsers(entityId, accessToken, refreshToken)
 		if err == nil && len(channelUsers) > 0 {
-			ws.messageService.Broadcast(channelUsers, &message)
+			readyMessage := models.ReadyMessage{
+				Message:      message,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+				ReceiversIds: channelUsers,
+			}
+			ws.messageService.Broadcast(channelUsers, &readyMessage)
 			continue
 		}
 
 		chatUsers, err := ws.chatMgmtClient.PerformGetChatUsers(entityId, accessToken, refreshToken)
 		if err == nil && len(chatUsers) > 0 {
-			ws.messageService.Broadcast(chatUsers, &message)
+			readyMessage := models.ReadyMessage{
+				Message:      message,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+				ReceiversIds: chatUsers,
+			}
+			ws.messageService.Broadcast(chatUsers, &readyMessage)
 			continue
 		}
 

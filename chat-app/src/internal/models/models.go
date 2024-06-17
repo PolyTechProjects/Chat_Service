@@ -69,3 +69,14 @@ func MapMessageToResponse(message *Message) *dto.MessageResponse {
 		Metadata:   message.Metadata,
 	}
 }
+
+type ErrorMessageResponse struct {
+	Error string `json:"error"`
+}
+
+type ReadyMessage struct {
+	Message      Message     `json:"message"`
+	AccessToken  string      `json:"access_token"`
+	RefreshToken string      `json:"refresh_token"`
+	ReceiversIds []uuid.UUID `json:"receivers_ids"`
+}

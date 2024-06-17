@@ -43,3 +43,15 @@ func (r *MessageRepository) SubscribeToRedisChannel(channelName string) *redis.P
 func (r *MessageRepository) PublishToRedisChannel(channelName string, message interface{}) error {
 	return r.Redis.Publish(context.Background(), channelName, message).Err()
 }
+
+func (r *MessageRepository) GetUserStatusFromRedis(userId uuid.UUID) (string, error) {
+	return r.Redis.Get(context.Background(), userId.String()).Result()
+}
+
+func (r *MessageRepository) SetUserStatusInRedis(userId uuid.UUID) error {
+	return r.Redis.Set(context.Background(), userId.String(), "ONLINE", 0).Err()
+}
+
+func (r *MessageRepository) DropUserStatusInRedis(userId uuid.UUID) error {
+	return r.Redis.Del(context.Background(), userId.String()).Err()
+}

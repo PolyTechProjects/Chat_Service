@@ -46,12 +46,12 @@ func (s *NotificationServer) Start(l net.Listener) error {
 }
 
 func (s *NotificationServer) ListenNotificationChannel() {
-	var subscriber = s.notificationService.SubscribeToRedisChannel("notification")
+	var subscriber = s.notificationService.SubscribeToRedisChannel("notification-channel")
 	err := subscriber.Ping(context.Background())
 	if err != nil {
-		slog.Error("Not Available notification")
+		slog.Error("Not Available notification-channel")
 	}
-	slog.Info("Available notification")
+	slog.Info("Available notification-channel")
 	for {
 		channel := subscriber.Channel()
 		message := <-channel

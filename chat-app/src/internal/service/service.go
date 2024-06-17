@@ -3,15 +3,18 @@ package service
 import (
 	"context"
 	"encoding/json"
+	e "errors"
 	"fmt"
 	"log/slog"
 
 	"example.com/chat-app/src/internal/dto"
+	"example.com/chat-app/src/internal/errors"
 	"example.com/chat-app/src/internal/models"
 	"example.com/chat-app/src/internal/repository"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/jinzhu/gorm"
 )
 
 type MessageHistoryService struct {
@@ -66,13 +69,13 @@ func (m *MessageService) ListenFileChannel() {
 	}
 }
 
-func (m *MessageService) Broadcast(userIds []uuid.UUID, message *models.Message) {
+func (m *MessageService) Broadcast(userIds []uuid.UUID, readyMessage *models.ReadyMessage) {
 	for _, userId := range userIds {
 		slog.Debug(fmt.Sprintf("Checking if user %s is connected", userId))
 		wsConnection, ok := m.userIdXWsConnection[userId]
 		if ok {
 			slog.Debug(fmt.Sprintf("User %s is connected", userId))
-			messageResp := models.MapMessageToResponse(message)
+			messageResp := models.MapMessageToResponse(&readyMessage.Message)
 			slog.Debug(fmt.Sprintf("Sending message to %s", userId))
 			err := wsConnection.WriteJSON(messageResp)
 			if err != nil {
@@ -81,21 +84,36 @@ func (m *MessageService) Broadcast(userIds []uuid.UUID, message *models.Message)
 				delete(m.userIdXWsConnection, userId)
 			}
 		} else {
-			slog.Debug(fmt.Sprintf("User %s is not connected", userId))
-			slog.Debug(fmt.Sprintf("Trying to notify user %v", userId))
-			m.messageRepository.PublishToRedisChannel("notification", message)
+			_, err := m.messageRepository.GetUserStatusFromRedis(userId)
+			if err != nil {
+				slog.Debug(fmt.Sprintf("User %s is not connected", userId))
+				slog.Debug(fmt.Sprintf("Trying to notify user %v", userId))
+				bytes, err := json.Marshal(*readyMessage)
+				if err != nil {
+					slog.Error(err.Error())
+				}
+				m.messageRepository.PublishToRedisChannel("notification-channel", bytes)
+			}
 		}
 	}
 }
 
-func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.Conn, broadcastChannel chan *models.Message, accessToken string, refreshToken string) {
+func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.Conn, broadcastChannel chan *models.Message, accessToken string, refreshToken string) error {
+	var cerr error
+	err := m.messageRepository.SetUserStatusInRedis(userId)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Error has occured while setting user status: %v", err.Error()))
+		cerr = fmt.Errorf("%w: %v", errors.ErrSetStatusRedis, err)
+		return cerr
+	}
 	m.userIdXWsConnection[userId] = wsConnection
 	slog.Debug(fmt.Sprintf("Added wsConnection to %v", userId))
 
 	for {
 		_, payload, err := wsConnection.ReadMessage()
 		if err != nil {
-			slog.Error("Error has occured while reading message", err)
+			slog.Error(fmt.Sprintf("Error has occured while reading message: %v", err))
+			cerr = fmt.Errorf("%w: %v", errors.ErrReadMessageError, err.Error())
 			break
 		}
 
@@ -103,13 +121,15 @@ func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.
 
 		err = json.Unmarshal(payload, &messageReq)
 		if err != nil {
-			slog.Error("Error has occured while unmarshalling message", err)
+			slog.Error(fmt.Sprintf("Error has occured while unmarshalling message: %v", err))
+			cerr = fmt.Errorf("%w: %v", errors.ErrMapping, err)
 			break
 		}
 
 		message, err := models.MapRequestToMessage(&messageReq)
 		if err != nil {
-			slog.Error("Error has occured while mapping request to message", err)
+			slog.Error(fmt.Sprintf("Error has occured while mapping request to message: %v", err))
+			cerr = fmt.Errorf("%w: %v", errors.ErrMapping, err)
 			break
 		}
 
@@ -134,6 +154,11 @@ func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.
 		err = m.messageRepository.SaveUserMessage(message)
 		if err != nil {
 			slog.Error(fmt.Sprintf("Error has occured while saving message: %v", err.Error()))
+			if e.Is(err, gorm.ErrUnaddressable) || e.Is(err, gorm.ErrCantStartTransaction) {
+				cerr = fmt.Errorf("%w: %v", errors.ErrDatabaseInternalError, err.Error())
+			} else {
+				cerr = fmt.Errorf("%w: %v", errors.ErrDataIntegrityViolation, err.Error())
+			}
 			break
 		}
 		slog.Debug(fmt.Sprintf("Message Saved %v, %v", message.Id, message.Metadata.FilePath))
@@ -147,11 +172,13 @@ func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.
 		bytes, err := json.Marshal(messageWithTokens)
 		if err != nil {
 			slog.Error(fmt.Sprintf("Error has occured while marshalling message: %v", err.Error()))
+			cerr = fmt.Errorf("%w: %v", errors.ErrMapping, err)
 			break
 		}
 		err = m.messageRepository.PublishToRedisChannel("message-channel", bytes)
 		if err != nil {
 			slog.Error(fmt.Sprintf("Error has occured while publishing message: %v", err.Error()))
+			cerr = fmt.Errorf("%w: %v", errors.ErrPublishMessageError, err)
 			break
 		}
 		slog.Debug(fmt.Sprintf("Message Published %v", bytes))
@@ -159,6 +186,12 @@ func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.
 
 	slog.Debug(fmt.Sprintf("Removing wsConnection from %v", userId))
 	delete(m.userIdXWsConnection, userId)
+	err = m.messageRepository.DropUserStatusInRedis(userId)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Error has occured while dropping user status in redis: %v", err.Error()))
+		cerr = fmt.Errorf("%w: %v", errors.ErrDropStatusRedis, err)
+	}
+	return cerr
 	//hmmm
 }
 
