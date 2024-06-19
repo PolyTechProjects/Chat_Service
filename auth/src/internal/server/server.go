@@ -4,14 +4,31 @@ import (
 	"context"
 	"log/slog"
 	"net"
+	"net/http"
 
 	"example.com/main/src/gen/go/auth"
 	"example.com/main/src/internal/client"
+	"example.com/main/src/internal/controller"
 	"example.com/main/src/internal/service"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+type HttpServer struct {
+	authController *controller.AuthController
+}
+
+func NewHttpServer(authController *controller.AuthController) *HttpServer {
+	return &HttpServer{
+		authController: authController,
+	}
+}
+
+func (h *HttpServer) StartServer() {
+	http.HandleFunc("POST /register", h.authController.RegisterHandler)
+	http.HandleFunc("POST /login", h.authController.LoginHandler)
+}
 
 type GRPCServer struct {
 	gRPCServer *grpc.Server
