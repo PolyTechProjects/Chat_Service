@@ -192,7 +192,6 @@ func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.
 		cerr = fmt.Errorf("%w: %v", errors.ErrDropStatusRedis, err)
 	}
 	return cerr
-	//hmmm
 }
 
 func (m *MessageService) SubscribeToMessageChannel() *redis.PubSub {

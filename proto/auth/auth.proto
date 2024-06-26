@@ -48,4 +48,5 @@ message AuthorizeResponse {
     reserved 1;
     string accessToken = 2;
     string userId = 3;
+    string refreshToken = 4;
 }

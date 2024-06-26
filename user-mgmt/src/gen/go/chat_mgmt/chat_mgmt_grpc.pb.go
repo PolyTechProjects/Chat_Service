@@ -27,8 +27,8 @@ type ChatManagementClient interface {
 	UpdateChat(ctx context.Context, in *UpdateChatRequest, opts ...grpc.CallOption) (*ChatRoomResponse, error)
 	JoinChat(ctx context.Context, in *JoinChatRequest, opts ...grpc.CallOption) (*ChatRoomResponse, error)
 	LeaveChat(ctx context.Context, in *LeaveChatRequest, opts ...grpc.CallOption) (*ChatRoomResponse, error)
-	InviteUserChat(ctx context.Context, in *InviteUserRequest, opts ...grpc.CallOption) (*ChatRoomResponse, error)
-	KickUserChat(ctx context.Context, in *KickUserRequest, opts ...grpc.CallOption) (*ChatRoomResponse, error)
+	InviteUser(ctx context.Context, in *InviteUserRequest, opts ...grpc.CallOption) (*ChatRoomResponse, error)
+	KickUser(ctx context.Context, in *KickUserRequest, opts ...grpc.CallOption) (*ChatRoomResponse, error)
 	CanWriteChat(ctx context.Context, in *CanWriteRequest, opts ...grpc.CallOption) (*CanWriteResponse, error)
 	MakeChatAdmin(ctx context.Context, in *MakeAdminRequest, opts ...grpc.CallOption) (*ChatRoomWithAdminsResponse, error)
 	DeleteChatAdmin(ctx context.Context, in *DeleteAdminRequest, opts ...grpc.CallOption) (*ChatRoomWithAdminsResponse, error)
@@ -89,18 +89,18 @@ func (c *chatManagementClient) LeaveChat(ctx context.Context, in *LeaveChatReque
 	return out, nil
 }
 
-func (c *chatManagementClient) InviteUserChat(ctx context.Context, in *InviteUserRequest, opts ...grpc.CallOption) (*ChatRoomResponse, error) {
+func (c *chatManagementClient) InviteUser(ctx context.Context, in *InviteUserRequest, opts ...grpc.CallOption) (*ChatRoomResponse, error) {
 	out := new(ChatRoomResponse)
-	err := c.cc.Invoke(ctx, "/chat_mgmt.ChatManagement/InviteUserChat", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/chat_mgmt.ChatManagement/InviteUser", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *chatManagementClient) KickUserChat(ctx context.Context, in *KickUserRequest, opts ...grpc.CallOption) (*ChatRoomResponse, error) {
+func (c *chatManagementClient) KickUser(ctx context.Context, in *KickUserRequest, opts ...grpc.CallOption) (*ChatRoomResponse, error) {
 	out := new(ChatRoomResponse)
-	err := c.cc.Invoke(ctx, "/chat_mgmt.ChatManagement/KickUserChat", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/chat_mgmt.ChatManagement/KickUser", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -161,8 +161,8 @@ type ChatManagementServer interface {
 	UpdateChat(context.Context, *UpdateChatRequest) (*ChatRoomResponse, error)
 	JoinChat(context.Context, *JoinChatRequest) (*ChatRoomResponse, error)
 	LeaveChat(context.Context, *LeaveChatRequest) (*ChatRoomResponse, error)
-	InviteUserChat(context.Context, *InviteUserRequest) (*ChatRoomResponse, error)
-	KickUserChat(context.Context, *KickUserRequest) (*ChatRoomResponse, error)
+	InviteUser(context.Context, *InviteUserRequest) (*ChatRoomResponse, error)
+	KickUser(context.Context, *KickUserRequest) (*ChatRoomResponse, error)
 	CanWriteChat(context.Context, *CanWriteRequest) (*CanWriteResponse, error)
 	MakeChatAdmin(context.Context, *MakeAdminRequest) (*ChatRoomWithAdminsResponse, error)
 	DeleteChatAdmin(context.Context, *DeleteAdminRequest) (*ChatRoomWithAdminsResponse, error)
@@ -190,11 +190,11 @@ func (UnimplementedChatManagementServer) JoinChat(context.Context, *JoinChatRequ
 func (UnimplementedChatManagementServer) LeaveChat(context.Context, *LeaveChatRequest) (*ChatRoomResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LeaveChat not implemented")
 }
-func (UnimplementedChatManagementServer) InviteUserChat(context.Context, *InviteUserRequest) (*ChatRoomResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method InviteUserChat not implemented")
+func (UnimplementedChatManagementServer) InviteUser(context.Context, *InviteUserRequest) (*ChatRoomResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InviteUser not implemented")
 }
-func (UnimplementedChatManagementServer) KickUserChat(context.Context, *KickUserRequest) (*ChatRoomResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method KickUserChat not implemented")
+func (UnimplementedChatManagementServer) KickUser(context.Context, *KickUserRequest) (*ChatRoomResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method KickUser not implemented")
 }
 func (UnimplementedChatManagementServer) CanWriteChat(context.Context, *CanWriteRequest) (*CanWriteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CanWriteChat not implemented")
@@ -314,38 +314,38 @@ func _ChatManagement_LeaveChat_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ChatManagement_InviteUserChat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ChatManagement_InviteUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(InviteUserRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ChatManagementServer).InviteUserChat(ctx, in)
+		return srv.(ChatManagementServer).InviteUser(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/chat_mgmt.ChatManagement/InviteUserChat",
+		FullMethod: "/chat_mgmt.ChatManagement/InviteUser",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatManagementServer).InviteUserChat(ctx, req.(*InviteUserRequest))
+		return srv.(ChatManagementServer).InviteUser(ctx, req.(*InviteUserRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ChatManagement_KickUserChat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ChatManagement_KickUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(KickUserRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ChatManagementServer).KickUserChat(ctx, in)
+		return srv.(ChatManagementServer).KickUser(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/chat_mgmt.ChatManagement/KickUserChat",
+		FullMethod: "/chat_mgmt.ChatManagement/KickUser",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatManagementServer).KickUserChat(ctx, req.(*KickUserRequest))
+		return srv.(ChatManagementServer).KickUser(ctx, req.(*KickUserRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -468,12 +468,12 @@ var ChatManagement_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ChatManagement_LeaveChat_Handler,
 		},
 		{
-			MethodName: "InviteUserChat",
-			Handler:    _ChatManagement_InviteUserChat_Handler,
+			MethodName: "InviteUser",
+			Handler:    _ChatManagement_InviteUser_Handler,
 		},
 		{
-			MethodName: "KickUserChat",
-			Handler:    _ChatManagement_KickUserChat_Handler,
+			MethodName: "KickUser",
+			Handler:    _ChatManagement_KickUser_Handler,
 		},
 		{
 			MethodName: "CanWriteChat",

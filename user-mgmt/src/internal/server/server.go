@@ -27,6 +27,9 @@ func NewHttpServer(userMgmtController *controller.UserMgmtController) *HttpServe
 
 func (h *HttpServer) StartServer() {
 	http.HandleFunc("POST /upload", h.userMgmtController.UpdateAvatarHandler)
+	http.HandleFunc("PUT /info", h.userMgmtController.InfoUpdateHandler)
+	http.HandleFunc("GET /user", h.userMgmtController.GetUserHandler)
+	http.HandleFunc("DELETE /user", h.userMgmtController.DeleteUserHandler)
 }
 
 type UserMgmtGRPCServer struct {
