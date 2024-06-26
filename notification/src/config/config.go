@@ -15,6 +15,7 @@ type Config struct {
 }
 
 type AppConfig struct {
+	HttpInnerPort int `env:"APP_HTTP_INNER_PORT"`
 	GRPCInnerPort int `env:"APP_GRPC_INNER_PORT"`
 }
 

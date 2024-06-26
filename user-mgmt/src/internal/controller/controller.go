@@ -35,7 +35,7 @@ func (c *UserMgmtController) UpdateAvatarHandler(w http.ResponseWriter, r *http.
 		return
 	}
 	slog.Info("Storing Image")
-	mediaResp, err := c.mediaHandlerClient.PerformStoreImage(r.Context(), authResp.AccessToken, file, fileHeader.Filename)
+	mediaResp, err := c.mediaHandlerClient.PerformStoreImage(r.Context(), file, fileHeader.Filename)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

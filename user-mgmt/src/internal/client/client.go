@@ -65,7 +65,7 @@ func NewMediaHandlerClient(cfg *config.Config) *MediaHandlerGRPCClient {
 	return &MediaHandlerGRPCClient{media.NewMediaHandlerClient(conn)}
 }
 
-func (mediaHandlerClient *MediaHandlerGRPCClient) PerformStoreImage(ctx context.Context, token string, file multipart.File, fileName string) (*media.ImageResponse, error) {
+func (mediaHandlerClient *MediaHandlerGRPCClient) PerformStoreImage(ctx context.Context, file multipart.File, fileName string) (*media.ImageResponse, error) {
 	stream, err := mediaHandlerClient.StoreImage(ctx)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func (mediaHandlerClient *MediaHandlerGRPCClient) PerformStoreImage(ctx context.
 			break
 		}
 		slog.Info("Read")
-		err = stream.Send(&media.StoreImageRequest{Token: token, Data: buf, FileName: fileName})
+		err = stream.Send(&media.StoreImageRequest{Data: buf, FileName: fileName})
 		if err != nil {
 			return nil, err
 		}
