@@ -25,18 +25,19 @@ func NewNotificationController(notificationService *service.NotificationService,
 }
 
 func (nc *NotificationController) BindDeviceToUserHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := nc.authClient.PerformAuthorize(r.Context(), r)
+	var bindDeviceToUserRequest dto.BindDeviceToUserRequest
+	err := json.NewDecoder(r.Body).Decode(&bindDeviceToUserRequest)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	_, err = nc.authClient.PerformAuthorize(r.Context(), r, bindDeviceToUserRequest.UserId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	var bindDeviceToUserRequest dto.BindDeviceToUserRequest
-	err = json.NewDecoder(r.Body).Decode(&bindDeviceToUserRequest)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 	userId, err := uuid.Parse(bindDeviceToUserRequest.UserId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -50,17 +51,19 @@ func (nc *NotificationController) BindDeviceToUserHandler(w http.ResponseWriter,
 }
 
 func (nc *NotificationController) UnbindDeviceFromUserHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := nc.authClient.PerformAuthorize(r.Context(), r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
 	var unbindDeviceFromUserRequest dto.UnbindDeviceFromUserRequest
-	err = json.NewDecoder(r.Body).Decode(&unbindDeviceFromUserRequest)
+	err := json.NewDecoder(r.Body).Decode(&unbindDeviceFromUserRequest)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	_, err = nc.authClient.PerformAuthorize(r.Context(), r, unbindDeviceFromUserRequest.UserId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	userId, err := uuid.Parse(unbindDeviceFromUserRequest.UserId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -74,17 +77,19 @@ func (nc *NotificationController) UnbindDeviceFromUserHandler(w http.ResponseWri
 }
 
 func (nc *NotificationController) DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := nc.authClient.PerformAuthorize(r.Context(), r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
 	var deleteUserRequest dto.DeleteUserRequest
-	err = json.NewDecoder(r.Body).Decode(&deleteUserRequest)
+	err := json.NewDecoder(r.Body).Decode(&deleteUserRequest)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	_, err = nc.authClient.PerformAuthorize(r.Context(), r, deleteUserRequest.UserId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	userId, err := uuid.Parse(deleteUserRequest.UserId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -98,17 +103,19 @@ func (nc *NotificationController) DeleteUserHandler(w http.ResponseWriter, r *ht
 }
 
 func (nc *NotificationController) UpdateOldDeviceOnUserHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := nc.authClient.PerformAuthorize(r.Context(), r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
 	var updateOldDeviceOnUserRequest dto.UpdateOldDeviceOnUserRequest
-	err = json.NewDecoder(r.Body).Decode(&updateOldDeviceOnUserRequest)
+	err := json.NewDecoder(r.Body).Decode(&updateOldDeviceOnUserRequest)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	_, err = nc.authClient.PerformAuthorize(r.Context(), r, updateOldDeviceOnUserRequest.UserId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	userId, err := uuid.Parse(updateOldDeviceOnUserRequest.UserId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

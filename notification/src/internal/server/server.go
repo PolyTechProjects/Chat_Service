@@ -101,7 +101,7 @@ func (s *NotificationGRPCServer) ListenNotificationChannel() {
 }
 
 func (s *NotificationGRPCServer) BindDeviceToUser(ctx context.Context, req *notification.BindDeviceRequest) (*notification.BindDeviceResponse, error) {
-	authResp, err := s.authClient.PerformAuthorize(ctx, nil)
+	authResp, err := s.authClient.PerformAuthorize(ctx, nil, req.UserId)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())
@@ -119,7 +119,7 @@ func (s *NotificationGRPCServer) BindDeviceToUser(ctx context.Context, req *noti
 }
 
 func (s *NotificationGRPCServer) UnbindDeviceFromUser(ctx context.Context, req *notification.UnbindDeviceRequest) (*notification.UnbindDeviceResponse, error) {
-	authResp, err := s.authClient.PerformAuthorize(ctx, nil)
+	authResp, err := s.authClient.PerformAuthorize(ctx, nil, req.UserId)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())
@@ -137,7 +137,7 @@ func (s *NotificationGRPCServer) UnbindDeviceFromUser(ctx context.Context, req *
 }
 
 func (s *NotificationGRPCServer) DeleteUser(ctx context.Context, req *notification.DeleteUserRequest) (*notification.DeleteUserResponse, error) {
-	authResp, err := s.authClient.PerformAuthorize(ctx, nil)
+	authResp, err := s.authClient.PerformAuthorize(ctx, nil, req.UserId)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())
@@ -155,7 +155,7 @@ func (s *NotificationGRPCServer) DeleteUser(ctx context.Context, req *notificati
 }
 
 func (s *NotificationGRPCServer) UpdateOldDeviceOnUser(ctx context.Context, req *notification.UpdateOldDeviceRequest) (*notification.UpdateOldDeviceResponse, error) {
-	authResp, err := s.authClient.PerformAuthorize(ctx, nil)
+	authResp, err := s.authClient.PerformAuthorize(ctx, nil, req.UserId)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())

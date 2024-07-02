@@ -32,7 +32,7 @@ func NewAuthClient(cfg *config.Config) *AuthGRPCClient {
 	return &AuthGRPCClient{auth.NewAuthClient(conn)}
 }
 
-func (authClient *AuthGRPCClient) PerformAuthorize(ctx context.Context, r *http.Request) (*auth.AuthorizeResponse, error) {
+func (authClient *AuthGRPCClient) PerformAuthorize(ctx context.Context, r *http.Request, userId string) (*auth.AuthorizeResponse, error) {
 	var accessToken, refreshToken string
 	if r == nil {
 		accessToken = metadata.ValueFromIncomingContext(ctx, "authorization")[0]
@@ -47,7 +47,7 @@ func (authClient *AuthGRPCClient) PerformAuthorize(ctx context.Context, r *http.
 		}
 		refreshToken = cookie.Value
 	}
-	return authClient.Authorize(ctx, &auth.AuthorizeRequest{AccessToken: accessToken, RefreshToken: refreshToken})
+	return authClient.Authorize(ctx, &auth.AuthorizeRequest{UserId: userId, AccessToken: accessToken, RefreshToken: refreshToken})
 }
 
 type MediaHandlerGRPCClient struct {

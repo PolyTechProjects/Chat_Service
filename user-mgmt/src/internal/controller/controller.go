@@ -24,7 +24,7 @@ func New(userMgmtService *service.UserMgmtService, authClient *client.AuthGRPCCl
 }
 
 func (c *UserMgmtController) UpdateAvatarHandler(w http.ResponseWriter, r *http.Request) {
-	authResp, err := c.authClient.PerformAuthorize(r.Context(), r)
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, r.Header.Get("UserId"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -60,17 +60,19 @@ func (c *UserMgmtController) UpdateAvatarHandler(w http.ResponseWriter, r *http.
 }
 
 func (c *UserMgmtController) InfoUpdateHandler(w http.ResponseWriter, r *http.Request) {
-	authResp, err := c.authClient.PerformAuthorize(r.Context(), r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
 	dto := dto.UpdateInfoRequest{}
-	err = json.NewDecoder(r.Body).Decode(&dto)
+	err := json.NewDecoder(r.Body).Decode(&dto)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, dto.UserId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	userId, err := uuid.Parse(dto.UserId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -91,11 +93,6 @@ func (c *UserMgmtController) InfoUpdateHandler(w http.ResponseWriter, r *http.Re
 }
 
 func (c *UserMgmtController) GetUserHandler(w http.ResponseWriter, r *http.Request) {
-	authResp, err := c.authClient.PerformAuthorize(r.Context(), r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
 	params, err := url.ParseQuery(r.URL.RawQuery)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -104,6 +101,13 @@ func (c *UserMgmtController) GetUserHandler(w http.ResponseWriter, r *http.Reque
 	if !params.Has("userId") {
 		http.Error(w, "URL query params are invalid", http.StatusBadRequest)
 	}
+
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, params.Get("userId"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	userId, err := uuid.Parse(params.Get("userId"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -124,17 +128,19 @@ func (c *UserMgmtController) GetUserHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (c *UserMgmtController) DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
-	authResp, err := c.authClient.PerformAuthorize(r.Context(), r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
 	dto := dto.UpdateInfoRequest{}
-	err = json.NewDecoder(r.Body).Decode(&dto)
+	err := json.NewDecoder(r.Body).Decode(&dto)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, dto.UserId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	userId, err := uuid.Parse(dto.UserId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
