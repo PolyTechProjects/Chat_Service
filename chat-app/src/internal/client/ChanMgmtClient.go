@@ -32,17 +32,24 @@ func (chanMgmtClient *ChanMgmtGRPCClient) PerformGetChanUsers(channelID, accessT
 	md := metadata.Pairs("authorization", accessToken)
 	md.Append("x-refresh-token", refreshToken)
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
-	resp, err := chanMgmtClient.GetUsersInChannel(ctx, &chanMgmt.GetUsersRequest{ChannelId: channelID})
+	resp, err := chanMgmtClient.GetChannel(ctx, &chanMgmt.GetChannelRequest{ChannelId: channelID})
 	if err != nil {
 		return nil, err
 	}
-	var userIDs []uuid.UUID
-	for _, id := range resp.UserIds {
-		userUUID, err := uuid.Parse(id)
+	var userIds []uuid.UUID
+	for _, id := range resp.ParticipantsIds {
+		userId, err := uuid.Parse(id)
 		if err != nil {
 			return nil, err
 		}
-		userIDs = append(userIDs, userUUID)
+		userIds = append(userIds, userId)
 	}
-	return userIDs, nil
+	for _, id := range resp.AdminsIds {
+		userId, err := uuid.Parse(id)
+		if err != nil {
+			return nil, err
+		}
+		userIds = append(userIds, userId)
+	}
+	return userIds, nil
 }

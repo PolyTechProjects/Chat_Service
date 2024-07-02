@@ -12,22 +12,13 @@ service ChannelManagement {
     rpc LeaveChannel (LeaveChannelRequest) returns (ChannelResponse) {}
     rpc InviteUser (InviteUserRequest) returns (ChannelResponse) {}
     rpc KickUser (KickUserRequest) returns (ChannelResponse) {}
-    rpc CanWriteToChannel (CanWriteRequest) returns (CanWriteResponse) {}
-    rpc MakeChannelAdmin (MakeAdminRequest) returns (ChannelWithAdminsResponse) {}
-    rpc DeleteChannelAdmin (DeleteAdminRequest) returns (ChannelWithAdminsResponse) {}
+    rpc MakeChannelAdmin (MakeAdminRequest) returns (ChannelResponse) {}
+    rpc DeleteChannelAdmin (DeleteAdminRequest) returns (ChannelResponse) {}
     rpc IsChannelAdmin (IsAdminRequest) returns (IsAdminResponse) {}
-    rpc GetUsersInChannel (GetUsersRequest) returns (GetUsersResponse) {}
+    rpc GetChannel (GetChannelRequest) returns (ChannelResponse) {}
 }
 
 message ChannelResponse {
-    string channelId = 1;
-    string creatorId = 2;
-    repeated string participantsIds = 3;
-    string name = 4;
-    string description = 5;
-}
-
-message ChannelWithAdminsResponse {
     string channelId = 1;
     string creatorId = 2;
     repeated string participantsIds = 3;
@@ -79,15 +70,6 @@ message KickUserRequest {
     string requestingUserId = 3;
 }
 
-message CanWriteRequest {
-    string channelId = 1;
-    string userId = 2;
-}
-
-message CanWriteResponse {
-    bool canWrite = 1;
-}
-
 message MakeAdminRequest {
     string channelId = 1;
     string userId = 2;
@@ -109,10 +91,7 @@ message IsAdminResponse {
     bool isAdmin = 1;
 }
 
-message GetUsersRequest {
+message GetChannelRequest {
     string channelId = 1;
-}
-
-message GetUsersResponse {
-    repeated string userIds = 1;
+    string userId = 2;
 }

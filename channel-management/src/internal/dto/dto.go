@@ -5,31 +5,55 @@ import (
 	"github.com/google/uuid"
 )
 
-type CreateChannelDTO struct {
+type CreateChannelRequest struct {
 	Name        string
 	Description string
 	CreatorId   uuid.UUID
 }
 
-type UpdateChannelDTO struct {
-	Id          uuid.UUID
+type DeleteChannelRequest struct {
+	ChannelId uuid.UUID
+	UserId    uuid.UUID
+}
+
+type UpdateChannelRequest struct {
+	ChannelId   uuid.UUID
 	Name        string
 	Description string
+	UserId      uuid.UUID
 }
 
-type AddUserDTO struct {
+type AdminRequest struct {
+	ChannelId        uuid.UUID
+	UserId           uuid.UUID
+	RequestingUserId uuid.UUID
+}
+
+type IsAdminRequest struct {
 	ChannelId uuid.UUID
 	UserId    uuid.UUID
 }
 
-type RemoveUserDTO struct {
+type JoinChannelRequest struct {
 	ChannelId uuid.UUID
 	UserId    uuid.UUID
 }
 
-type AdminDTO struct {
+type LeaveChannelRequest struct {
 	ChannelId uuid.UUID
 	UserId    uuid.UUID
+}
+
+type InviteUserRequest struct {
+	ChannelId        uuid.UUID
+	UserId           uuid.UUID
+	RequestingUserId uuid.UUID
+}
+
+type KickUserRequest struct {
+	ChannelId        uuid.UUID
+	UserId           uuid.UUID
+	RequestingUserId uuid.UUID
 }
 
 type GetChannelRequest struct {

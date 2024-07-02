@@ -29,11 +29,10 @@ type ChannelManagementClient interface {
 	LeaveChannel(ctx context.Context, in *LeaveChannelRequest, opts ...grpc.CallOption) (*ChannelResponse, error)
 	InviteUser(ctx context.Context, in *InviteUserRequest, opts ...grpc.CallOption) (*ChannelResponse, error)
 	KickUser(ctx context.Context, in *KickUserRequest, opts ...grpc.CallOption) (*ChannelResponse, error)
-	CanWriteToChannel(ctx context.Context, in *CanWriteRequest, opts ...grpc.CallOption) (*CanWriteResponse, error)
-	MakeChannelAdmin(ctx context.Context, in *MakeAdminRequest, opts ...grpc.CallOption) (*ChannelWithAdminsResponse, error)
-	DeleteChannelAdmin(ctx context.Context, in *DeleteAdminRequest, opts ...grpc.CallOption) (*ChannelWithAdminsResponse, error)
+	MakeChannelAdmin(ctx context.Context, in *MakeAdminRequest, opts ...grpc.CallOption) (*ChannelResponse, error)
+	DeleteChannelAdmin(ctx context.Context, in *DeleteAdminRequest, opts ...grpc.CallOption) (*ChannelResponse, error)
 	IsChannelAdmin(ctx context.Context, in *IsAdminRequest, opts ...grpc.CallOption) (*IsAdminResponse, error)
-	GetUsersInChannel(ctx context.Context, in *GetUsersRequest, opts ...grpc.CallOption) (*GetUsersResponse, error)
+	GetChannel(ctx context.Context, in *GetChannelRequest, opts ...grpc.CallOption) (*ChannelResponse, error)
 }
 
 type channelManagementClient struct {
@@ -107,17 +106,8 @@ func (c *channelManagementClient) KickUser(ctx context.Context, in *KickUserRequ
 	return out, nil
 }
 
-func (c *channelManagementClient) CanWriteToChannel(ctx context.Context, in *CanWriteRequest, opts ...grpc.CallOption) (*CanWriteResponse, error) {
-	out := new(CanWriteResponse)
-	err := c.cc.Invoke(ctx, "/channel_mgmt.ChannelManagement/CanWriteToChannel", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *channelManagementClient) MakeChannelAdmin(ctx context.Context, in *MakeAdminRequest, opts ...grpc.CallOption) (*ChannelWithAdminsResponse, error) {
-	out := new(ChannelWithAdminsResponse)
+func (c *channelManagementClient) MakeChannelAdmin(ctx context.Context, in *MakeAdminRequest, opts ...grpc.CallOption) (*ChannelResponse, error) {
+	out := new(ChannelResponse)
 	err := c.cc.Invoke(ctx, "/channel_mgmt.ChannelManagement/MakeChannelAdmin", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -125,8 +115,8 @@ func (c *channelManagementClient) MakeChannelAdmin(ctx context.Context, in *Make
 	return out, nil
 }
 
-func (c *channelManagementClient) DeleteChannelAdmin(ctx context.Context, in *DeleteAdminRequest, opts ...grpc.CallOption) (*ChannelWithAdminsResponse, error) {
-	out := new(ChannelWithAdminsResponse)
+func (c *channelManagementClient) DeleteChannelAdmin(ctx context.Context, in *DeleteAdminRequest, opts ...grpc.CallOption) (*ChannelResponse, error) {
+	out := new(ChannelResponse)
 	err := c.cc.Invoke(ctx, "/channel_mgmt.ChannelManagement/DeleteChannelAdmin", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -143,9 +133,9 @@ func (c *channelManagementClient) IsChannelAdmin(ctx context.Context, in *IsAdmi
 	return out, nil
 }
 
-func (c *channelManagementClient) GetUsersInChannel(ctx context.Context, in *GetUsersRequest, opts ...grpc.CallOption) (*GetUsersResponse, error) {
-	out := new(GetUsersResponse)
-	err := c.cc.Invoke(ctx, "/channel_mgmt.ChannelManagement/GetUsersInChannel", in, out, opts...)
+func (c *channelManagementClient) GetChannel(ctx context.Context, in *GetChannelRequest, opts ...grpc.CallOption) (*ChannelResponse, error) {
+	out := new(ChannelResponse)
+	err := c.cc.Invoke(ctx, "/channel_mgmt.ChannelManagement/GetChannel", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -163,11 +153,10 @@ type ChannelManagementServer interface {
 	LeaveChannel(context.Context, *LeaveChannelRequest) (*ChannelResponse, error)
 	InviteUser(context.Context, *InviteUserRequest) (*ChannelResponse, error)
 	KickUser(context.Context, *KickUserRequest) (*ChannelResponse, error)
-	CanWriteToChannel(context.Context, *CanWriteRequest) (*CanWriteResponse, error)
-	MakeChannelAdmin(context.Context, *MakeAdminRequest) (*ChannelWithAdminsResponse, error)
-	DeleteChannelAdmin(context.Context, *DeleteAdminRequest) (*ChannelWithAdminsResponse, error)
+	MakeChannelAdmin(context.Context, *MakeAdminRequest) (*ChannelResponse, error)
+	DeleteChannelAdmin(context.Context, *DeleteAdminRequest) (*ChannelResponse, error)
 	IsChannelAdmin(context.Context, *IsAdminRequest) (*IsAdminResponse, error)
-	GetUsersInChannel(context.Context, *GetUsersRequest) (*GetUsersResponse, error)
+	GetChannel(context.Context, *GetChannelRequest) (*ChannelResponse, error)
 	mustEmbedUnimplementedChannelManagementServer()
 }
 
@@ -196,20 +185,17 @@ func (UnimplementedChannelManagementServer) InviteUser(context.Context, *InviteU
 func (UnimplementedChannelManagementServer) KickUser(context.Context, *KickUserRequest) (*ChannelResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method KickUser not implemented")
 }
-func (UnimplementedChannelManagementServer) CanWriteToChannel(context.Context, *CanWriteRequest) (*CanWriteResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CanWriteToChannel not implemented")
-}
-func (UnimplementedChannelManagementServer) MakeChannelAdmin(context.Context, *MakeAdminRequest) (*ChannelWithAdminsResponse, error) {
+func (UnimplementedChannelManagementServer) MakeChannelAdmin(context.Context, *MakeAdminRequest) (*ChannelResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MakeChannelAdmin not implemented")
 }
-func (UnimplementedChannelManagementServer) DeleteChannelAdmin(context.Context, *DeleteAdminRequest) (*ChannelWithAdminsResponse, error) {
+func (UnimplementedChannelManagementServer) DeleteChannelAdmin(context.Context, *DeleteAdminRequest) (*ChannelResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteChannelAdmin not implemented")
 }
 func (UnimplementedChannelManagementServer) IsChannelAdmin(context.Context, *IsAdminRequest) (*IsAdminResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method IsChannelAdmin not implemented")
 }
-func (UnimplementedChannelManagementServer) GetUsersInChannel(context.Context, *GetUsersRequest) (*GetUsersResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetUsersInChannel not implemented")
+func (UnimplementedChannelManagementServer) GetChannel(context.Context, *GetChannelRequest) (*ChannelResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChannel not implemented")
 }
 func (UnimplementedChannelManagementServer) mustEmbedUnimplementedChannelManagementServer() {}
 
@@ -350,24 +336,6 @@ func _ChannelManagement_KickUser_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ChannelManagement_CanWriteToChannel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CanWriteRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ChannelManagementServer).CanWriteToChannel(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/channel_mgmt.ChannelManagement/CanWriteToChannel",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChannelManagementServer).CanWriteToChannel(ctx, req.(*CanWriteRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _ChannelManagement_MakeChannelAdmin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MakeAdminRequest)
 	if err := dec(in); err != nil {
@@ -422,20 +390,20 @@ func _ChannelManagement_IsChannelAdmin_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ChannelManagement_GetUsersInChannel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetUsersRequest)
+func _ChannelManagement_GetChannel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetChannelRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ChannelManagementServer).GetUsersInChannel(ctx, in)
+		return srv.(ChannelManagementServer).GetChannel(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/channel_mgmt.ChannelManagement/GetUsersInChannel",
+		FullMethod: "/channel_mgmt.ChannelManagement/GetChannel",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChannelManagementServer).GetUsersInChannel(ctx, req.(*GetUsersRequest))
+		return srv.(ChannelManagementServer).GetChannel(ctx, req.(*GetChannelRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -476,10 +444,6 @@ var ChannelManagement_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ChannelManagement_KickUser_Handler,
 		},
 		{
-			MethodName: "CanWriteToChannel",
-			Handler:    _ChannelManagement_CanWriteToChannel_Handler,
-		},
-		{
 			MethodName: "MakeChannelAdmin",
 			Handler:    _ChannelManagement_MakeChannelAdmin_Handler,
 		},
@@ -492,8 +456,8 @@ var ChannelManagement_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ChannelManagement_IsChannelAdmin_Handler,
 		},
 		{
-			MethodName: "GetUsersInChannel",
-			Handler:    _ChannelManagement_GetUsersInChannel_Handler,
+			MethodName: "GetChannel",
+			Handler:    _ChannelManagement_GetChannel_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

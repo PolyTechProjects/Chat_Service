@@ -22,8 +22,8 @@ func (r *ChatRepository) FindById(chatId uuid.UUID) (*models.Chat, error) {
 	return &chat, err
 }
 
-func (r *ChatRepository) SaveChat(chat models.Chat) error {
-	return r.db.Create(&chat).Error
+func (r *ChatRepository) SaveChat(chat *models.Chat) error {
+	return r.db.Create(chat).Error
 }
 
 func (r *ChatRepository) DeleteChat(chatId uuid.UUID) error {
@@ -37,42 +37,24 @@ func (r *ChatRepository) UpdateChat(request *dto.UpdateChatRequest) error {
 	}).Error
 }
 
-func (r *ChatRepository) AddUserToChat(request *dto.UserChatRequest) error {
-	userChat := models.UserChat{
-		ChatId: request.ChatId,
-		UserId: request.UserId,
-	}
-	return r.db.Create(&userChat).Error
+func (r *ChatRepository) AddUserToChat(user *models.UserChat) error {
+	return r.db.Create(&user).Error
 }
 
-func (r *ChatRepository) RemoveUserFromChat(request *dto.UserChatRequest) error {
-	return r.db.Where("chat_id = ? AND user_id = ?", request.ChatId, request.UserId).Delete(&models.UserChat{}).Error
+func (r *ChatRepository) RemoveUserFromChat(user *models.UserChat) error {
+	return r.db.Where("chat_id = ? AND user_id = ?", user.ChatId, user.UserId).Delete(&models.UserChat{}).Error
 }
 
-func (r *ChatRepository) AddAdmin(request *dto.AdminRequest) error {
-	admin := models.Admin{
-		ChatId: request.ChatId,
-		UserId: request.UserId,
-	}
+func (r *ChatRepository) AddAdmin(admin *models.Admin) error {
 	return r.db.Create(&admin).Error
 }
 
-func (r *ChatRepository) RemoveAdmin(request *dto.AdminRequest) error {
-	return r.db.Where("chat_id = ? AND user_id = ?", request.ChatId, request.UserId).Delete(&models.Admin{}).Error
+func (r *ChatRepository) RemoveAdmin(admin *models.Admin) error {
+	return r.db.Where("chat_id = ? AND user_id = ?", admin.ChatId, admin.UserId).Delete(&models.Admin{}).Error
 }
 
-func (r *ChatRepository) IsAdmin(request *dto.AdminRequest) (bool, error) {
-	var admin models.Admin
-	err := r.db.Where("chat_id = ? AND user_id = ?", request.ChatId, request.UserId).First(&admin).Error
-	if err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-func (r *ChatRepository) IsMember(request *dto.UserChatRequest) (bool, error) {
-	var userChat models.UserChat
-	err := r.db.Where("chat_id = ? AND user_id = ?", request.ChatId, request.UserId).First(&userChat).Error
+func (r *ChatRepository) IsAdmin(admin *models.Admin) (bool, error) {
+	err := r.db.Where("chat_id = ? AND user_id = ?", admin.ChatId, admin.UserId).First(&admin).Error
 	if err != nil {
 		return false, err
 	}

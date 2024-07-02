@@ -32,17 +32,24 @@ func (chatMgmtClient *ChatMgmtGRPCClient) PerformGetChatUsers(chatID, accessToke
 	md := metadata.Pairs("authorization", accessToken)
 	md.Append("x-refresh-token", refreshToken)
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
-	resp, err := chatMgmtClient.GetChatUsers(ctx, &chatMgmt.GetUsersRequest{ChatId: chatID})
+	resp, err := chatMgmtClient.GetChat(ctx, &chatMgmt.GetChatRequest{ChatId: chatID})
 	if err != nil {
 		return nil, err
 	}
-	var userIDs []uuid.UUID
-	for _, id := range resp.UserIds {
-		userUUID, err := uuid.Parse(id)
+	var userIds []uuid.UUID
+	for _, id := range resp.ParticipantsIds {
+		userId, err := uuid.Parse(id)
 		if err != nil {
 			return nil, err
 		}
-		userIDs = append(userIDs, userUUID)
+		userIds = append(userIds, userId)
 	}
-	return userIDs, nil
+	for _, id := range resp.AdminsIds {
+		userId, err := uuid.Parse(id)
+		if err != nil {
+			return nil, err
+		}
+		userIds = append(userIds, userId)
+	}
+	return userIds, nil
 }

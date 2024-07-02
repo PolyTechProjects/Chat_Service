@@ -84,31 +84,31 @@ func (s *AuthService) Login(login string, password string) (string, string, erro
 	return accessToken, refreshToken.Value, nil
 }
 
-func (s *AuthService) Authorize(accessToken string, refreshToken string) (string, uuid.UUID, error) {
+func (s *AuthService) Authorize(accessToken string, refreshToken string) (string, string, uuid.UUID, error) {
 	var claims jwt.MapClaims
 	_, err := jwt.ParseWithClaims(accessToken, &claims, s.keyFunc)
 	if err != nil {
-		return "", uuid.Nil, err
+		return "", "", uuid.Nil, err
 	}
 
 	userId, err := uuid.Parse(claims["sub"].(string))
 	if err != nil {
-		return "", uuid.Nil, err
+		return "", "", uuid.Nil, err
 	}
 
 	user, err := s.AuthRepository.FindById(userId)
 	if err != nil {
-		return "", uuid.Nil, err
+		return "", "", uuid.Nil, err
 	}
 
 	if claims["exp"].(float64) < float64(time.Now().Unix()) {
 		accessToken, err = s.refreshAccessToken(refreshToken, user.Id)
 		if err != nil {
-			return "", uuid.Nil, err
+			return "", "", uuid.Nil, err
 		}
 	}
 
-	return accessToken, user.Id, nil
+	return accessToken, refreshToken, user.Id, nil
 }
 
 func (s *AuthService) ExtractUserId(tokenString string) (string, error) {

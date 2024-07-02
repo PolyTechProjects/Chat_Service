@@ -9,7 +9,7 @@ type Chat struct {
 	Id          uuid.UUID `gorm:"type:uuid;default:gen_random_uuid()"`
 	Name        string
 	Description string
-	CreatorId   string
+	CreatorId   uuid.UUID `gorm:"type:uuid"`
 }
 
 type UserChat struct {

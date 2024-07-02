@@ -7,7 +7,7 @@ import (
 
 type Config struct {
 	Auth     AuthConfig
-	Grpc     WebConfig
+	App      AppConfig
 	Database DatabaseConfig
 }
 
@@ -16,8 +16,9 @@ type AuthConfig struct {
 	AuthPort string `env:"AUTH_APP_PORT"`
 }
 
-type WebConfig struct {
-	Port int `env:"APP_INNER_PORT"`
+type AppConfig struct {
+	HttpInnerPort int `env:"APP_HTTP_INNER_PORT"`
+	GrpcInnerPort int `env:"APP_GRPC_INNER_PORT"`
 }
 
 type DatabaseConfig struct {
