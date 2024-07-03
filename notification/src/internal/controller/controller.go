@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"example.com/notification/src/internal/client"
@@ -32,7 +33,7 @@ func (nc *NotificationController) BindDeviceToUserHandler(w http.ResponseWriter,
 		return
 	}
 
-	_, err = nc.authClient.PerformAuthorize(r.Context(), r, bindDeviceToUserRequest.UserId)
+	authResp, err := nc.authClient.PerformAuthorize(r.Context(), r, bindDeviceToUserRequest.UserId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -48,6 +49,9 @@ func (nc *NotificationController) BindDeviceToUserHandler(w http.ResponseWriter,
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }
 
 func (nc *NotificationController) UnbindDeviceFromUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +62,7 @@ func (nc *NotificationController) UnbindDeviceFromUserHandler(w http.ResponseWri
 		return
 	}
 
-	_, err = nc.authClient.PerformAuthorize(r.Context(), r, unbindDeviceFromUserRequest.UserId)
+	authResp, err := nc.authClient.PerformAuthorize(r.Context(), r, unbindDeviceFromUserRequest.UserId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -74,6 +78,9 @@ func (nc *NotificationController) UnbindDeviceFromUserHandler(w http.ResponseWri
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }
 
 func (nc *NotificationController) DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +91,7 @@ func (nc *NotificationController) DeleteUserHandler(w http.ResponseWriter, r *ht
 		return
 	}
 
-	_, err = nc.authClient.PerformAuthorize(r.Context(), r, deleteUserRequest.UserId)
+	authResp, err := nc.authClient.PerformAuthorize(r.Context(), r, deleteUserRequest.UserId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -100,6 +107,9 @@ func (nc *NotificationController) DeleteUserHandler(w http.ResponseWriter, r *ht
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }
 
 func (nc *NotificationController) UpdateOldDeviceOnUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -110,7 +120,7 @@ func (nc *NotificationController) UpdateOldDeviceOnUserHandler(w http.ResponseWr
 		return
 	}
 
-	_, err = nc.authClient.PerformAuthorize(r.Context(), r, updateOldDeviceOnUserRequest.UserId)
+	authResp, err := nc.authClient.PerformAuthorize(r.Context(), r, updateOldDeviceOnUserRequest.UserId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -126,4 +136,7 @@ func (nc *NotificationController) UpdateOldDeviceOnUserHandler(w http.ResponseWr
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }

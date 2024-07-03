@@ -93,7 +93,14 @@ func (ws *WebsocketController) SendMessageHandler(w http.ResponseWriter, r *http
 	}
 	refreshToken := cookie.Value
 
-	authorizeResp, err := ws.authClient.PerformAuthorize(r.Context(), accessToken, refreshToken)
+	userIdH := r.Header.Get("X-User-Id")
+	if userIdH == "" {
+		slog.Error("X-User-Id header not found")
+		wsConnection.WriteJSON(models.ErrorMessageResponse{Error: "X-User-Id header not found"})
+		return
+	}
+
+	authorizeResp, err := ws.authClient.PerformAuthorize(r.Context(), accessToken, refreshToken, userIdH)
 	if err != nil {
 		slog.Error(err.Error())
 		wsConnection.WriteJSON(models.ErrorMessageResponse{Error: err.Error()})
@@ -147,7 +154,7 @@ func (ws *WebsocketController) StartBroadcasting() {
 		refreshToken := messageWithTokens.RefreshToken
 
 		entityId := message.ChatRoomId.String()
-		channelUsers, err := ws.channelMgmtClient.PerformGetChanUsers(entityId, accessToken, refreshToken)
+		channelUsers, err := ws.channelMgmtClient.PerformGetChanUsers(entityId, accessToken, refreshToken, message.SenderId.String())
 		if err == nil && len(channelUsers) > 0 {
 			readyMessage := models.ReadyMessage{
 				Message:      message,
@@ -159,7 +166,7 @@ func (ws *WebsocketController) StartBroadcasting() {
 			continue
 		}
 
-		chatUsers, err := ws.chatMgmtClient.PerformGetChatUsers(entityId, accessToken, refreshToken)
+		chatUsers, err := ws.chatMgmtClient.PerformGetChatUsers(entityId, accessToken, refreshToken, message.SenderId.String())
 		if err == nil && len(chatUsers) > 0 {
 			readyMessage := models.ReadyMessage{
 				Message:      message,

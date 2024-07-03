@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -19,7 +20,7 @@ func New(mediaHandlerService *service.MediaHandlerService, authClient *client.Au
 }
 
 func (m *MediaHandlerController) UploadMediaHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := m.authClient.PerformAuthorize(r.Context(), r, r.Header.Get("UserId"))
+	authResp, err := m.authClient.PerformAuthorize(r.Context(), r, r.Header.Get("UserId"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -41,10 +42,13 @@ func (m *MediaHandlerController) UploadMediaHandler(w http.ResponseWriter, r *ht
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }
 
 func (m *MediaHandlerController) GetMediaHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := m.authClient.PerformAuthorize(r.Context(), r, r.Header.Get("UserId"))
+	authResp, err := m.authClient.PerformAuthorize(r.Context(), r, r.Header.Get("UserId"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -60,11 +64,14 @@ func (m *MediaHandlerController) GetMediaHandler(w http.ResponseWriter, r *http.
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 	w.Write(res)
 }
 
 func (m *MediaHandlerController) DeleteMediaHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := m.authClient.PerformAuthorize(r.Context(), r, r.Header.Get("UserId"))
+	authResp, err := m.authClient.PerformAuthorize(r.Context(), r, r.Header.Get("UserId"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -80,4 +87,7 @@ func (m *MediaHandlerController) DeleteMediaHandler(w http.ResponseWriter, r *ht
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }

@@ -28,11 +28,11 @@ func NewChatMgmtClient(cfg *config.Config) *ChatMgmtGRPCClient {
 	return &ChatMgmtGRPCClient{chatMgmt.NewChatManagementClient(conn)}
 }
 
-func (chatMgmtClient *ChatMgmtGRPCClient) PerformGetChatUsers(chatID, accessToken string, refreshToken string) ([]uuid.UUID, error) {
+func (chatMgmtClient *ChatMgmtGRPCClient) PerformGetChatUsers(chatID, accessToken string, refreshToken string, userId string) ([]uuid.UUID, error) {
 	md := metadata.Pairs("authorization", accessToken)
 	md.Append("x-refresh-token", refreshToken)
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
-	resp, err := chatMgmtClient.GetChat(ctx, &chatMgmt.GetChatRequest{ChatId: chatID})
+	resp, err := chatMgmtClient.GetChat(ctx, &chatMgmt.GetChatRequest{ChatId: chatID, UserId: userId})
 	if err != nil {
 		return nil, err
 	}

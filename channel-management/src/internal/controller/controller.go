@@ -32,7 +32,7 @@ func (c *ChannelManagementController) CreateChannelHandler(w http.ResponseWriter
 		return
 	}
 
-	_, err = c.authClient.PerformAuthorize(r.Context(), r, channelReq.CreatorId.String())
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, channelReq.CreatorId.String())
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -51,6 +51,9 @@ func (c *ChannelManagementController) CreateChannelHandler(w http.ResponseWriter
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 	w.Write(channelResp)
 }
 
@@ -63,7 +66,7 @@ func (c *ChannelManagementController) DeleteChannelHandler(w http.ResponseWriter
 		return
 	}
 
-	_, err = c.authClient.PerformAuthorize(r.Context(), r, channelReq.UserId.String())
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, channelReq.UserId.String())
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -76,7 +79,9 @@ func (c *ChannelManagementController) DeleteChannelHandler(w http.ResponseWriter
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }
 
 func (c *ChannelManagementController) UpdateChannelHandler(w http.ResponseWriter, r *http.Request) {
@@ -88,7 +93,7 @@ func (c *ChannelManagementController) UpdateChannelHandler(w http.ResponseWriter
 		return
 	}
 
-	_, err = c.authClient.PerformAuthorize(r.Context(), r, channelReq.UserId.String())
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, channelReq.UserId.String())
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -101,7 +106,9 @@ func (c *ChannelManagementController) UpdateChannelHandler(w http.ResponseWriter
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }
 
 func (c *ChannelManagementController) JoinChannelHandler(w http.ResponseWriter, r *http.Request) {
@@ -113,7 +120,7 @@ func (c *ChannelManagementController) JoinChannelHandler(w http.ResponseWriter, 
 		return
 	}
 
-	_, err = c.authClient.PerformAuthorize(r.Context(), r, joinReq.UserId.String())
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, joinReq.UserId.String())
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -126,7 +133,9 @@ func (c *ChannelManagementController) JoinChannelHandler(w http.ResponseWriter, 
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }
 
 func (c *ChannelManagementController) LeaveChannelHandler(w http.ResponseWriter, r *http.Request) {
@@ -138,7 +147,7 @@ func (c *ChannelManagementController) LeaveChannelHandler(w http.ResponseWriter,
 		return
 	}
 
-	_, err = c.authClient.PerformAuthorize(r.Context(), r, leaveReq.UserId.String())
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, leaveReq.UserId.String())
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -151,7 +160,9 @@ func (c *ChannelManagementController) LeaveChannelHandler(w http.ResponseWriter,
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }
 
 func (c *ChannelManagementController) InviteUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -163,7 +174,7 @@ func (c *ChannelManagementController) InviteUserHandler(w http.ResponseWriter, r
 		return
 	}
 
-	_, err = c.authClient.PerformAuthorize(r.Context(), r, inviteReq.UserId.String())
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, inviteReq.UserId.String())
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -176,7 +187,9 @@ func (c *ChannelManagementController) InviteUserHandler(w http.ResponseWriter, r
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }
 
 func (c *ChannelManagementController) KickUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -188,7 +201,7 @@ func (c *ChannelManagementController) KickUserHandler(w http.ResponseWriter, r *
 		return
 	}
 
-	_, err = c.authClient.PerformAuthorize(r.Context(), r, kickReq.UserId.String())
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, kickReq.UserId.String())
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -201,7 +214,9 @@ func (c *ChannelManagementController) KickUserHandler(w http.ResponseWriter, r *
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }
 
 func (c *ChannelManagementController) MakeAdminHandler(w http.ResponseWriter, r *http.Request) {
@@ -213,7 +228,7 @@ func (c *ChannelManagementController) MakeAdminHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	_, err = c.authClient.PerformAuthorize(r.Context(), r, adminReq.UserId.String())
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, adminReq.UserId.String())
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -236,7 +251,9 @@ func (c *ChannelManagementController) MakeAdminHandler(w http.ResponseWriter, r 
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }
 
 func (c *ChannelManagementController) DeleteAdminHandler(w http.ResponseWriter, r *http.Request) {
@@ -248,7 +265,7 @@ func (c *ChannelManagementController) DeleteAdminHandler(w http.ResponseWriter, 
 		return
 	}
 
-	_, err = c.authClient.PerformAuthorize(r.Context(), r, adminReq.UserId.String())
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, adminReq.UserId.String())
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -271,7 +288,9 @@ func (c *ChannelManagementController) DeleteAdminHandler(w http.ResponseWriter, 
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }
 
 func (c *ChannelManagementController) GetChannelHandler(w http.ResponseWriter, r *http.Request) {
@@ -283,7 +302,7 @@ func (c *ChannelManagementController) GetChannelHandler(w http.ResponseWriter, r
 		return
 	}
 
-	_, err = c.authClient.PerformAuthorize(r.Context(), r, channelReq.UserId.String())
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, channelReq.UserId.String())
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -302,5 +321,8 @@ func (c *ChannelManagementController) GetChannelHandler(w http.ResponseWriter, r
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 	w.Write(channelResp)
 }

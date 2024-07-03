@@ -32,7 +32,7 @@ func (c *ChatManagementController) CreateChatHandler(w http.ResponseWriter, r *h
 		return
 	}
 
-	_, err = c.authClient.PerformAuthorize(r.Context(), r, chatReq.CreatorId.String())
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, chatReq.CreatorId.String())
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -51,6 +51,9 @@ func (c *ChatManagementController) CreateChatHandler(w http.ResponseWriter, r *h
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 	w.Write(chatResp)
 }
 
@@ -62,7 +65,7 @@ func (c *ChatManagementController) DeleteChatHandler(w http.ResponseWriter, r *h
 		return
 	}
 
-	_, err = c.authClient.PerformAuthorize(r.Context(), r, chatReq.UserId.String())
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, chatReq.UserId.String())
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -74,7 +77,9 @@ func (c *ChatManagementController) DeleteChatHandler(w http.ResponseWriter, r *h
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }
 
 func (c *ChatManagementController) GetChatHandler(w http.ResponseWriter, r *http.Request) {
@@ -85,7 +90,7 @@ func (c *ChatManagementController) GetChatHandler(w http.ResponseWriter, r *http
 		return
 	}
 
-	_, err = c.authClient.PerformAuthorize(r.Context(), r, chatReq.UserId.String())
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, chatReq.UserId.String())
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -102,6 +107,9 @@ func (c *ChatManagementController) GetChatHandler(w http.ResponseWriter, r *http
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 	w.Write(chatResp)
 }
 
@@ -113,7 +121,7 @@ func (c *ChatManagementController) UpdateChatHandler(w http.ResponseWriter, r *h
 		return
 	}
 
-	_, err = c.authClient.PerformAuthorize(r.Context(), r, chatReq.UserId.String())
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, chatReq.UserId.String())
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -125,7 +133,9 @@ func (c *ChatManagementController) UpdateChatHandler(w http.ResponseWriter, r *h
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }
 
 func (c *ChatManagementController) JoinChatHandler(w http.ResponseWriter, r *http.Request) {
@@ -136,7 +146,7 @@ func (c *ChatManagementController) JoinChatHandler(w http.ResponseWriter, r *htt
 		return
 	}
 
-	_, err = c.authClient.PerformAuthorize(r.Context(), r, joinReq.UserId.String())
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, joinReq.UserId.String())
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -148,7 +158,9 @@ func (c *ChatManagementController) JoinChatHandler(w http.ResponseWriter, r *htt
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }
 
 func (c *ChatManagementController) LeaveChatHandler(w http.ResponseWriter, r *http.Request) {
@@ -159,7 +171,7 @@ func (c *ChatManagementController) LeaveChatHandler(w http.ResponseWriter, r *ht
 		return
 	}
 
-	_, err = c.authClient.PerformAuthorize(r.Context(), r, leaveReq.UserId.String())
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, leaveReq.UserId.String())
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -171,7 +183,9 @@ func (c *ChatManagementController) LeaveChatHandler(w http.ResponseWriter, r *ht
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }
 
 func (c *ChatManagementController) InviteUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -182,7 +196,7 @@ func (c *ChatManagementController) InviteUserHandler(w http.ResponseWriter, r *h
 		return
 	}
 
-	_, err = c.authClient.PerformAuthorize(r.Context(), r, inviteReq.UserId.String())
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, inviteReq.UserId.String())
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -202,7 +216,9 @@ func (c *ChatManagementController) InviteUserHandler(w http.ResponseWriter, r *h
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }
 
 func (c *ChatManagementController) KickUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -213,7 +229,7 @@ func (c *ChatManagementController) KickUserHandler(w http.ResponseWriter, r *htt
 		return
 	}
 
-	_, err = c.authClient.PerformAuthorize(r.Context(), r, kickReq.UserId.String())
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, kickReq.UserId.String())
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -233,7 +249,9 @@ func (c *ChatManagementController) KickUserHandler(w http.ResponseWriter, r *htt
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }
 
 func (c *ChatManagementController) MakeAdminHandler(w http.ResponseWriter, r *http.Request) {
@@ -244,7 +262,7 @@ func (c *ChatManagementController) MakeAdminHandler(w http.ResponseWriter, r *ht
 		return
 	}
 
-	_, err = c.authClient.PerformAuthorize(r.Context(), r, adminReq.UserId.String())
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, adminReq.UserId.String())
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -264,7 +282,9 @@ func (c *ChatManagementController) MakeAdminHandler(w http.ResponseWriter, r *ht
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }
 
 func (c *ChatManagementController) DeleteAdminHandler(w http.ResponseWriter, r *http.Request) {
@@ -275,7 +295,7 @@ func (c *ChatManagementController) DeleteAdminHandler(w http.ResponseWriter, r *
 		return
 	}
 
-	_, err = c.authClient.PerformAuthorize(r.Context(), r, adminReq.UserId.String())
+	authResp, err := c.authClient.PerformAuthorize(r.Context(), r, adminReq.UserId.String())
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -295,5 +315,7 @@ func (c *ChatManagementController) DeleteAdminHandler(w http.ResponseWriter, r *
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
 }
