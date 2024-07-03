@@ -51,7 +51,8 @@ func (nc *NotificationController) BindDeviceToUserHandler(w http.ResponseWriter,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly", authResp.AccessToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly", authResp.RefreshToken))
 }
 
 func (nc *NotificationController) UnbindDeviceFromUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -80,7 +81,8 @@ func (nc *NotificationController) UnbindDeviceFromUserHandler(w http.ResponseWri
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly", authResp.AccessToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly", authResp.RefreshToken))
 }
 
 func (nc *NotificationController) DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -109,7 +111,8 @@ func (nc *NotificationController) DeleteUserHandler(w http.ResponseWriter, r *ht
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly", authResp.AccessToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly", authResp.RefreshToken))
 }
 
 func (nc *NotificationController) UpdateOldDeviceOnUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -138,5 +141,6 @@ func (nc *NotificationController) UpdateOldDeviceOnUserHandler(w http.ResponseWr
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly", authResp.AccessToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly", authResp.RefreshToken))
 }

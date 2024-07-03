@@ -40,16 +40,18 @@ func (a *AuthController) RegisterHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	response := dto.RegisterResponse{
+	register := dto.RegisterResponse{
 		UserId: userId.String(),
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", accessToken, refreshToken))
-	err = json.NewEncoder(w).Encode(response)
+	registerResp, err := json.Marshal(register)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly", accessToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly", refreshToken))
+	w.Write(registerResp)
 }
 
 func (a *AuthController) LoginHandler(w http.ResponseWriter, r *http.Request) {
@@ -65,5 +67,6 @@ func (a *AuthController) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", accessToken, refreshToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly", accessToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly", refreshToken))
 }

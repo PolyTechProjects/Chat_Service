@@ -53,7 +53,8 @@ func (c *ChannelManagementController) CreateChannelHandler(w http.ResponseWriter
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly", authResp.AccessToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly", authResp.RefreshToken))
 	w.Write(channelResp)
 }
 
@@ -81,7 +82,8 @@ func (c *ChannelManagementController) DeleteChannelHandler(w http.ResponseWriter
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly", authResp.AccessToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly", authResp.RefreshToken))
 }
 
 func (c *ChannelManagementController) UpdateChannelHandler(w http.ResponseWriter, r *http.Request) {
@@ -108,7 +110,8 @@ func (c *ChannelManagementController) UpdateChannelHandler(w http.ResponseWriter
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly", authResp.AccessToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly", authResp.RefreshToken))
 }
 
 func (c *ChannelManagementController) JoinChannelHandler(w http.ResponseWriter, r *http.Request) {
@@ -135,7 +138,8 @@ func (c *ChannelManagementController) JoinChannelHandler(w http.ResponseWriter, 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly", authResp.AccessToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly", authResp.RefreshToken))
 }
 
 func (c *ChannelManagementController) LeaveChannelHandler(w http.ResponseWriter, r *http.Request) {
@@ -162,7 +166,8 @@ func (c *ChannelManagementController) LeaveChannelHandler(w http.ResponseWriter,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly", authResp.AccessToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly", authResp.RefreshToken))
 }
 
 func (c *ChannelManagementController) InviteUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -189,7 +194,8 @@ func (c *ChannelManagementController) InviteUserHandler(w http.ResponseWriter, r
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly", authResp.AccessToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly", authResp.RefreshToken))
 }
 
 func (c *ChannelManagementController) KickUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -216,7 +222,8 @@ func (c *ChannelManagementController) KickUserHandler(w http.ResponseWriter, r *
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly", authResp.AccessToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly", authResp.RefreshToken))
 }
 
 func (c *ChannelManagementController) MakeAdminHandler(w http.ResponseWriter, r *http.Request) {
@@ -253,7 +260,8 @@ func (c *ChannelManagementController) MakeAdminHandler(w http.ResponseWriter, r 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly", authResp.AccessToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly", authResp.RefreshToken))
 }
 
 func (c *ChannelManagementController) DeleteAdminHandler(w http.ResponseWriter, r *http.Request) {
@@ -290,7 +298,8 @@ func (c *ChannelManagementController) DeleteAdminHandler(w http.ResponseWriter, 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly", authResp.AccessToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly", authResp.RefreshToken))
 }
 
 func (c *ChannelManagementController) GetChannelHandler(w http.ResponseWriter, r *http.Request) {
@@ -323,6 +332,7 @@ func (c *ChannelManagementController) GetChannelHandler(w http.ResponseWriter, r
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Cookie", fmt.Sprintf("Authorization=Bearer %s; X-Refresh-Token=%s", authResp.AccessToken, authResp.RefreshToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly", authResp.AccessToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly", authResp.RefreshToken))
 	w.Write(channelResp)
 }
