@@ -53,3 +53,14 @@ func (chanMgmtClient *ChanMgmtGRPCClient) PerformGetChanUsers(channelID, accessT
 	}
 	return userIds, nil
 }
+
+func (chanMgmtClient *ChanMgmtGRPCClient) PerformIsAdmin(channelID, accessToken string, refreshToken string, userId string) (bool, error) {
+	md := metadata.Pairs("authorization", accessToken)
+	md.Append("x-refresh-token", refreshToken)
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+	resp, err := chanMgmtClient.IsChannelAdmin(ctx, &chanMgmt.IsAdminRequest{ChannelId: channelID, UserId: userId})
+	if err != nil {
+		return false, err
+	}
+	return resp.IsAdmin, nil
+}

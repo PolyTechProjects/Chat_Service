@@ -72,16 +72,7 @@ func NewWebsocketController(messageService *service.MessageService, authClient *
 	}
 }
 
-func (ws *WebsocketController) SendMessageHandler(w http.ResponseWriter, r *http.Request) {
-	upgrader := websocket.Upgrader{}
-	wsConnection, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		slog.Error("Error has occurred while trying to connect to websocket server.")
-		return
-	}
-	slog.Debug("Connected to websocket server")
-	defer wsConnection.Close()
-
+func (ws *WebsocketController) extractUserIdAndTokens(wsConnection *websocket.Conn, r *http.Request) (uuid.UUID, string, string) {
 	header := r.Header.Get("Authorization")
 	accessToken := strings.Split(header, "Bearer ")[1]
 
@@ -89,7 +80,7 @@ func (ws *WebsocketController) SendMessageHandler(w http.ResponseWriter, r *http
 	if err != nil {
 		slog.Error("X-Refresh-Token cookie not found")
 		wsConnection.WriteJSON(models.ErrorMessageResponse{Error: "X-Refresh-Token cookie not found"})
-		return
+		return uuid.Nil, "", ""
 	}
 	refreshToken := cookie.Value
 
@@ -97,14 +88,14 @@ func (ws *WebsocketController) SendMessageHandler(w http.ResponseWriter, r *http
 	if userIdH == "" {
 		slog.Error("X-User-Id header not found")
 		wsConnection.WriteJSON(models.ErrorMessageResponse{Error: "X-User-Id header not found"})
-		return
+		return uuid.Nil, "", ""
 	}
 
 	authorizeResp, err := ws.authClient.PerformAuthorize(r.Context(), accessToken, refreshToken, userIdH)
 	if err != nil {
 		slog.Error(err.Error())
 		wsConnection.WriteJSON(models.ErrorMessageResponse{Error: err.Error()})
-		return
+		return uuid.Nil, "", ""
 	}
 	slog.Debug("Authorized")
 
@@ -113,9 +104,47 @@ func (ws *WebsocketController) SendMessageHandler(w http.ResponseWriter, r *http
 	if err != nil {
 		slog.Error(err.Error())
 		wsConnection.WriteJSON(models.ErrorMessageResponse{Error: err.Error()})
+		return uuid.Nil, "", ""
+	}
+	return userId, accessToken, refreshToken
+}
+
+func (ws *WebsocketController) SendMessageInChatRoomHandler(w http.ResponseWriter, r *http.Request) {
+	upgrader := websocket.Upgrader{}
+	wsConnection, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		slog.Error("Error has occurred while trying to connect to websocket server.")
 		return
 	}
-	err = ws.messageService.ReadMessages(userId, wsConnection, ws.broadcastChannel, accessToken, refreshToken)
+	slog.Debug("Connected to websocket server")
+	defer wsConnection.Close()
+	userId, accessToken, refreshToken := ws.extractUserIdAndTokens(wsConnection, r)
+
+	err = ws.messageService.ReadMessagesFromChatRoom(userId, wsConnection, accessToken, refreshToken)
+	if err != nil {
+		if e.Is(err, errors.ErrDatabaseInternalError) {
+			slog.Debug(fmt.Sprintf("%v: %v", http.StatusInternalServerError, err.Error()))
+			wsConnection.WriteJSON(models.ErrorMessageResponse{Error: err.Error()})
+			return
+		}
+		slog.Debug(fmt.Sprintf("%v: %v", http.StatusBadRequest, err.Error()))
+		wsConnection.WriteJSON(models.ErrorMessageResponse{Error: err.Error()})
+		return
+	}
+}
+
+func (ws *WebsocketController) SendMessageInChannelHandler(w http.ResponseWriter, r *http.Request) {
+	upgrader := websocket.Upgrader{}
+	wsConnection, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		slog.Error("Error has occurred while trying to connect to websocket server.")
+		return
+	}
+	slog.Debug("Connected to websocket server")
+	defer wsConnection.Close()
+	userId, accessToken, refreshToken := ws.extractUserIdAndTokens(wsConnection, r)
+
+	err = ws.messageService.ReadMessagesFromChannel(userId, wsConnection, accessToken, refreshToken)
 	if err != nil {
 		if e.Is(err, errors.ErrDatabaseInternalError) {
 			slog.Debug(fmt.Sprintf("%v: %v", http.StatusInternalServerError, err.Error()))
@@ -132,14 +161,14 @@ func (ws *WebsocketController) StartListeningFileChannel() {
 	ws.messageService.ListenFileChannel()
 }
 
-func (ws *WebsocketController) StartBroadcasting() {
-	subscriber := ws.messageService.SubscribeToMessageChannel()
+func (ws *WebsocketController) StartBroadcastingToChatRooms() {
+	subscriber := ws.messageService.SubscribeToMessageChannel(ws.messageService.RedisChannelForChatRoomMessagesName)
 	err := subscriber.Ping(context.Background())
 	if err != nil {
-		slog.Error("Not Available message-channel")
+		slog.Error("Channel Not Available", "channel", ws.messageService.RedisChannelForChatRoomMessagesName)
 		return
 	}
-	slog.Info("Available message-channel")
+	slog.Info("Channel Available", "channel", ws.messageService.RedisChannelForChatRoomMessagesName)
 	for {
 		messageWithTokens, err := receiveMessageFromRedis(subscriber)
 		if err != nil {
@@ -153,32 +182,61 @@ func (ws *WebsocketController) StartBroadcasting() {
 		accessToken := messageWithTokens.AccessToken
 		refreshToken := messageWithTokens.RefreshToken
 
-		entityId := message.ChatRoomId.String()
-		channelUsers, err := ws.channelMgmtClient.PerformGetChanUsers(entityId, accessToken, refreshToken, message.SenderId.String())
-		if err == nil && len(channelUsers) > 0 {
-			readyMessage := models.ReadyMessage{
-				Message:      message,
-				AccessToken:  accessToken,
-				RefreshToken: refreshToken,
-				ReceiversIds: channelUsers,
-			}
-			ws.messageService.Broadcast(channelUsers, &readyMessage)
+		chatRoomId := message.ChatRoomId.String()
+		chatUsers, err := ws.chatMgmtClient.PerformGetChatUsers(chatRoomId, accessToken, refreshToken, message.SenderId.String())
+		if err != nil {
+			slog.Error(err.Error())
 			continue
 		}
+		readyMessage := models.ReadyMessage{
+			Message:      message,
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
+			ReceiversIds: chatUsers,
+		}
+		ws.messageService.Broadcast(chatUsers, &readyMessage)
+	}
+}
 
-		chatUsers, err := ws.chatMgmtClient.PerformGetChatUsers(entityId, accessToken, refreshToken, message.SenderId.String())
-		if err == nil && len(chatUsers) > 0 {
-			readyMessage := models.ReadyMessage{
-				Message:      message,
-				AccessToken:  accessToken,
-				RefreshToken: refreshToken,
-				ReceiversIds: chatUsers,
-			}
-			ws.messageService.Broadcast(chatUsers, &readyMessage)
+func (ws *WebsocketController) StartBroadcastingToChannels() {
+	subscriber := ws.messageService.SubscribeToMessageChannel(ws.messageService.RedisChannelForChannelMessagesName)
+	err := subscriber.Ping(context.Background())
+	if err != nil {
+		slog.Error("Channel Not Available", "channel", ws.messageService.RedisChannelForChannelMessagesName)
+		return
+	}
+	slog.Info("Channel Available", "channel", ws.messageService.RedisChannelForChannelMessagesName)
+	for {
+		messageWithTokens, err := receiveMessageFromRedis(subscriber)
+		if err != nil {
+			slog.Error(err.Error())
 			continue
 		}
+		slog.Info("Received message")
 
-		slog.Error("No users found in either channel or chat management for broadcasting")
+		message := messageWithTokens.Message
+		slog.Debug(fmt.Sprintf("Message: %v", message))
+		accessToken := messageWithTokens.AccessToken
+		refreshToken := messageWithTokens.RefreshToken
+
+		channelId := message.ChatRoomId.String()
+		isAdmin, err := ws.channelMgmtClient.PerformIsAdmin(channelId, accessToken, refreshToken, message.SenderId.String())
+		if err != nil || !isAdmin {
+			slog.Error(err.Error())
+			continue
+		}
+		channelUsers, err := ws.channelMgmtClient.PerformGetChanUsers(channelId, accessToken, refreshToken, message.SenderId.String())
+		if err != nil {
+			slog.Error(err.Error())
+			continue
+		}
+		readyMessage := models.ReadyMessage{
+			Message:      message,
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
+			ReceiversIds: channelUsers,
+		}
+		ws.messageService.Broadcast(channelUsers, &readyMessage)
 	}
 }
 

@@ -184,7 +184,7 @@ func (s *ChatManagementService) KickUser(req *dto.KickUserRequest) error {
 	}
 	userChat := models.UserChat{
 		ChatId: req.ChatId,
-		UserId: req.UserId,
+		UserId: req.RequestingUserId,
 	}
 	err := s.repo.RemoveUserFromChat(&userChat)
 	if err != nil {

@@ -185,6 +185,15 @@ func (c *ChannelManagementController) InviteUserHandler(w http.ResponseWriter, r
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
+	isAdminReq := dto.IsAdminRequest{
+		ChannelId: inviteReq.ChannelId,
+		UserId:    inviteReq.UserId,
+	}
+	if isAdmin, err := c.service.IsAdmin(&isAdminReq); !isAdmin || err != nil {
+		slog.Error(fmt.Sprintf("Permission denied: %v not an admin", isAdminReq.UserId))
+		http.Error(w, "permission denied", http.StatusForbidden)
+		return
+	}
 
 	err = c.service.InviteUser(&inviteReq)
 	if err != nil {
@@ -211,6 +220,15 @@ func (c *ChannelManagementController) KickUserHandler(w http.ResponseWriter, r *
 	if err != nil {
 		slog.Error("Authorization error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	isAdminReq := dto.IsAdminRequest{
+		ChannelId: kickReq.ChannelId,
+		UserId:    kickReq.UserId,
+	}
+	if isAdmin, err := c.service.IsAdmin(&isAdminReq); !isAdmin || err != nil {
+		slog.Error(fmt.Sprintf("Permission denied: %v not an admin", isAdminReq.UserId))
+		http.Error(w, "permission denied", http.StatusForbidden)
 		return
 	}
 
@@ -246,7 +264,7 @@ func (c *ChannelManagementController) MakeAdminHandler(w http.ResponseWriter, r 
 		ChannelId: adminReq.ChannelId,
 		UserId:    adminReq.UserId,
 	}
-	if isAdmin, err := c.service.IsAdmin(&isAdminReq); isAdmin || err != nil {
+	if isAdmin, err := c.service.IsAdmin(&isAdminReq); !isAdmin || err != nil {
 		slog.Error(fmt.Sprintf("Permission denied: %v not an admin", adminReq.UserId))
 		http.Error(w, "permission denied", http.StatusForbidden)
 		return
@@ -284,7 +302,7 @@ func (c *ChannelManagementController) DeleteAdminHandler(w http.ResponseWriter, 
 		ChannelId: adminReq.ChannelId,
 		UserId:    adminReq.UserId,
 	}
-	if isAdmin, err := c.service.IsAdmin(&isAdminReq); isAdmin || err != nil {
+	if isAdmin, err := c.service.IsAdmin(&isAdminReq); !isAdmin || err != nil {
 		slog.Error(fmt.Sprintf("Permission denied: %v not an admin", adminReq.UserId))
 		http.Error(w, "permission denied", http.StatusForbidden)
 		return

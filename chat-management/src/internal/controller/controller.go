@@ -212,9 +212,10 @@ func (c *ChatManagementController) InviteUserHandler(w http.ResponseWriter, r *h
 		ChatId: inviteReq.ChatId,
 		UserId: inviteReq.UserId,
 	}
-	if isAdmin, err := c.service.IsAdmin(&isAdminReq); isAdmin || err != nil {
+	if isAdmin, err := c.service.IsAdmin(&isAdminReq); !isAdmin || err != nil {
 		slog.Error(fmt.Sprintf("Permission denied: %v not an admin", isAdminReq.UserId))
 		http.Error(w, "permission denied", http.StatusForbidden)
+		return
 	}
 
 	err = c.service.InviteUser(&inviteReq)
@@ -246,9 +247,10 @@ func (c *ChatManagementController) KickUserHandler(w http.ResponseWriter, r *htt
 		ChatId: kickReq.ChatId,
 		UserId: kickReq.UserId,
 	}
-	if isAdmin, err := c.service.IsAdmin(&isAdminReq); isAdmin || err != nil {
+	if isAdmin, err := c.service.IsAdmin(&isAdminReq); !isAdmin || err != nil {
 		slog.Error(fmt.Sprintf("Permission denied: %v not an admin", isAdminReq.UserId))
 		http.Error(w, "permission denied", http.StatusForbidden)
+		return
 	}
 
 	err = c.service.KickUser(&kickReq)
@@ -280,9 +282,10 @@ func (c *ChatManagementController) MakeAdminHandler(w http.ResponseWriter, r *ht
 		ChatId: adminReq.ChatId,
 		UserId: adminReq.UserId,
 	}
-	if isAdmin, err := c.service.IsAdmin(&isAdminReq); isAdmin || err != nil {
+	if isAdmin, err := c.service.IsAdmin(&isAdminReq); !isAdmin || err != nil {
 		slog.Error(fmt.Sprintf("Permission denied: %v not an admin", isAdminReq.UserId))
 		http.Error(w, "permission denied", http.StatusForbidden)
+		return
 	}
 
 	err = c.service.MakeAdmin(&adminReq)
@@ -317,6 +320,7 @@ func (c *ChatManagementController) DeleteAdminHandler(w http.ResponseWriter, r *
 	if isAdmin, err := c.service.IsAdmin(&isAdminReq); !isAdmin || err != nil {
 		slog.Error(fmt.Sprintf("Permission denied: %v not an admin", isAdminReq.UserId))
 		http.Error(w, "permission denied", http.StatusForbidden)
+		return
 	}
 
 	err = c.service.DeleteAdmin(&adminReq)

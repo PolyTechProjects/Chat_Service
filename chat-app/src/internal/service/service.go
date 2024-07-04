@@ -36,16 +36,20 @@ func (m *MessageHistoryService) GetHistory(chatRoomId uuid.UUID) ([]models.Messa
 }
 
 type MessageService struct {
-	messageRepository   *repository.MessageRepository
-	fileLoadedChannel   chan *models.MessageIdXFileId
-	userIdXWsConnection map[uuid.UUID]*websocket.Conn
+	messageRepository                   *repository.MessageRepository
+	fileLoadedChannel                   chan *models.MessageIdXFileId
+	userIdXWsConnection                 map[uuid.UUID]*websocket.Conn
+	RedisChannelForChatRoomMessagesName string
+	RedisChannelForChannelMessagesName  string
 }
 
 func NewMessageService(messageRepository *repository.MessageRepository) *MessageService {
 	return &MessageService{
-		messageRepository:   messageRepository,
-		fileLoadedChannel:   make(chan *models.MessageIdXFileId),
-		userIdXWsConnection: make(map[uuid.UUID]*websocket.Conn),
+		messageRepository:                   messageRepository,
+		fileLoadedChannel:                   make(chan *models.MessageIdXFileId),
+		userIdXWsConnection:                 make(map[uuid.UUID]*websocket.Conn),
+		RedisChannelForChatRoomMessagesName: "chat-room-messages-channel",
+		RedisChannelForChannelMessagesName:  "channel-messages-channel",
 	}
 }
 
@@ -98,7 +102,7 @@ func (m *MessageService) Broadcast(userIds []uuid.UUID, readyMessage *models.Rea
 	}
 }
 
-func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.Conn, broadcastChannel chan *models.Message, accessToken string, refreshToken string) error {
+func (m *MessageService) ReadMessagesFromChannel(userId uuid.UUID, wsConnection *websocket.Conn, accessToken string, refreshToken string) error {
 	var cerr error
 	err := m.messageRepository.SetUserStatusInRedis(userId)
 	if err != nil {
@@ -175,7 +179,8 @@ func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.
 			cerr = fmt.Errorf("%w: %v", errors.ErrMapping, err)
 			break
 		}
-		err = m.messageRepository.PublishToRedisChannel("message-channel", bytes)
+
+		err = m.messageRepository.PublishToRedisChannel(m.RedisChannelForChannelMessagesName, bytes)
 		if err != nil {
 			slog.Error(fmt.Sprintf("Error has occured while publishing message: %v", err.Error()))
 			cerr = fmt.Errorf("%w: %v", errors.ErrPublishMessageError, err)
@@ -194,6 +199,103 @@ func (m *MessageService) ReadMessages(userId uuid.UUID, wsConnection *websocket.
 	return cerr
 }
 
-func (m *MessageService) SubscribeToMessageChannel() *redis.PubSub {
-	return m.messageRepository.SubscribeToRedisChannel("message-channel")
+func (m *MessageService) ReadMessagesFromChatRoom(userId uuid.UUID, wsConnection *websocket.Conn, accessToken string, refreshToken string) error {
+	var cerr error
+	err := m.messageRepository.SetUserStatusInRedis(userId)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Error has occured while setting user status: %v", err.Error()))
+		cerr = fmt.Errorf("%w: %v", errors.ErrSetStatusRedis, err)
+		return cerr
+	}
+	m.userIdXWsConnection[userId] = wsConnection
+	slog.Debug(fmt.Sprintf("Added wsConnection to %v", userId))
+
+	for {
+		_, payload, err := wsConnection.ReadMessage()
+		if err != nil {
+			slog.Error(fmt.Sprintf("Error has occured while reading message: %v", err))
+			cerr = fmt.Errorf("%w: %v", errors.ErrReadMessageError, err.Error())
+			break
+		}
+
+		messageReq := dto.MessageRequest{}
+
+		err = json.Unmarshal(payload, &messageReq)
+		if err != nil {
+			slog.Error(fmt.Sprintf("Error has occured while unmarshalling message: %v", err))
+			cerr = fmt.Errorf("%w: %v", errors.ErrMapping, err)
+			break
+		}
+
+		message, err := models.MapRequestToMessage(&messageReq)
+		if err != nil {
+			slog.Error(fmt.Sprintf("Error has occured while mapping request to message: %v", err))
+			cerr = fmt.Errorf("%w: %v", errors.ErrMapping, err)
+			break
+		}
+
+		mediaReceived := 0
+		if messageReq.WithMedia > 0 {
+			slog.Debug("Getting files")
+			for messageReq.WithMedia != mediaReceived {
+				mf := <-m.fileLoadedChannel
+				if mf.MessageId == message.Id {
+					metadata := dto.Metadata{}
+					metadata.FilePath = mf.FileId.String()
+					message.Metadata = metadata
+					mediaReceived++
+				} else {
+					m.fileLoadedChannel <- mf
+				}
+			}
+			slog.Debug("Files received")
+		}
+
+		slog.Debug("Saving message")
+		err = m.messageRepository.SaveUserMessage(message)
+		if err != nil {
+			slog.Error(fmt.Sprintf("Error has occured while saving message: %v", err.Error()))
+			if e.Is(err, gorm.ErrUnaddressable) || e.Is(err, gorm.ErrCantStartTransaction) {
+				cerr = fmt.Errorf("%w: %v", errors.ErrDatabaseInternalError, err.Error())
+			} else {
+				cerr = fmt.Errorf("%w: %v", errors.ErrDataIntegrityViolation, err.Error())
+			}
+			break
+		}
+		slog.Debug(fmt.Sprintf("Message Saved %v, %v", message.Id, message.Metadata.FilePath))
+
+		slog.Debug("Publishing Message")
+		messageWithTokens := models.MessageWithTokens{
+			Message:      *message,
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
+		}
+		bytes, err := json.Marshal(messageWithTokens)
+		if err != nil {
+			slog.Error(fmt.Sprintf("Error has occured while marshalling message: %v", err.Error()))
+			cerr = fmt.Errorf("%w: %v", errors.ErrMapping, err)
+			break
+		}
+
+		err = m.messageRepository.PublishToRedisChannel(m.RedisChannelForChatRoomMessagesName, bytes)
+		if err != nil {
+			slog.Error(fmt.Sprintf("Error has occured while publishing message: %v", err.Error()))
+			cerr = fmt.Errorf("%w: %v", errors.ErrPublishMessageError, err)
+			break
+		}
+		slog.Debug(fmt.Sprintf("Message Published %v", bytes))
+	}
+
+	slog.Debug(fmt.Sprintf("Removing wsConnection from %v", userId))
+	delete(m.userIdXWsConnection, userId)
+	err = m.messageRepository.DropUserStatusInRedis(userId)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Error has occured while dropping user status in redis: %v", err.Error()))
+		cerr = fmt.Errorf("%w: %v", errors.ErrDropStatusRedis, err)
+	}
+	return cerr
+}
+
+func (m *MessageService) SubscribeToMessageChannel(channelName string) *redis.PubSub {
+	return m.messageRepository.SubscribeToRedisChannel(channelName)
 }
