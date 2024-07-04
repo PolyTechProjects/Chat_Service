@@ -20,7 +20,9 @@ func NewHttpServer(messageHistoryController *controller.MessageHistoryController
 
 func (h *HttpServer) StartServer() {
 	http.HandleFunc("GET /{chatRoomId}/history", h.messageHistoryController.GetHistoryHandler)
-	http.HandleFunc("/websocket", h.websocketController.SendMessageHandler)
-	go h.websocketController.StartBroadcasting()
+	http.HandleFunc("/websocket/channel", h.websocketController.SendMessageInChannelHandler)
+	http.HandleFunc("/websocket/chat", h.websocketController.SendMessageInChatRoomHandler)
+	go h.websocketController.StartBroadcastingToChatRooms()
+	go h.websocketController.StartBroadcastingToChannels()
 	go h.websocketController.StartListeningFileChannel()
 }

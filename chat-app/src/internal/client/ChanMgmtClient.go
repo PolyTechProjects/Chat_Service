@@ -28,21 +28,39 @@ func NewChanMgmtClient(cfg *config.Config) *ChanMgmtGRPCClient {
 	return &ChanMgmtGRPCClient{chanMgmt.NewChannelManagementClient(conn)}
 }
 
-func (chanMgmtClient *ChanMgmtGRPCClient) PerformGetChanUsers(channelID, accessToken string, refreshToken string) ([]uuid.UUID, error) {
+func (chanMgmtClient *ChanMgmtGRPCClient) PerformGetChanUsers(channelID, accessToken string, refreshToken string, userId string) ([]uuid.UUID, error) {
 	md := metadata.Pairs("authorization", accessToken)
 	md.Append("x-refresh-token", refreshToken)
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
-	resp, err := chanMgmtClient.GetUsersInChannel(ctx, &chanMgmt.GetUsersRequest{ChannelId: channelID})
+	resp, err := chanMgmtClient.GetChannel(ctx, &chanMgmt.GetChannelRequest{ChannelId: channelID, UserId: userId})
 	if err != nil {
 		return nil, err
 	}
-	var userIDs []uuid.UUID
-	for _, id := range resp.UserIds {
-		userUUID, err := uuid.Parse(id)
+	var userIds []uuid.UUID
+	for _, id := range resp.ParticipantsIds {
+		userId, err := uuid.Parse(id)
 		if err != nil {
 			return nil, err
 		}
-		userIDs = append(userIDs, userUUID)
+		userIds = append(userIds, userId)
 	}
-	return userIDs, nil
+	for _, id := range resp.AdminsIds {
+		userId, err := uuid.Parse(id)
+		if err != nil {
+			return nil, err
+		}
+		userIds = append(userIds, userId)
+	}
+	return userIds, nil
+}
+
+func (chanMgmtClient *ChanMgmtGRPCClient) PerformIsAdmin(channelID, accessToken string, refreshToken string, userId string) (bool, error) {
+	md := metadata.Pairs("authorization", accessToken)
+	md.Append("x-refresh-token", refreshToken)
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+	resp, err := chanMgmtClient.IsChannelAdmin(ctx, &chanMgmt.IsAdminRequest{ChannelId: channelID, UserId: userId})
+	if err != nil {
+		return false, err
+	}
+	return resp.IsAdmin, nil
 }

@@ -12,7 +12,8 @@ type Config struct {
 }
 
 type AppConfig struct {
-	InnerPort int `env:"APP_INNER_PORT"`
+	InnerGrpcPort int `env:"APP_GRPC_INNER_PORT"`
+	InnerHttpPort int `env:"APP_HTTP_INNER_PORT"`
 }
 
 type UserMgmtConfig struct {

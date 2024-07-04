@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
+	"strings"
 
 	"example.com/notification/src/config"
 	"example.com/notification/src/gen/go/auth"
 	userMgmt "example.com/notification/src/gen/go/user_mgmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
 
 type AuthClient struct {
@@ -27,8 +30,22 @@ func NewAuthClient(cfg *config.Config) *AuthClient {
 	return &AuthClient{auth.NewAuthClient(conn)}
 }
 
-func (authClient *AuthClient) PerformAuthorize(ctx context.Context, accessToken string, refreshToken string) (*auth.AuthorizeResponse, error) {
-	return authClient.Authorize(ctx, &auth.AuthorizeRequest{AccessToken: accessToken, RefreshToken: refreshToken})
+func (authClient *AuthClient) PerformAuthorize(ctx context.Context, r *http.Request, userId string) (*auth.AuthorizeResponse, error) {
+	var accessToken, refreshToken string
+	if r == nil {
+		accessToken = metadata.ValueFromIncomingContext(ctx, "authorization")[0]
+		refreshToken = metadata.ValueFromIncomingContext(ctx, "x-refresh-token")[0]
+	} else {
+		ctx = r.Context()
+		authHeader := r.Header.Get("Authorization")
+		accessToken = strings.Split(authHeader, " ")[1]
+		cookie, err := r.Cookie("X-Refresh-Token")
+		if err != nil {
+			return nil, err
+		}
+		refreshToken = cookie.Value
+	}
+	return authClient.Authorize(ctx, &auth.AuthorizeRequest{UserId: userId, AccessToken: accessToken, RefreshToken: refreshToken})
 }
 
 type UserMgmtClient struct {

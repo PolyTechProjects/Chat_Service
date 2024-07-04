@@ -10,6 +10,7 @@ import (
 	"example.com/notification/src/database"
 	"example.com/notification/src/internal/app"
 	"example.com/notification/src/internal/client"
+	"example.com/notification/src/internal/controller"
 	"example.com/notification/src/internal/repository"
 	"example.com/notification/src/internal/server"
 	"example.com/notification/src/internal/service"
@@ -26,9 +27,12 @@ func main() {
 	redis := redis.RedisClient
 	repository := repository.NewUserIdXDeviceTokenRepository(db, redis)
 	service := service.NewNotificationService(repository, cfg)
-	client := client.NewUserMgmtClient(cfg)
-	server := server.NewNotificationServer(service, client)
-	app := app.New(server, cfg)
+	authClient := client.NewAuthClient(cfg)
+	userMgmtClient := client.NewUserMgmtClient(cfg)
+	controller := controller.NewNotificationController(service, authClient, userMgmtClient)
+	httpServer := server.NewNotificationHttpServer(controller)
+	gRPCServer := server.NewNotificationGRPCServer(service, authClient, userMgmtClient)
+	app := app.New(httpServer, gRPCServer, cfg)
 	go app.MustRun()
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)

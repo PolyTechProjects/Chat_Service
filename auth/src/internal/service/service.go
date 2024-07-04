@@ -67,13 +67,16 @@ func (s *AuthService) Login(login string, password string) (string, string, erro
 	}
 
 	refreshTokenValueString := fmt.Sprintf("%v:%v:%v", user.Id, user.Login, time.Now().Unix())
+	slog.Debug(fmt.Sprintf("refreshTokenValueString: %v", refreshTokenValueString))
 	refreshTokenValue, err := bcrypt.GenerateFromPassword([]byte(refreshTokenValueString), bcrypt.DefaultCost)
 	if err != nil {
 		return "", "", err
 	}
 	refreshToken := models.NewRefreshToken(user.Id, string(refreshTokenValue))
+	slog.Debug(fmt.Sprintf("refreshToken: %v", refreshToken))
 
 	accessToken, err := s.generateAccessToken(user.Id, user.Name)
+	slog.Debug(fmt.Sprintf("accessToken: %v", accessToken))
 	if err != nil {
 		return "", "", err
 	}
@@ -81,31 +84,31 @@ func (s *AuthService) Login(login string, password string) (string, string, erro
 	return accessToken, refreshToken.Value, nil
 }
 
-func (s *AuthService) Authorize(accessToken string, refreshToken string) (string, uuid.UUID, error) {
+func (s *AuthService) Authorize(accessToken string, refreshToken string) (string, string, uuid.UUID, error) {
 	var claims jwt.MapClaims
 	_, err := jwt.ParseWithClaims(accessToken, &claims, s.keyFunc)
 	if err != nil {
-		return "", uuid.Nil, err
+		return "", "", uuid.Nil, err
 	}
 
 	userId, err := uuid.Parse(claims["sub"].(string))
 	if err != nil {
-		return "", uuid.Nil, err
+		return "", "", uuid.Nil, err
 	}
 
 	user, err := s.AuthRepository.FindById(userId)
 	if err != nil {
-		return "", uuid.Nil, err
+		return "", "", uuid.Nil, err
 	}
 
-	if claims["exp"].(int64) < time.Now().Unix() {
+	if claims["exp"].(float64) < float64(time.Now().Unix()) {
 		accessToken, err = s.refreshAccessToken(refreshToken, user.Id)
 		if err != nil {
-			return "", uuid.Nil, err
+			return "", "", uuid.Nil, err
 		}
 	}
 
-	return accessToken, user.Id, nil
+	return accessToken, refreshToken, user.Id, nil
 }
 
 func (s *AuthService) ExtractUserId(tokenString string) (string, error) {

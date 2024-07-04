@@ -10,6 +10,7 @@ import (
 	"example.com/chat-management/src/database"
 	"example.com/chat-management/src/internal/app"
 	"example.com/chat-management/src/internal/client"
+	"example.com/chat-management/src/internal/controller"
 	"example.com/chat-management/src/internal/repository"
 	"example.com/chat-management/src/internal/server"
 	"example.com/chat-management/src/internal/service"
@@ -34,16 +35,17 @@ func main() {
 	slog.Info("Creating auth client")
 	authClient := client.NewAuthClient(cfg)
 
-	slog.Info("Creating gRPC server")
-	grpcServer, err := server.New(service, authClient)
+	slog.Info("Creating controller")
+	controller := controller.NewChatManagementController(service, authClient)
 
-	if err != nil {
-		log.Error("Failed to create gRPC server", "error", err)
-		return
-	}
+	slog.Info("Creating gRPC server")
+	grpcServer := server.New(service, authClient)
+
+	slog.Info("Creating http server")
+	httpServer := server.NewHttpServer(controller)
 
 	log.Info("Starting application")
-	application := app.New(cfg.Grpc.Port, grpcServer)
+	application := app.New(httpServer, grpcServer, cfg)
 	go application.MustRun()
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)

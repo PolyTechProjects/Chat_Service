@@ -5,20 +5,38 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net"
+	"net/http"
 
 	"example.com/notification/src/gen/go/notification"
 	userMgmt "example.com/notification/src/gen/go/user_mgmt"
 	"example.com/notification/src/internal/client"
+	"example.com/notification/src/internal/controller"
 	"example.com/notification/src/internal/service"
 	"example.com/notification/src/models"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
-type NotificationServer struct {
+type NotificationHttpServer struct {
+	notificationController *controller.NotificationController
+}
+
+func NewNotificationHttpServer(notificationController *controller.NotificationController) *NotificationHttpServer {
+	return &NotificationHttpServer{
+		notificationController: notificationController,
+	}
+}
+
+func (n *NotificationHttpServer) StartServer() {
+	http.HandleFunc("POST /device", n.notificationController.BindDeviceToUserHandler)
+	http.HandleFunc("DELETE /device", n.notificationController.UnbindDeviceFromUserHandler)
+	http.HandleFunc("DELETE /user", n.notificationController.DeleteUserHandler)
+	http.HandleFunc("PUT /device", n.notificationController.UpdateOldDeviceOnUserHandler)
+}
+
+type NotificationGRPCServer struct {
 	gRPCServer *grpc.Server
 	notification.UnimplementedNotificationServer
 	notificationService *service.NotificationService
@@ -26,18 +44,19 @@ type NotificationServer struct {
 	userMgmtClient      *client.UserMgmtClient
 }
 
-func NewNotificationServer(notificationService *service.NotificationService, userMgmtClient *client.UserMgmtClient) *NotificationServer {
+func NewNotificationGRPCServer(notificationService *service.NotificationService, authClient *client.AuthClient, userMgmtClient *client.UserMgmtClient) *NotificationGRPCServer {
 	gRPCServer := grpc.NewServer()
-	g := &NotificationServer{
+	g := &NotificationGRPCServer{
 		gRPCServer:          gRPCServer,
 		notificationService: notificationService,
+		authClient:          authClient,
 		userMgmtClient:      userMgmtClient,
 	}
 	notification.RegisterNotificationServer(gRPCServer, g)
 	return g
 }
 
-func (s *NotificationServer) Start(l net.Listener) error {
+func (s *NotificationGRPCServer) Start(l net.Listener) error {
 	slog.Debug("Starting notification gRPC server")
 	slog.Debug(l.Addr().String())
 	slog.Debug("Listening notification channel")
@@ -45,13 +64,13 @@ func (s *NotificationServer) Start(l net.Listener) error {
 	return s.gRPCServer.Serve(l)
 }
 
-func (s *NotificationServer) ListenNotificationChannel() {
-	var subscriber = s.notificationService.SubscribeToRedisChannel("notification")
+func (s *NotificationGRPCServer) ListenNotificationChannel() {
+	var subscriber = s.notificationService.SubscribeToRedisChannel("notification-channel")
 	err := subscriber.Ping(context.Background())
 	if err != nil {
-		slog.Error("Not Available notification")
+		slog.Error("Not Available notification-channel")
 	}
-	slog.Info("Available notification")
+	slog.Info("Available notification-channel")
 	for {
 		channel := subscriber.Channel()
 		message := <-channel
@@ -81,10 +100,8 @@ func (s *NotificationServer) ListenNotificationChannel() {
 	}
 }
 
-func (s *NotificationServer) BindDeviceToUser(ctx context.Context, req *notification.BindDeviceRequest) (*notification.BindDeviceResponse, error) {
-	accessToken := metadata.ValueFromIncomingContext(ctx, "authorization")[0]
-	refreshToken := metadata.ValueFromIncomingContext(ctx, "x-refresh-token")[0]
-	authResp, err := s.authClient.PerformAuthorize(ctx, accessToken, refreshToken)
+func (s *NotificationGRPCServer) BindDeviceToUser(ctx context.Context, req *notification.BindDeviceRequest) (*notification.BindDeviceResponse, error) {
+	authResp, err := s.authClient.PerformAuthorize(ctx, nil, req.UserId)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())
@@ -101,10 +118,8 @@ func (s *NotificationServer) BindDeviceToUser(ctx context.Context, req *notifica
 	return &notification.BindDeviceResponse{}, nil
 }
 
-func (s *NotificationServer) UnbindDeviceFromUser(ctx context.Context, req *notification.UnbindDeviceRequest) (*notification.UnbindDeviceResponse, error) {
-	accessToken := metadata.ValueFromIncomingContext(ctx, "authorization")[0]
-	refreshToken := metadata.ValueFromIncomingContext(ctx, "x-refresh-token")[0]
-	authResp, err := s.authClient.PerformAuthorize(ctx, accessToken, refreshToken)
+func (s *NotificationGRPCServer) UnbindDeviceFromUser(ctx context.Context, req *notification.UnbindDeviceRequest) (*notification.UnbindDeviceResponse, error) {
+	authResp, err := s.authClient.PerformAuthorize(ctx, nil, req.UserId)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())
@@ -121,10 +136,8 @@ func (s *NotificationServer) UnbindDeviceFromUser(ctx context.Context, req *noti
 	return &notification.UnbindDeviceResponse{}, nil
 }
 
-func (s *NotificationServer) DeleteUser(ctx context.Context, req *notification.DeleteUserRequest) (*notification.DeleteUserResponse, error) {
-	accessToken := metadata.ValueFromIncomingContext(ctx, "authorization")[0]
-	refreshToken := metadata.ValueFromIncomingContext(ctx, "x-refresh-token")[0]
-	authResp, err := s.authClient.PerformAuthorize(ctx, accessToken, refreshToken)
+func (s *NotificationGRPCServer) DeleteUser(ctx context.Context, req *notification.DeleteUserRequest) (*notification.DeleteUserResponse, error) {
+	authResp, err := s.authClient.PerformAuthorize(ctx, nil, req.UserId)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())
@@ -141,10 +154,8 @@ func (s *NotificationServer) DeleteUser(ctx context.Context, req *notification.D
 	return &notification.DeleteUserResponse{}, nil
 }
 
-func (s *NotificationServer) UpdateOldDeviceOnUser(ctx context.Context, req *notification.UpdateOldDeviceRequest) (*notification.UpdateOldDeviceResponse, error) {
-	accessToken := metadata.ValueFromIncomingContext(ctx, "authorization")[0]
-	refreshToken := metadata.ValueFromIncomingContext(ctx, "x-refresh-token")[0]
-	authResp, err := s.authClient.PerformAuthorize(ctx, accessToken, refreshToken)
+func (s *NotificationGRPCServer) UpdateOldDeviceOnUser(ctx context.Context, req *notification.UpdateOldDeviceRequest) (*notification.UpdateOldDeviceResponse, error) {
+	authResp, err := s.authClient.PerformAuthorize(ctx, nil, req.UserId)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())

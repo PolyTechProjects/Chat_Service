@@ -2,16 +2,34 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net"
+	"net/http"
 
 	"example.com/main/src/gen/go/auth"
 	"example.com/main/src/internal/client"
+	"example.com/main/src/internal/controller"
 	"example.com/main/src/internal/service"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+type HttpServer struct {
+	authController *controller.AuthController
+}
+
+func NewHttpServer(authController *controller.AuthController) *HttpServer {
+	return &HttpServer{
+		authController: authController,
+	}
+}
+
+func (h *HttpServer) StartServer() {
+	http.HandleFunc("POST /register", h.authController.RegisterHandler)
+	http.HandleFunc("POST /login", h.authController.LoginHandler)
+}
 
 type GRPCServer struct {
 	gRPCServer *grpc.Server
@@ -61,10 +79,15 @@ func (s *GRPCServer) Login(ctx context.Context, req *auth.LoginRequest) (*auth.L
 }
 
 func (s *GRPCServer) Authorize(ctx context.Context, req *auth.AuthorizeRequest) (*auth.AuthorizeResponse, error) {
-	accessToken, userId, err := s.authService.Authorize(req.GetAccessToken(), req.GetRefreshToken())
+	accessToken, refreshToken, userId, err := s.authService.Authorize(req.GetAccessToken(), req.GetRefreshToken())
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())
 	}
-	return &auth.AuthorizeResponse{AccessToken: accessToken, UserId: userId.String()}, nil
+	if req.UserId != userId.String() {
+		err = fmt.Errorf("user id mismatch: %v != %v", req.UserId, userId.String())
+		slog.Error(err.Error())
+		return nil, status.Error(codes.PermissionDenied, err.Error())
+	}
+	return &auth.AuthorizeResponse{AccessToken: accessToken, RefreshToken: refreshToken, UserId: userId.String()}, nil
 }

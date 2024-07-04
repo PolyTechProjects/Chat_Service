@@ -26,6 +26,6 @@ func NewAuthClient(cfg *config.Config) *AuthGRPCClient {
 	return &AuthGRPCClient{auth.NewAuthClient(conn)}
 }
 
-func (authClient *AuthGRPCClient) PerformAuthorize(ctx context.Context, accessToken string, refreshToken string) (*auth.AuthorizeResponse, error) {
-	return authClient.Authorize(ctx, &auth.AuthorizeRequest{AccessToken: accessToken, RefreshToken: refreshToken})
+func (authClient *AuthGRPCClient) PerformAuthorize(ctx context.Context, accessToken string, refreshToken string, userId string) (*auth.AuthorizeResponse, error) {
+	return authClient.Authorize(ctx, &auth.AuthorizeRequest{UserId: userId, AccessToken: accessToken, RefreshToken: refreshToken})
 }

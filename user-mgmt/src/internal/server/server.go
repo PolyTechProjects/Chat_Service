@@ -27,6 +27,9 @@ func NewHttpServer(userMgmtController *controller.UserMgmtController) *HttpServe
 
 func (h *HttpServer) StartServer() {
 	http.HandleFunc("POST /upload", h.userMgmtController.UpdateAvatarHandler)
+	http.HandleFunc("PUT /info", h.userMgmtController.InfoUpdateHandler)
+	http.HandleFunc("GET /user", h.userMgmtController.GetUserHandler)
+	http.HandleFunc("DELETE /user", h.userMgmtController.DeleteUserHandler)
 }
 
 type UserMgmtGRPCServer struct {
@@ -75,7 +78,7 @@ func (s *UserMgmtGRPCServer) AddUser(ctx context.Context, req *userMgmt.AddUserR
 }
 
 func (s *UserMgmtGRPCServer) InfoUpdate(ctx context.Context, req *userMgmt.InfoUpdateRequest) (*userMgmt.UserResponse, error) {
-	authResp, err := s.authClient.PerformAuthorize(ctx, nil)
+	authResp, err := s.authClient.PerformAuthorize(ctx, nil, req.UserId)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())
@@ -105,7 +108,7 @@ func (s *UserMgmtGRPCServer) InfoUpdate(ctx context.Context, req *userMgmt.InfoU
 }
 
 func (s *UserMgmtGRPCServer) GetUser(ctx context.Context, req *userMgmt.GetUserRequest) (*userMgmt.UserResponse, error) {
-	authResp, err := s.authClient.PerformAuthorize(ctx, nil)
+	authResp, err := s.authClient.PerformAuthorize(ctx, nil, req.UserId)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())
@@ -135,7 +138,7 @@ func (s *UserMgmtGRPCServer) GetUser(ctx context.Context, req *userMgmt.GetUserR
 }
 
 func (s *UserMgmtGRPCServer) DeleteAccount(ctx context.Context, req *userMgmt.DeleteAccountRequest) (*userMgmt.DummyResponse, error) {
-	authResp, err := s.authClient.PerformAuthorize(ctx, nil)
+	authResp, err := s.authClient.PerformAuthorize(ctx, nil, req.UserId)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())

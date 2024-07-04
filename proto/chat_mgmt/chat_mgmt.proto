@@ -12,22 +12,13 @@ service ChatManagement {
     rpc LeaveChat (LeaveChatRequest) returns (ChatRoomResponse) {}
     rpc InviteUser (InviteUserRequest) returns (ChatRoomResponse) {}
     rpc KickUser (KickUserRequest) returns (ChatRoomResponse) {}
-    rpc CanWriteChat (CanWriteRequest) returns (CanWriteResponse) {}
-    rpc MakeChatAdmin (MakeAdminRequest) returns (ChatRoomWithAdminsResponse) {}
-    rpc DeleteChatAdmin (DeleteAdminRequest) returns (ChatRoomWithAdminsResponse) {}
+    rpc MakeChatAdmin (MakeAdminRequest) returns (ChatRoomResponse) {}
+    rpc DeleteChatAdmin (DeleteAdminRequest) returns (ChatRoomResponse) {}
     rpc IsChatAdmin (IsAdminRequest) returns (IsAdminResponse) {}
-    rpc GetChatUsers (GetUsersRequest) returns (GetUsersResponse) {}
+    rpc GetChat (GetChatRequest) returns (ChatRoomResponse) {}
 }
 
 message ChatRoomResponse {
-    string chatId = 1;
-    string creatorId = 2;
-    repeated string participantsIds = 3;
-    string name = 4;
-    string description = 5;
-}
-
-message ChatRoomWithAdminsResponse {
     string chatId = 1;
     string creatorId = 2;
     repeated string participantsIds = 3;
@@ -79,15 +70,6 @@ message KickUserRequest {
     string requestingUserId = 3;
 }
 
-message CanWriteRequest {
-    string chatId = 1;
-    string userId = 2;
-}
-
-message CanWriteResponse {
-    bool canWrite = 1;
-}
-
 message MakeAdminRequest {
     string chatId = 1;
     string userId = 2;
@@ -109,10 +91,7 @@ message IsAdminResponse {
     bool isAdmin = 1;
 }
 
-message GetUsersRequest {
+message GetChatRequest {
     string chatId = 1;
-}
-
-message GetUsersResponse {
-    repeated string userIds = 1;
+    string userId = 2;
 }

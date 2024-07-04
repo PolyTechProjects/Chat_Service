@@ -26,7 +26,7 @@ func New(cfg *config.Config) *AuthGRPCClient {
 	return &AuthGRPCClient{authClient: auth.NewAuthClient(conn)}
 }
 
-func (c *AuthGRPCClient) PerformAuthorize(ctx context.Context, r *http.Request) (*auth.AuthorizeResponse, error) {
+func (c *AuthGRPCClient) PerformAuthorize(ctx context.Context, r *http.Request, userId string) (*auth.AuthorizeResponse, error) {
 	var accessToken, refreshToken string
 	if r == nil {
 		accessToken = metadata.ValueFromIncomingContext(ctx, "authorization")[0]
@@ -41,5 +41,5 @@ func (c *AuthGRPCClient) PerformAuthorize(ctx context.Context, r *http.Request) 
 		}
 		refreshToken = cookie.Value
 	}
-	return c.authClient.Authorize(ctx, &auth.AuthorizeRequest{AccessToken: accessToken, RefreshToken: refreshToken})
+	return c.authClient.Authorize(ctx, &auth.AuthorizeRequest{UserId: userId, AccessToken: accessToken, RefreshToken: refreshToken})
 }

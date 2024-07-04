@@ -9,9 +9,10 @@ service MediaHandler {
 }
 
 message StoreImageRequest {
-    string token = 1;
+    reserved 1;
     bytes data = 2;
     string fileName = 3;
+    string senderId = 4;
 }
 
 message ImageResponse {

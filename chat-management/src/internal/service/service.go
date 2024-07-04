@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"log/slog"
 
 	"google.golang.org/grpc/codes"
@@ -23,7 +22,7 @@ func New(repo repository.ChatRepository) *ChatManagementService {
 	}
 }
 
-func (s *ChatManagementService) GetChat(ctx context.Context, req *dto.GetChatRequest) (*dto.GetChatResponse, error) {
+func (s *ChatManagementService) GetChat(req *dto.GetChatRequest) (*dto.GetChatResponse, error) {
 	slog.Info("GetChat called", "chatID", req.ChatId)
 	chat, err := s.repo.FindById(req.ChatId)
 	if err != nil {
@@ -42,8 +41,8 @@ func (s *ChatManagementService) GetChat(ctx context.Context, req *dto.GetChatReq
 	return getResp, nil
 }
 
-func (s *ChatManagementService) GetChatWithAdmins(ctx context.Context, req *dto.GetChatRequest) (*dto.GetChatResponse, error) {
-	getResp, err := s.GetChat(ctx, req)
+func (s *ChatManagementService) GetChatWithAdmins(req *dto.GetChatRequest) (*dto.GetChatResponse, error) {
+	getResp, err := s.GetChat(req)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +55,7 @@ func (s *ChatManagementService) GetChatWithAdmins(ctx context.Context, req *dto.
 	return getResp, nil
 }
 
-func (s *ChatManagementService) CreateChat(ctx context.Context, req *dto.CreateChatRequest) (dto.ChatResponse, error) {
+func (s *ChatManagementService) CreateChat(req *dto.CreateChatRequest) (dto.ChatResponse, error) {
 	slog.Info("CreateChat called", "name", req.Name, "description", req.Description, "creatorID", req.CreatorId)
 	chat := models.Chat{
 		Id:          uuid.New(),
@@ -64,23 +63,26 @@ func (s *ChatManagementService) CreateChat(ctx context.Context, req *dto.CreateC
 		Description: req.Description,
 		CreatorId:   req.CreatorId,
 	}
-	err := s.repo.SaveChat(chat)
+	err := s.repo.SaveChat(&chat)
 	if err != nil {
 		slog.Error("Failed to create chat", "error", err.Error())
 		return dto.ChatResponse{}, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	userID, err := uuid.Parse(req.CreatorId)
-	if err != nil {
-		slog.Error("Invalid creator ID", "error", err.Error())
-		return dto.ChatResponse{}, status.Error(codes.InvalidArgument, err.Error())
+	userChat := models.UserChat{
+		ChatId: chat.Id,
+		UserId: req.CreatorId,
 	}
-	err = s.repo.AddUserToChat(&dto.UserChatRequest{ChatId: chat.Id, UserId: userID})
+	err = s.repo.AddUserToChat(&userChat)
 	if err != nil {
 		slog.Error("Failed to add user to chat", "error", err.Error())
 		return dto.ChatResponse{}, status.Error(codes.InvalidArgument, err.Error())
 	}
-	err = s.repo.AddAdmin(&dto.AdminRequest{ChatId: chat.Id, UserId: userID})
+	admin := models.Admin{
+		ChatId: chat.Id,
+		UserId: req.CreatorId,
+	}
+	err = s.repo.AddAdmin(&admin)
 	if err != nil {
 		slog.Error("Failed to add admin to chat", "error", err.Error())
 		return dto.ChatResponse{}, status.Error(codes.InvalidArgument, err.Error())
@@ -90,29 +92,27 @@ func (s *ChatManagementService) CreateChat(ctx context.Context, req *dto.CreateC
 	return dto.ChatResponse{ChatId: chat.Id.String()}, nil
 }
 
-func (s *ChatManagementService) DeleteChat(ctx context.Context, chatID, userID string) error {
-	slog.Info("DeleteChat called", "chatID", chatID, "userID", userID)
-	if isAdmin, err := s.isAdmin(ctx, chatID, userID); err != nil || !isAdmin {
+func (s *ChatManagementService) DeleteChat(req *dto.DeleteChatRequest) error {
+	slog.Info("DeleteChat called", "chatID", req.ChatId, "userID", req.UserId)
+	isAdminReq := &dto.IsAdminRequest{ChatId: req.ChatId, UserId: req.UserId}
+	if isAdmin, err := s.IsAdmin(isAdminReq); err != nil || !isAdmin {
 		slog.Error("Permission denied or error checking admin status", "error", err)
 		return status.Error(codes.PermissionDenied, "permission denied or error checking admin status")
 	}
-	id, err := uuid.Parse(chatID)
-	if err != nil {
-		slog.Error("Invalid chat ID", "error", err.Error())
-		return status.Error(codes.InvalidArgument, err.Error())
-	}
-	err = s.repo.DeleteChat(id)
+
+	err := s.repo.DeleteChat(req.ChatId)
 	if err != nil {
 		slog.Error("Failed to delete chat", "error", err.Error())
 		return status.Error(codes.InvalidArgument, err.Error())
 	}
-	slog.Info("Chat deleted successfully", "chatID", chatID)
+	slog.Info("Chat deleted successfully", "chatID", req.ChatId)
 	return nil
 }
 
-func (s *ChatManagementService) UpdateChat(ctx context.Context, req *dto.UpdateChatRequest, userID string) error {
-	slog.Info("UpdateChat called", "chatID", req.ChatId, "name", req.Name, "description", req.Description, "userID", userID)
-	if isAdmin, err := s.isAdmin(ctx, req.ChatId.String(), userID); err != nil || !isAdmin {
+func (s *ChatManagementService) UpdateChat(req *dto.UpdateChatRequest) error {
+	slog.Info("UpdateChat called", "chatID", req.ChatId, "name", req.Name, "description", req.Description, "userID", req.UserId)
+	isAdminReq := &dto.IsAdminRequest{ChatId: req.ChatId, UserId: req.UserId}
+	if isAdmin, err := s.IsAdmin(isAdminReq); err != nil || !isAdmin {
 		slog.Error("Permission denied or error checking admin status", "error", err)
 		return status.Error(codes.PermissionDenied, "permission denied or error checking admin status")
 	}
@@ -125,55 +125,88 @@ func (s *ChatManagementService) UpdateChat(ctx context.Context, req *dto.UpdateC
 	return nil
 }
 
-func (s *ChatManagementService) AddUser(ctx context.Context, req *dto.UserChatRequest) error {
+func (s *ChatManagementService) JoinChat(req *dto.JoinChatRequest) error {
 	slog.Info("JoinChat called", "chatID", req.ChatId, "userID", req.UserId)
-	err := s.repo.AddUserToChat(req)
+	userChat := models.UserChat{
+		ChatId: req.ChatId,
+		UserId: req.UserId,
+	}
+	err := s.repo.AddUserToChat(&userChat)
 	if err != nil {
-		slog.Error("Failed to join chat", "error", err.Error())
+		slog.Error("Failed to add user to chat", "error", err.Error())
 		return status.Error(codes.InvalidArgument, err.Error())
 	}
 	slog.Info("User joined chat successfully", "chatID", req.ChatId, "userID", req.UserId)
 	return nil
 }
 
-func (s *ChatManagementService) RemoveUser(ctx context.Context, req *dto.UserChatRequest) error {
+func (s *ChatManagementService) LeaveChat(req *dto.LeaveChatRequest) error {
 	slog.Info("LeaveChat called", "chatID", req.ChatId, "userID", req.UserId)
-	err := s.repo.RemoveUserFromChat(req)
+	userChat := models.UserChat{
+		ChatId: req.ChatId,
+		UserId: req.UserId,
+	}
+	err := s.repo.RemoveUserFromChat(&userChat)
 	if err != nil {
-		slog.Error("Failed to leave chat", "error", err.Error())
+		slog.Error("Failed to remove user from chat", "error", err.Error())
 		return status.Error(codes.InvalidArgument, err.Error())
 	}
 	slog.Info("User left chat successfully", "chatID", req.ChatId, "userID", req.UserId)
 	return nil
 }
 
-func (s *ChatManagementService) CanWrite(ctx context.Context, chatID, userID string) (bool, error) {
-	slog.Info("CanWrite called", "chatID", chatID, "userID", userID)
-	chatUUID, err := uuid.Parse(chatID)
-	if err != nil {
-		slog.Error("Invalid chat ID", "error", err.Error())
-		return false, status.Error(codes.InvalidArgument, err.Error())
-	}
-	userUUID, err := uuid.Parse(userID)
-	if err != nil {
-		slog.Error("Invalid user ID", "error", err.Error())
-		return false, status.Error(codes.InvalidArgument, err.Error())
-	}
-	isMember, err := s.repo.IsMember(&dto.UserChatRequest{ChatId: chatUUID, UserId: userUUID})
-	if err != nil {
-		slog.Error("Failed to check member status", "error", err.Error())
-		return false, status.Error(codes.InvalidArgument, err.Error())
-	}
-	return isMember, nil
-}
-
-func (s *ChatManagementService) MakeAdmin(ctx context.Context, req *dto.AdminRequest, requestingUserId string) error {
-	slog.Info("MakeAdmin called", "chatID", req.ChatId, "userID", req.UserId, "requestingUserId", requestingUserId)
-	if isAdmin, err := s.isAdmin(ctx, req.ChatId.String(), requestingUserId); err != nil || !isAdmin {
+func (s *ChatManagementService) InviteUser(req *dto.InviteUserRequest) error {
+	slog.Info("InviteUser called", "chatID", req.ChatId, "userID", req.UserId)
+	isAdminReq := &dto.IsAdminRequest{ChatId: req.ChatId, UserId: req.UserId}
+	if isAdmin, err := s.IsAdmin(isAdminReq); err != nil || !isAdmin {
 		slog.Error("Permission denied or error checking admin status", "error", err)
 		return status.Error(codes.PermissionDenied, "permission denied or error checking admin status")
 	}
-	err := s.repo.AddAdmin(req)
+	userChat := models.UserChat{
+		ChatId: req.ChatId,
+		UserId: req.RequestingUserId,
+	}
+	err := s.repo.AddUserToChat(&userChat)
+	if err != nil {
+		slog.Error("Failed to invite user", "error", err.Error())
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+	slog.Info("User invited successfully", "chatID", req.ChatId, "userID", req.UserId)
+	return nil
+}
+
+func (s *ChatManagementService) KickUser(req *dto.KickUserRequest) error {
+	slog.Info("KickUser called", "chatID", req.ChatId, "userID", req.UserId)
+	isAdminReq := &dto.IsAdminRequest{ChatId: req.ChatId, UserId: req.UserId}
+	if isAdmin, err := s.IsAdmin(isAdminReq); err != nil || !isAdmin {
+		slog.Error("Permission denied or error checking admin status", "error", err)
+		return status.Error(codes.PermissionDenied, "permission denied or error checking admin status")
+	}
+	userChat := models.UserChat{
+		ChatId: req.ChatId,
+		UserId: req.RequestingUserId,
+	}
+	err := s.repo.RemoveUserFromChat(&userChat)
+	if err != nil {
+		slog.Error("Failed to kick user", "error", err.Error())
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+	slog.Info("User kicked successfully", "chatID", req.ChatId, "userID", req.UserId)
+	return nil
+}
+
+func (s *ChatManagementService) MakeAdmin(req *dto.AdminRequest) error {
+	slog.Info("MakeAdmin called", "chatID", req.ChatId, "userID", req.UserId, "requestingUserId", req.RequestingUserId)
+	isAdminReq := &dto.IsAdminRequest{ChatId: req.ChatId, UserId: req.UserId}
+	if isAdmin, err := s.IsAdmin(isAdminReq); err != nil || !isAdmin {
+		slog.Error("Permission denied or error checking admin status", "error", err)
+		return status.Error(codes.PermissionDenied, "permission denied or error checking admin status")
+	}
+	admin := models.Admin{
+		ChatId: req.ChatId,
+		UserId: req.RequestingUserId,
+	}
+	err := s.repo.AddAdmin(&admin)
 	if err != nil {
 		slog.Error("Failed to add admin", "error", err.Error())
 		return status.Error(codes.InvalidArgument, err.Error())
@@ -182,13 +215,18 @@ func (s *ChatManagementService) MakeAdmin(ctx context.Context, req *dto.AdminReq
 	return nil
 }
 
-func (s *ChatManagementService) DeleteAdmin(ctx context.Context, req *dto.AdminRequest, requestingUserId string) error {
-	slog.Info("DeleteAdmin called", "chatID", req.ChatId, "userID", req.UserId, "requestingUserId", requestingUserId)
-	if isAdmin, err := s.isAdmin(ctx, req.ChatId.String(), requestingUserId); err != nil || !isAdmin {
+func (s *ChatManagementService) DeleteAdmin(req *dto.AdminRequest) error {
+	slog.Info("DeleteAdmin called", "chatID", req.ChatId, "userID", req.UserId, "requestingUserId", req.RequestingUserId)
+	isAdminReq := &dto.IsAdminRequest{ChatId: req.ChatId, UserId: req.UserId}
+	if isAdmin, err := s.IsAdmin(isAdminReq); err != nil || !isAdmin {
 		slog.Error("Permission denied or error checking admin status", "error", err)
 		return status.Error(codes.PermissionDenied, "permission denied or error checking admin status")
 	}
-	err := s.repo.RemoveAdmin(req)
+	admin := models.Admin{
+		ChatId: req.ChatId,
+		UserId: req.RequestingUserId,
+	}
+	err := s.repo.RemoveAdmin(&admin)
 	if err != nil {
 		slog.Error("Failed to remove admin", "error", err.Error())
 		return status.Error(codes.InvalidArgument, err.Error())
@@ -197,41 +235,16 @@ func (s *ChatManagementService) DeleteAdmin(ctx context.Context, req *dto.AdminR
 	return nil
 }
 
-func (s *ChatManagementService) IsAdmin(ctx context.Context, chatID, userID string) (bool, error) {
-	slog.Info("IsAdmin called", "chatID", chatID, "userID", userID)
-	chatUUID, err := uuid.Parse(chatID)
-	if err != nil {
-		slog.Error("Invalid chat ID", "error", err.Error())
-		return false, status.Error(codes.InvalidArgument, err.Error())
+func (s *ChatManagementService) IsAdmin(adminReq *dto.IsAdminRequest) (bool, error) {
+	slog.Info("IsAdmin called", "chatID", adminReq.ChatId, "userID", adminReq.UserId)
+	admin := models.Admin{
+		ChatId: adminReq.ChatId,
+		UserId: adminReq.UserId,
 	}
-	userUUID, err := uuid.Parse(userID)
-	if err != nil {
-		slog.Error("Invalid user ID", "error", err.Error())
-		return false, status.Error(codes.InvalidArgument, err.Error())
-	}
-	isAdmin, err := s.repo.IsAdmin(&dto.AdminRequest{ChatId: chatUUID, UserId: userUUID})
+	isAdmin, err := s.repo.IsAdmin(&admin)
 	if err != nil {
 		slog.Error("Failed to check admin status", "error", err.Error())
 		return false, status.Error(codes.InvalidArgument, err.Error())
 	}
 	return isAdmin, nil
-}
-
-func (s *ChatManagementService) isAdmin(ctx context.Context, chatID, userID string) (bool, error) {
-	return s.IsAdmin(ctx, chatID, userID)
-}
-
-func (s *ChatManagementService) GetChatUsers(ctx context.Context, chatID string) ([]string, error) {
-	slog.Info("GetChatUsers called", "chatID", chatID)
-	chatUUID, err := uuid.Parse(chatID)
-	if err != nil {
-		slog.Error("Invalid chat ID", "error", err.Error())
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	userIDs, err := s.repo.GetChatUsers(chatUUID)
-	if err != nil {
-		slog.Error("Failed to get chat users", "error", err.Error())
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	return userIDs, nil
 }
