@@ -29,16 +29,18 @@ func (a *AuthController) RegisterHandler(w http.ResponseWriter, r *http.Request)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	user, err := a.authService.Register(req.Login, req.Username, req.Password)
+	user, err := a.authService.Register(req.Login, req.Username, req.Password, req.Firstname, req.Lastname)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	register := dto.RegisterResponse{
-		UserId:   user.Id.String(),
-		Login:    user.Login,
-		Username: user.Name,
+		UserId:    user.Id.String(),
+		Login:     user.Login,
+		Username:  user.Name,
+		Firstname: req.Firstname,
+		Lastname:  req.Lastname,
 	}
 	registerResp, err := json.Marshal(register)
 	if err != nil {

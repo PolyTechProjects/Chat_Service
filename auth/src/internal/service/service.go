@@ -22,8 +22,8 @@ func New(authRepository *repository.AuthRepository, keycloakClient *client.Keycl
 	}
 }
 
-func (s *AuthService) Register(login string, username string, password string) (*models.User, error) {
-	user, err := models.New(login, username, password)
+func (s *AuthService) Register(login string, username string, password string, firstname string, lastname string) (*models.User, error) {
+	user, err := models.New(login, username, password, firstname, lastname)
 	if err != nil {
 		return nil, err
 	}
@@ -42,9 +42,11 @@ func (s *AuthService) Register(login string, username string, password string) (
 		return nil, err
 	}
 	accountCreatedEvent := &dto.AccountCreatedEvent{
-		UserId:   user.Id.String(),
-		Login:    user.Login,
-		Username: user.Name,
+		UserId:    user.Id.String(),
+		Login:     user.Login,
+		Username:  user.Name,
+		Firstname: user.Firstname,
+		Lastname:  user.Lastname,
 	}
 	s.RedisClient.SendToChannel(accountCreatedEvent)
 

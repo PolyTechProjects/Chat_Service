@@ -14,9 +14,11 @@ type User struct {
 	Name       string    `gorm:"not null;check:name <> ''"`
 	Pass       string    `gorm:"not null;check:pass <> ''"`
 	KeycloakId string    `gorm:"unique;not null;check:keycloak_id <> ''"`
+	Firstname  string    `gorm:"not null;check:firstname <> ''"`
+	Lastname   string    `gorm:"not null;check:lastname <> ''"`
 }
 
-func New(login string, name string, pass string) (*User, error) {
+func New(login string, name string, pass string, firstname string, lastname string) (*User, error) {
 	/*
 		phonenumber, err := phonenumbers.Parse(login, "RU")
 		if err != nil {
@@ -34,10 +36,12 @@ func New(login string, name string, pass string) (*User, error) {
 	}
 
 	user := User{
-		Id:    uuid.New(),
-		Login: login,
-		Name:  name,
-		Pass:  pass,
+		Id:        uuid.New(),
+		Login:     login,
+		Name:      name,
+		Pass:      pass,
+		Firstname: firstname,
+		Lastname:  lastname,
 	}
 
 	return &user, nil

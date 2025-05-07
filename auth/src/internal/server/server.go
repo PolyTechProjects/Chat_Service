@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 )
 
@@ -47,6 +48,7 @@ func New(authService *service.AuthService, userMgmtClient *client.UserMgmtGRPCCl
 		authService:    authService,
 		userMgmtClient: userMgmtClient,
 	}
+	reflection.Register(gRPCServer)
 	auth.RegisterAuthServer(gRPCServer, g)
 	return g
 }

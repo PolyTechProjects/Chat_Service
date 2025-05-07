@@ -61,10 +61,12 @@ func (k *KeycloakClient) adminAuth() *gocloak.JWT {
 func (k *KeycloakClient) RegisterUser(user *models.User) error {
 	token := k.adminAuth()
 	keycloakUser := gocloak.User{
-		ID:       gocloak.StringP(user.Id.String()),
-		Username: gocloak.StringP(user.Name),
-		Email:    gocloak.StringP(user.Login),
-		Enabled:  gocloak.BoolP(true),
+		ID:        gocloak.StringP(user.Id.String()),
+		Username:  gocloak.StringP(user.Name),
+		Email:     gocloak.StringP(user.Login),
+		Enabled:   gocloak.BoolP(true),
+		FirstName: gocloak.StringP(user.Firstname),
+		LastName:  gocloak.StringP(user.Lastname),
 	}
 	keycloakUserId, err := k.client.CreateUser(context.Background(), token.AccessToken, k.realm, keycloakUser)
 	if err != nil {
@@ -81,7 +83,7 @@ func (k *KeycloakClient) RegisterUser(user *models.User) error {
 }
 
 func (k *KeycloakClient) LoginUser(login string, password string) (string, string, error) {
-	token, err := k.client.Login(context.Background(), k.clientId, k.clientId, k.realm, login, password)
+	token, err := k.client.Login(context.Background(), k.clientId, k.clientSecret, k.realm, login, password)
 	if err != nil {
 		slog.Error("KeycloakLogin failed: " + err.Error())
 		return "", "", err
@@ -95,7 +97,10 @@ func (k *KeycloakClient) AuthroizeUser(accessToken string) error {
 		slog.Error("KeycloakRetrospectToken failed: " + err.Error())
 		return err
 	}
-	slog.Debug(res.String())
+	if !*res.Active {
+		slog.Error("Token is not active")
+		return fmt.Errorf("token is not active")
+	}
 	return nil
 }
 
