@@ -1,59 +1,54 @@
 package service
 
 import (
-	"fmt"
-	"log/slog"
-	"os"
-	"time"
-
+	"example.com/main/src/internal/client"
+	"example.com/main/src/internal/dto"
 	"example.com/main/src/internal/repository"
 	"example.com/main/src/models"
-	"github.com/golang-jwt/jwt"
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
 	AuthRepository *repository.AuthRepository
-	jwtSecretKey   []byte
-	keyFunc        func(token *jwt.Token) (interface{}, error)
+	KeycloakClient *client.KeycloakClient
+	RedisClient    *client.RedisClient
 }
 
-func New(authRepository *repository.AuthRepository) *AuthService {
-	jwtSecretKey := []byte(os.Getenv("JWT_SECRET_KEY"))
-	keyFunc := func(token *jwt.Token) (interface{}, error) {
-		return jwtSecretKey, nil
+func New(authRepository *repository.AuthRepository, keycloakClient *client.KeycloakClient, redisClient *client.RedisClient) *AuthService {
+	return &AuthService{
+		AuthRepository: authRepository,
+		KeycloakClient: keycloakClient,
+		RedisClient:    redisClient,
 	}
-	return &AuthService{AuthRepository: authRepository, jwtSecretKey: jwtSecretKey, keyFunc: keyFunc}
 }
 
-func (s *AuthService) Register(login string, username string, password string) (string, string, uuid.UUID, error) {
+func (s *AuthService) Register(login string, username string, password string) (*models.User, error) {
+	user, err := models.New(login, username, password)
+	if err != nil {
+		return nil, err
+	}
+	err = s.KeycloakClient.RegisterUser(user)
+	if err != nil {
+		return nil, err
+	}
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return "", "", uuid.Nil, err
+		return nil, err
 	}
-	user, err := models.New(login, username, string(hash))
-	if err != nil {
-		return "", "", uuid.Nil, err
-	}
+	user.Pass = string(hash)
 	err = s.AuthRepository.Save(user)
 	if err != nil {
-		return "", "", uuid.Nil, err
+		return nil, err
 	}
+	accountCreatedEvent := &dto.AccountCreatedEvent{
+		UserId:   user.Id.String(),
+		Login:    user.Login,
+		Username: user.Name,
+	}
+	s.RedisClient.SendToChannel(accountCreatedEvent)
 
-	refreshTokenValueString := fmt.Sprintf("%v:%v:%v", user.Id, user.Login, time.Now().Unix())
-	refreshTokenValue, err := bcrypt.GenerateFromPassword([]byte(refreshTokenValueString), bcrypt.DefaultCost)
-	if err != nil {
-		return "", "", uuid.Nil, err
-	}
-	refreshToken := models.NewRefreshToken(user.Id, string(refreshTokenValue))
-
-	accessToken, err := s.generateAccessToken(user.Id, user.Name)
-	if err != nil {
-		return "", "", uuid.Nil, err
-	}
-	slog.Info(fmt.Sprintf("User %v registered", user.Id))
-	return accessToken, refreshToken.Value, user.Id, nil
+	return user, nil
 }
 
 func (s *AuthService) Login(login string, password string) (string, string, error) {
@@ -66,87 +61,17 @@ func (s *AuthService) Login(login string, password string) (string, string, erro
 		return "", "", err
 	}
 
-	refreshTokenValueString := fmt.Sprintf("%v:%v:%v", user.Id, user.Login, time.Now().Unix())
-	slog.Debug(fmt.Sprintf("refreshTokenValueString: %v", refreshTokenValueString))
-	refreshTokenValue, err := bcrypt.GenerateFromPassword([]byte(refreshTokenValueString), bcrypt.DefaultCost)
-	if err != nil {
-		return "", "", err
-	}
-	refreshToken := models.NewRefreshToken(user.Id, string(refreshTokenValue))
-	slog.Debug(fmt.Sprintf("refreshToken: %v", refreshToken))
-
-	accessToken, err := s.generateAccessToken(user.Id, user.Name)
-	slog.Debug(fmt.Sprintf("accessToken: %v", accessToken))
-	if err != nil {
-		return "", "", err
-	}
-	slog.Info(fmt.Sprintf("User %v authenticated", user.Id))
-	return accessToken, refreshToken.Value, nil
+	return s.KeycloakClient.LoginUser(login, password)
 }
 
-func (s *AuthService) Authorize(accessToken string, refreshToken string) (string, string, uuid.UUID, error) {
-	var claims jwt.MapClaims
-	_, err := jwt.ParseWithClaims(accessToken, &claims, s.keyFunc)
-	if err != nil {
-		return "", "", uuid.Nil, err
-	}
-
-	userId, err := uuid.Parse(claims["sub"].(string))
-	if err != nil {
-		return "", "", uuid.Nil, err
-	}
-
-	user, err := s.AuthRepository.FindById(userId)
-	if err != nil {
-		return "", "", uuid.Nil, err
-	}
-
-	if claims["exp"].(float64) < float64(time.Now().Unix()) {
-		accessToken, err = s.refreshAccessToken(refreshToken, user.Id)
-		if err != nil {
-			return "", "", uuid.Nil, err
-		}
-	}
-
-	return accessToken, refreshToken, user.Id, nil
+func (s *AuthService) Authorize(accessToken string) error {
+	return s.KeycloakClient.AuthroizeUser(accessToken)
 }
 
-func (s *AuthService) ExtractUserId(tokenString string) (string, error) {
-	var claims jwt.MapClaims
-	_, err := jwt.ParseWithClaims(tokenString, &claims, s.keyFunc)
-	if err != nil {
-		return "", err
-	}
-	return claims["sub"].(string), nil
+func (s *AuthService) RefreshTokens(refreshToken string) (string, string, error) {
+	return s.KeycloakClient.RefreshTokens(refreshToken)
 }
 
-func (s *AuthService) refreshAccessToken(refreshToken string, userId uuid.UUID) (string, error) {
-	user, err := s.AuthRepository.FindById(userId)
-	if err != nil {
-		return "", err
-	}
-	userRefreshToken, err := s.AuthRepository.FindTokenByUserId(user.Id)
-	if err != nil {
-		return "", err
-	}
-	if userRefreshToken.Value != refreshToken {
-		return "", fmt.Errorf("invalid refresh token")
-	}
-	if userRefreshToken.ExpiredAt.Before(time.Now()) {
-		return "", fmt.Errorf("refresh token expired")
-	}
-	token, err := s.generateAccessToken(user.Id, user.Name)
-	if err != nil {
-		return "", err
-	}
-	return token, nil
-}
-
-func (s *AuthService) generateAccessToken(userId uuid.UUID, userName string) (string, error) {
-	payload := jwt.MapClaims{
-		"sub":  userId,
-		"name": userName,
-		"exp":  time.Now().Add(time.Minute * 30).Unix(),
-	}
-	return jwt.NewWithClaims(jwt.SigningMethodHS256, payload).SignedString(s.jwtSecretKey)
+func (s *AuthService) Logout(refreshToken string) error {
+	return s.KeycloakClient.RevokeTokens(refreshToken)
 }

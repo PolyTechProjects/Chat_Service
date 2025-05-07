@@ -29,19 +29,16 @@ func (a *AuthController) RegisterHandler(w http.ResponseWriter, r *http.Request)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	accessToken, refreshToken, userId, err := a.authService.Register(req.Login, req.Username, req.Password)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	_, err = a.userMgmtClient.PerformAddUser(r.Context(), userId.String(), req.Username)
+	user, err := a.authService.Register(req.Login, req.Username, req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	register := dto.RegisterResponse{
-		UserId: userId.String(),
+		UserId:   user.Id.String(),
+		Login:    user.Login,
+		Username: user.Name,
 	}
 	registerResp, err := json.Marshal(register)
 	if err != nil {
@@ -49,8 +46,6 @@ func (a *AuthController) RegisterHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly", accessToken))
-	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly", refreshToken))
 	w.Write(registerResp)
 }
 
@@ -67,6 +62,19 @@ func (a *AuthController) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly", accessToken))
-	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly", refreshToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly; Secure", accessToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly; Secure", refreshToken))
+}
+
+func (a *AuthController) LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	refreshToken := r.Header.Get("X-Refresh-Token")
+	if refreshToken == "" {
+		http.Error(w, "no refresh token", http.StatusUnauthorized)
+		return
+	}
+	err := a.authService.Logout(refreshToken)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 }

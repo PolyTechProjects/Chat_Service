@@ -1,5 +1,6 @@
 services:
   auth_app:
+    container_name: auth_app
     build:
       context: .
       dockerfile: app.Dockerfile
@@ -13,12 +14,35 @@ services:
 
   auth_db:
     image: postgres:15.3
+    container_name: auth_db
     ports:
       - "${DB_PORT}:${DB_INNER_PORT}"
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
+    networks:
+      - micro-proxy-net
+
+  auth_keycloak:
+    image: keycloak/keycloak
+    container_name: auth_keycloak
+    ports:
+      - "${KEYCLOAK_PORT}:${KEYCLOAK_INNER_PORT}"
+    environment:
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN_USERNAME}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+      - KC_DB=postgres
+      - KC_DB_SCHEMA=keycloak
+      - KC_DB_USERNAME=${DB_USER}
+      - KC_DB_PASSWORD=${DB_PASSWORD}
+      - KC_DB_URL_HOST=auth_db
+      - KC_DB_URL_DATABASE=${DB_NAME}
+    command: "-v start-dev --import-realm"
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import
+    depends_on:
+      - auth_db
     networks:
       - micro-proxy-net
 

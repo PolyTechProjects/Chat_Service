@@ -23,7 +23,11 @@ func main() {
 	database.Init(cfg)
 	db := database.DB
 	repository := repository.New(db)
-	authService := service.New(repository)
+	keycloakClient := client.NewKeycloakClient(cfg)
+	redisClient := client.NewRedisClient(cfg)
+	defer redisClient.Client.Close()
+
+	authService := service.New(repository, keycloakClient, redisClient)
 	client := client.New(cfg)
 	grpcServer := server.New(authService, client)
 	authController := controller.NewAuthController(authService, client)

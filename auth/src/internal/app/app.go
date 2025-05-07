@@ -43,6 +43,8 @@ func (a *App) RunGRPCServer() error {
 	if err != nil {
 		return err
 	}
+	slog.Debug("Starting gRPC server")
+	slog.Debug(gl.Addr().String())
 	if err = a.gRPCServer.Start(gl); err != nil {
 		return err
 	}

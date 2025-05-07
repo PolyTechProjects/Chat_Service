@@ -2,10 +2,10 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
+	"strings"
 
 	"example.com/main/src/gen/go/auth"
 	"example.com/main/src/internal/client"
@@ -13,6 +13,7 @@ import (
 	"example.com/main/src/internal/service"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -29,6 +30,7 @@ func NewHttpServer(authController *controller.AuthController) *HttpServer {
 func (h *HttpServer) StartServer() {
 	http.HandleFunc("POST /register", h.authController.RegisterHandler)
 	http.HandleFunc("POST /login", h.authController.LoginHandler)
+	http.HandleFunc("POST /logout", h.authController.LogoutHandler)
 }
 
 type GRPCServer struct {
@@ -50,44 +52,46 @@ func New(authService *service.AuthService, userMgmtClient *client.UserMgmtGRPCCl
 }
 
 func (s *GRPCServer) Start(l net.Listener) error {
-	slog.Debug("Starting gRPC server")
-	slog.Debug(l.Addr().String())
 	return s.gRPCServer.Serve(l)
 }
 
-func (s *GRPCServer) Register(ctx context.Context, req *auth.RegisterRequest) (*auth.RegisterResponse, error) {
-	accessToken, refreshToken, userId, err := s.authService.Register(req.GetLogin(), req.GetUsername(), req.GetPassword())
-	if err != nil {
-		slog.Error(err.Error())
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	_, err = s.userMgmtClient.PerformAddUser(ctx, userId.String(), req.GetUsername())
-	if err != nil {
-		slog.Error(err.Error())
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	return &auth.RegisterResponse{AccessToken: accessToken, RefreshToken: refreshToken, UserId: userId.String()}, nil
-}
-
-func (s *GRPCServer) Login(ctx context.Context, req *auth.LoginRequest) (*auth.LoginResponse, error) {
-	accessToken, refreshToken, err := s.authService.Login(req.GetLogin(), req.GetPassword())
-	if err != nil {
-		slog.Error(err.Error())
-		return nil, status.Error(codes.Unauthenticated, err.Error())
-	}
-	return &auth.LoginResponse{AccessToken: accessToken, RefreshToken: refreshToken}, nil
-}
-
 func (s *GRPCServer) Authorize(ctx context.Context, req *auth.AuthorizeRequest) (*auth.AuthorizeResponse, error) {
-	accessToken, refreshToken, userId, err := s.authService.Authorize(req.GetAccessToken(), req.GetRefreshToken())
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "no metadata")
+	}
+	authHeader := md.Get("authorization")
+	if len(authHeader) == 0 {
+		return nil, status.Error(codes.Unauthenticated, "no auth header")
+	}
+	accessToken := strings.TrimPrefix(authHeader[0], "Bearer ")
+
+	err := s.authService.Authorize(accessToken)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())
 	}
-	if req.UserId != userId.String() {
-		err = fmt.Errorf("user id mismatch: %v != %v", req.UserId, userId.String())
+	return nil, nil
+}
+
+func (s *GRPCServer) Refresh(ctx context.Context, req *auth.RefreshRequest) (*auth.RefreshResponse, error) {
+	accessToken, refreshToken, err := s.authService.RefreshTokens(req.GetRefreshToken())
+	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())
 	}
-	return &auth.AuthorizeResponse{AccessToken: accessToken, RefreshToken: refreshToken, UserId: userId.String()}, nil
+	return &auth.RefreshResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
 }
+
+/*
+	Access Token = 10 mins
+	Refresh Token = 10 Days
+	Client sends access token and receives access to resource
+	If access token is expired, then server returns 401, so client sends refresh token to refresh access token
+	When access token is refreshed, server also refreshes a refresh token and saves new version in database
+	After that, server returns new access token and old refresh token
+	So, when old refresh token expires, server will take refresh token from db, verify that it is not expired, refresh both tokens and return
+*/
