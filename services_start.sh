@@ -14,3 +14,4 @@ echo 'CHAT_APP' $(docker ps | grep -i "chat_app" | awk '{print $1}')
 echo 'MEDIA_HANDLER_APP' $(docker ps | grep -i "media_app" | awk '{print $1}')
 echo 'NOTIFICATION_APP' $(docker ps | grep -i "notification_app" | awk '{print $1}')
 echo '----------------------------------'
+

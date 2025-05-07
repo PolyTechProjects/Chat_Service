@@ -19,3 +19,4 @@ echo 'MEDIA_HANDLER_SEAWEEDFS_VOLUME_2' $(docker ps | grep -i "seaweedfs_volume2
 echo 'NOTIFICATION_POSTGRES' $(docker ps | grep -i "notification_db" | awk '{print $1}')
 echo 'REDIS' $(docker ps | grep -i "redis" | awk '{print $1}')
 echo '----------------------------------'
+

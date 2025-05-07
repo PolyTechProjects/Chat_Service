@@ -7,3 +7,4 @@ do
         echo "Generating code for $dir in $code_dir"
     done
 done
+

@@ -14,3 +14,4 @@ echo $COOKIE_HEADER
 USER_ID_HEADER='X-User-Id: '$USER_ID
 echo $USER_ID_HEADER
 rlwrap websocat ws://localhost:2000/websocket/chat -H "$AUTH_HEADER" -H "$USER_ID_HEADER" -H "$COOKIE_HEADER"
+

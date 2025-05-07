@@ -6,3 +6,4 @@ cd chat-app/ && docker compose stop chat_app && cd ../
 cd media-handler/ && docker compose stop media_app && cd ../
 cd notification/ && docker compose stop notification_app && cd ../
 docker ps
+

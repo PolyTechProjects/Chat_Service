@@ -7,3 +7,4 @@ cd media-handler/ && docker compose stop media_db seaweedfs_master seaweedfs_vol
 cd notification/ && docker compose stop notification_db && cd ../
 docker compose stop redis
 docker ps
+
