@@ -8,15 +8,13 @@ import (
 type Config struct {
 	App       AppConfig
 	Auth      AuthConfig
-	UserMgmt  UserMgmtConfig
 	Db        DbConfig
 	SeaweedFS SeaweedFSConfig
 	Redis     RedisConfig
 }
 
 type AppConfig struct {
-	HttpInnerPort int `env:"APP_HTTP_INNER_PORT"`
-	GrpcInnerPort int `env:"APP_GRPC_INNER_PORT"`
+	HttpInnerPort int `env:"APP_HTTP_PORT"`
 }
 
 type AuthConfig struct {
@@ -24,17 +22,12 @@ type AuthConfig struct {
 	AuthPort string `env:"AUTH_PORT"`
 }
 
-type UserMgmtConfig struct {
-	UserMgmtHost string `env:"USER_MGMT_HOST"`
-	UserMgmtPort string `env:"USER_MGMT_PORT"`
-}
-
 type DbConfig struct {
 	DatabaseName string `env:"DB_NAME"`
 	UserName     string `env:"DB_USER"`
 	Password     string `env:"DB_PASSWORD"`
 	Host         string `env:"DB_HOST"`
-	InnerPort    int    `env:"DB_INNER_PORT"`
+	InnerPort    int    `env:"DB_PORT"`
 	SslMode      string `env:"DB_SSL_MODE"`
 }
 
@@ -47,7 +40,7 @@ type RedisConfig struct {
 	Db        int    `env:"REDIS_DB"`
 	Password  string `env:"REDIS_PASSWORD"`
 	Host      string `env:"REDIS_HOST"`
-	InnerPort int    `env:"REDIS_INNER_PORT"`
+	InnerPort int    `env:"REDIS_PORT"`
 }
 
 func MustLoad() *Config {

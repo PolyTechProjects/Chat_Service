@@ -6,13 +6,23 @@ services:
     ports:
       - "${APP_HTTP_PORT}:${APP_HTTP_INNER_PORT}"
       - "${APP_GRPC_PORT}:${APP_GRPC_INNER_PORT}"
+    environment:
+      - DB_HOST=media_db
+      - DB_PORT=${DB_INNER_PORT}
+      - AUTH_HOST=auth_app
+      - AUTH_PORT=${AUTH_INNER_PORT}
+      - SEAWEEDFS_MASTER_HOST=seaweedfs_master
+      - SEAWEEDFS_MASTER_PORT=${SEAWEEDFS_MASTER_INNER_PORT}
+      - APP_HTTP_PORT=${APP_HTTP_INNER_PORT}
     depends_on:
       - media_db
+      - seaweedfs_master
     networks:
       - micro-proxy-net
 
   media_db:
     image: postgres:15.3
+    container_name: media_db
     ports:
       - "${DB_PORT}:${DB_INNER_PORT}"
     environment:
@@ -24,14 +34,16 @@ services:
 
   seaweedfs_master:
     image: chrislusf/seaweedfs:latest
+    container_name: seaweedfs_master
     ports:
-      - "${SEAWEEDFS_MASTER_PORT}:9333"
+      - "${SEAWEEDFS_MASTER_PORT}:${SEAWEEDFS_MASTER_INNER_PORT}"
     networks:
       - micro-proxy-net
     command: "master -ip=seaweedfs_master"
 
   seaweedfs_volume1:
     image: chrislusf/seaweedfs:latest
+    container_name: seaweedfs_volume1
     ports:
       - "10000:8080"
     networks:
@@ -42,6 +54,7 @@ services:
 
   seaweedfs_volume2:
     image: chrislusf/seaweedfs:latest
+    container_name: seaweedfs_volume2
     ports:
       - "10001:8080"
     networks:

@@ -1,4 +1,4 @@
-module example.com/media-handler
+module example.com/media
 
 go 1.22.0
 

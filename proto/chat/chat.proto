@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package chat;
+
+option go_package = "example.com/proto/chat_mgmt";
+
+service ChatManagement {
+    rpc GetChat (GetChatRequest) returns (ChatRoomResponse) {}
+}
+
+message ChatRoomResponse {
+    string chatId = 1;
+    string creatorId = 2;
+    repeated string participantsIds = 3;
+    string name = 4;
+    string description = 5;
+    repeated string adminsIds = 6;
+    reserved 7;
+    repeated string readersIds = 8;
+}
+
+message GetChatRequest {
+    string chatId = 1;
+    string userId = 2;
+}

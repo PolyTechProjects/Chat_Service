@@ -13,7 +13,7 @@ type Config struct {
 }
 
 type AppConfig struct {
-	HttpInnerPort int `env:"APP_HTTP_INNER_PORT"`
+	HttpInnerPort int `env:"APP_HTTP_PORT"`
 }
 
 type AuthConfig struct {

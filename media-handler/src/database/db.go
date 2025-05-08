@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"example.com/media-handler/src/config"
-	"example.com/media-handler/src/internal/models"
+	"example.com/media/src/config"
+	"example.com/media/src/internal/models"
 	"github.com/jinzhu/gorm"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
