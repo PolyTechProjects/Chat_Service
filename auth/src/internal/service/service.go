@@ -5,6 +5,7 @@ import (
 	"example.com/main/src/internal/dto"
 	"example.com/main/src/internal/repository"
 	"example.com/main/src/models"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -48,7 +49,7 @@ func (s *AuthService) Register(login string, username string, password string, f
 		Firstname: user.Firstname,
 		Lastname:  user.Lastname,
 	}
-	s.RedisClient.SendToChannel(accountCreatedEvent)
+	s.RedisClient.SendToCreateAccountChannel(accountCreatedEvent)
 
 	return user, nil
 }
@@ -76,4 +77,25 @@ func (s *AuthService) RefreshTokens(refreshToken string) (string, string, error)
 
 func (s *AuthService) Logout(refreshToken string) error {
 	return s.KeycloakClient.RevokeTokens(refreshToken)
+}
+
+func (s *AuthService) DeleteAccount(userId uuid.UUID, accessToken string, refreshToken string) error {
+	user, err := s.AuthRepository.FindById(userId)
+	if err != nil {
+		return err
+	}
+	err = s.KeycloakClient.DeleteAccount(user.KeycloakId, accessToken, refreshToken)
+	if err != nil {
+		return err
+	}
+	err = s.AuthRepository.DeleteById(userId)
+	if err != nil {
+		return err
+	}
+	accountDeletedEvent := &dto.AccountDeletedEvent{
+		UserId: user.Id.String(),
+	}
+	s.RedisClient.SendToDeleteAccountChannel(accountDeletedEvent)
+
+	return nil
 }

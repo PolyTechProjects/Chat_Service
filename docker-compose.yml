@@ -1,6 +1,7 @@
 services:
   redis:
     image: bitnami/redis:latest
+    container_name: redis
     ports:
       - "${REDIS_PORT}:${REDIS_INNER_PORT}"
     environment:

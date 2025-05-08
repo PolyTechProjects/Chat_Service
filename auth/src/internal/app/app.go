@@ -54,6 +54,7 @@ func (a *App) RunGRPCServer() error {
 func (a *App) RunHttpServer() error {
 	hl, err := net.Listen("tcp", fmt.Sprintf(":%d", a.httpPort))
 	if err != nil {
+		slog.Error("Error has occured while listening: " + err.Error())
 		return err
 	}
 	slog.Debug("Starting HTTP server")

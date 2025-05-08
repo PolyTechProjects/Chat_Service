@@ -28,9 +28,8 @@ func main() {
 	defer redisClient.Client.Close()
 
 	authService := service.New(repository, keycloakClient, redisClient)
-	client := client.New(cfg)
-	grpcServer := server.New(authService, client)
-	authController := controller.NewAuthController(authService, client)
+	grpcServer := server.New(authService)
+	authController := controller.NewAuthController(authService)
 	httpServer := server.NewHttpServer(authController)
 	app := app.New(grpcServer, httpServer, cfg)
 	go app.MustRun()

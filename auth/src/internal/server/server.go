@@ -8,13 +8,11 @@ import (
 	"strings"
 
 	"example.com/main/src/gen/go/auth"
-	"example.com/main/src/internal/client"
 	"example.com/main/src/internal/controller"
 	"example.com/main/src/internal/service"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 )
 
@@ -29,26 +27,25 @@ func NewHttpServer(authController *controller.AuthController) *HttpServer {
 }
 
 func (h *HttpServer) StartServer() {
-	http.HandleFunc("POST /register", h.authController.RegisterHandler)
-	http.HandleFunc("POST /login", h.authController.LoginHandler)
-	http.HandleFunc("POST /logout", h.authController.LogoutHandler)
+	http.HandleFunc("POST /api/v1/auth/register", h.authController.RegisterHandler)
+	http.HandleFunc("POST /api/v1/auth/login", h.authController.LoginHandler)
+	http.HandleFunc("POST /api/v1/auth/logout", h.authController.LogoutHandler)
+	http.HandleFunc("DELETE /api/v1/auth/{userId}", h.authController.DeleteAccountHandler)
+	http.HandleFunc("POST /api/v1/auth/refresh", h.authController.RefreshHandler)
 }
 
 type GRPCServer struct {
 	gRPCServer *grpc.Server
 	auth.UnimplementedAuthServer
-	authService    *service.AuthService
-	userMgmtClient *client.UserMgmtGRPCClient
+	authService *service.AuthService
 }
 
-func New(authService *service.AuthService, userMgmtClient *client.UserMgmtGRPCClient) *GRPCServer {
+func New(authService *service.AuthService) *GRPCServer {
 	gRPCServer := grpc.NewServer()
 	g := &GRPCServer{
-		gRPCServer:     gRPCServer,
-		authService:    authService,
-		userMgmtClient: userMgmtClient,
+		gRPCServer:  gRPCServer,
+		authService: authService,
 	}
-	reflection.Register(gRPCServer)
 	auth.RegisterAuthServer(gRPCServer, g)
 	return g
 }
@@ -62,7 +59,7 @@ func (s *GRPCServer) Authorize(ctx context.Context, req *auth.AuthorizeRequest) 
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "no metadata")
 	}
-	authHeader := md.Get("authorization")
+	authHeader := md.Get("Authorization")
 	if len(authHeader) == 0 {
 		return nil, status.Error(codes.Unauthenticated, "no auth header")
 	}
@@ -87,13 +84,3 @@ func (s *GRPCServer) Refresh(ctx context.Context, req *auth.RefreshRequest) (*au
 		RefreshToken: refreshToken,
 	}, nil
 }
-
-/*
-	Access Token = 10 mins
-	Refresh Token = 10 Days
-	Client sends access token and receives access to resource
-	If access token is expired, then server returns 401, so client sends refresh token to refresh access token
-	When access token is refreshed, server also refreshes a refresh token and saves new version in database
-	After that, server returns new access token and old refresh token
-	So, when old refresh token expires, server will take refresh token from db, verify that it is not expired, refresh both tokens and return
-*/

@@ -1,0 +1,37 @@
+services:
+  user_mgmt_app:
+    container_name: user_mgmt_app
+    build:
+      context: .
+      dockerfile: app.Dockerfile
+    ports:
+      - "${APP_HTTP_PORT}:${APP_HTTP_INNER_PORT}"
+    environment:
+      - DB_HOST=user_mgmt_db
+      - DB_PORT=${DB_INNER_PORT}
+      - REDIS_HOST=redis
+      - REDIS_PORT=${REDIS_INNER_PORT}
+      - AUTH_HOST=auth_app
+      - AUTH_PORT=${APP_HTTP_INNER_PORT}
+      - APP_HTTP_PORT=${APP_HTTP_INNER_PORT}
+    depends_on:
+      - user_mgmt_db
+    networks:
+      - micro-proxy-net
+
+  user_mgmt_db:
+    image: postgres:15.3
+    container_name: user_mgmt_db
+    ports:
+      - "${DB_PORT}:${DB_INNER_PORT}"
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    networks:
+      - micro-proxy-net
+
+networks:
+  micro-proxy-net:
+    external: true
+    name: microservice-network

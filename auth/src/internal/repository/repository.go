@@ -44,3 +44,11 @@ func (r *AuthRepository) FindTokenByUserId(userId uuid.UUID) (*models.RefreshTok
 	}
 	return &token, nil
 }
+
+func (r *AuthRepository) DeleteById(id uuid.UUID) error {
+	err := r.db.Debug().Where("id = ?", id).Delete(&models.User{}).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}

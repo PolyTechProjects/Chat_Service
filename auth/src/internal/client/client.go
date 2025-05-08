@@ -2,38 +2,16 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 
 	"example.com/main/src/config"
-	"example.com/main/src/gen/go/user_mgmt"
 	"example.com/main/src/internal/dto"
 	"example.com/main/src/models"
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/go-redis/redis"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
-
-type UserMgmtGRPCClient struct {
-	client user_mgmt.UserMgmtClient
-}
-
-func New(cfg *config.Config) *UserMgmtGRPCClient {
-	connectionUrl := fmt.Sprintf("%s:%s", cfg.UserMgmt.UserMgmtHost, cfg.UserMgmt.UserMgmtPort)
-	conn, err := grpc.NewClient(connectionUrl, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic("failed to connect: " + err.Error())
-	}
-	return &UserMgmtGRPCClient{client: user_mgmt.NewUserMgmtClient(conn)}
-}
-
-func (c *UserMgmtGRPCClient) PerformAddUser(ctx context.Context, userId string, name string) (*user_mgmt.UserResponse, error) {
-	return c.client.AddUser(ctx, &user_mgmt.AddUserRequest{
-		UserId: userId,
-		Name:   name,
-	})
-}
 
 type KeycloakClient struct {
 	client       *gocloak.GoCloak
@@ -62,7 +40,7 @@ func (k *KeycloakClient) RegisterUser(user *models.User) error {
 	token := k.adminAuth()
 	keycloakUser := gocloak.User{
 		ID:        gocloak.StringP(user.Id.String()),
-		Username:  gocloak.StringP(user.Name),
+		Username:  gocloak.StringP(user.Login),
 		Email:     gocloak.StringP(user.Login),
 		Enabled:   gocloak.BoolP(true),
 		FirstName: gocloak.StringP(user.Firstname),
@@ -122,9 +100,44 @@ func (k *KeycloakClient) RevokeTokens(refreshToken string) error {
 	return nil
 }
 
+func (k *KeycloakClient) DeleteAccount(userId string, accessToken string, refreshToken string) error {
+	token := k.adminAuth()
+	k.client.GetUserByID(context.Background(), token.AccessToken, k.realm, userId)
+	res, err := k.client.RetrospectToken(context.Background(), accessToken, k.clientId, k.clientSecret, k.realm)
+	if err != nil {
+		slog.Error("KeycloakRetrospectToken failed: " + err.Error())
+		return err
+	}
+	if !*res.Active {
+		slog.Error("Token is not active")
+		return fmt.Errorf("token is not active")
+	}
+	_, claims, err := k.client.DecodeAccessToken(context.Background(), accessToken, k.realm)
+	if err != nil {
+		slog.Error("KeycloakDecodeAccessToken failed: " + err.Error())
+		return err
+	}
+	subject, err := claims.GetSubject()
+	if err != nil {
+		slog.Error("KeycloakGetSubject failed: " + err.Error())
+		return err
+	}
+	if subject != userId {
+		slog.Error("Invalid user id")
+		return fmt.Errorf("invalid user id")
+	}
+	err = k.RevokeTokens(refreshToken)
+	if err != nil {
+		slog.Error("KeycloakRevokeToken failed: " + err.Error())
+		return err
+	}
+	return k.client.DeleteUser(context.Background(), token.AccessToken, k.realm, userId)
+}
+
 type RedisClient struct {
-	Client      *redis.Client
-	channelName string
+	Client                   *redis.Client
+	createAccountChannelName string
+	deleteAccountChannelName string
 }
 
 func NewRedisClient(cfg *config.Config) *RedisClient {
@@ -133,13 +146,37 @@ func NewRedisClient(cfg *config.Config) *RedisClient {
 		Password: cfg.Redis.Password,
 		DB:       cfg.Redis.Db,
 	})
-	return &RedisClient{Client: client, channelName: cfg.Redis.ChannelName}
+	return &RedisClient{
+		Client:                   client,
+		createAccountChannelName: cfg.Redis.CreateAccountChannelName,
+		deleteAccountChannelName: cfg.Redis.DeleteAccountChannelName,
+	}
 }
 
-func (c *RedisClient) SendToChannel(accountCreatedEvent *dto.AccountCreatedEvent) error {
-	_, err := c.Client.Publish(c.channelName, accountCreatedEvent).Result()
+func (c *RedisClient) SendToCreateAccountChannel(accountCreatedEvent *dto.AccountCreatedEvent) error {
+	event, err := json.Marshal(accountCreatedEvent)
+	if err != nil {
+		slog.Error("Failed to marshal event: " + err.Error())
+		return err
+	}
+	_, err = c.Client.Publish(c.createAccountChannelName, event).Result()
 	if err != nil {
 		slog.Error("Failed to publish message: " + err.Error())
+		return err
+	}
+	return nil
+}
+
+func (c *RedisClient) SendToDeleteAccountChannel(accountDeletedEvent *dto.AccountDeletedEvent) error {
+	event, err := json.Marshal(accountDeletedEvent)
+	if err != nil {
+		slog.Error("Failed to marshal event: " + err.Error())
+		return err
+	}
+	_, err = c.Client.Publish(c.deleteAccountChannelName, event).Result()
+	if err != nil {
+		slog.Error("Failed to publish message: " + err.Error())
+		return err
 	}
 	return nil
 }

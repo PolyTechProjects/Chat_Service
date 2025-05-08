@@ -28,3 +28,7 @@ type AccountCreatedEvent struct {
 	Firstname string `json:"firstname"`
 	Lastname  string `json:"lastname"`
 }
+
+type AccountDeletedEvent struct {
+	UserId string `json:"user_id"`
+}

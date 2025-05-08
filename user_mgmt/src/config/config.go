@@ -6,15 +6,19 @@ import (
 )
 
 type Config struct {
-	App      AppConfig
-	Db       DbConfig
-	Keycloak KeycloakConfig
-	Redis    RedisConfig
+	App   AppConfig
+	Auth  AuthConfig
+	Db    DbConfig
+	Redis RedisConfig
 }
 
 type AppConfig struct {
-	InnerGrpcPort int `env:"APP_GRPC_PORT"`
-	InnerHttpPort int `env:"APP_HTTP_PORT"`
+	HttpInnerPort int `env:"APP_HTTP_INNER_PORT"`
+}
+
+type AuthConfig struct {
+	AuthHost string `env:"AUTH_HOST"`
+	AuthPort string `env:"AUTH_PORT"`
 }
 
 type DbConfig struct {
@@ -24,14 +28,6 @@ type DbConfig struct {
 	Host         string `env:"DB_HOST"`
 	InnerPort    int    `env:"DB_PORT"`
 	SslMode      string `env:"DB_SSL_MODE"`
-}
-
-type KeycloakConfig struct {
-	Host         string `env:"KEYCLOAK_HOST"`
-	InnerPort    int    `env:"KEYCLOAK_PORT"`
-	Realm        string `env:"KEYCLOAK_REALM"`
-	ClientId     string `env:"KEYCLOAK_CLIENT_ID"`
-	ClientSecret string `env:"KEYCLOAK_CLIENT_SECRET"`
 }
 
 type RedisConfig struct {
