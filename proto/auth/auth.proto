@@ -7,7 +7,7 @@ option go_package = "example.com/proto/auth";
 service Auth {
     rpc Authorize (AuthorizeRequest) returns (AuthorizeResponse) {}
 
-    rpc Refresh (RefreshRequest) returns (RefreshResponse) {}
+    rpc ExtractUserId (ExtractUserIdRequest) returns (ExtractUserIdResponse) {}
 }
 
 message AuthorizeRequest {
@@ -18,11 +18,8 @@ message AuthorizeResponse {
     reserved 1,2,3,4;
 }
 
-message RefreshRequest {
-    string refreshToken = 1;
-}
+message ExtractUserIdRequest {}
 
-message RefreshResponse {
-    string accessToken = 1;
-    string refreshToken = 2;
+message ExtractUserIdResponse {
+    string userId = 1;
 }

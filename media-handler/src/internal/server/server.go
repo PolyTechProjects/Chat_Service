@@ -15,7 +15,7 @@ func NewHttpServer(mediaHandlerController *controller.MediaHandlerController) *H
 }
 
 func (h *HttpServer) StartServer() {
-	http.HandleFunc("POST /uploads", h.mediaHandlerController.UploadMediaHandler)
-	http.HandleFunc("GET /uploads", h.mediaHandlerController.GetMediaHandler)
-	http.HandleFunc("DELETE /uploads", h.mediaHandlerController.DeleteMediaHandler)
+	http.HandleFunc("POST /api/v1/media/uploads", h.mediaHandlerController.UploadMediaHandler)
+	http.HandleFunc("GET /api/v1/media/uploads", h.mediaHandlerController.GetMediaHandler)
+	http.HandleFunc("DELETE /api/v1/media/uploads", h.mediaHandlerController.DeleteMediaHandler)
 }

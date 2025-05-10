@@ -73,14 +73,21 @@ func (s *GRPCServer) Authorize(ctx context.Context, req *auth.AuthorizeRequest) 
 	return nil, nil
 }
 
-func (s *GRPCServer) Refresh(ctx context.Context, req *auth.RefreshRequest) (*auth.RefreshResponse, error) {
-	accessToken, refreshToken, err := s.authService.RefreshTokens(req.GetRefreshToken())
+func (s *GRPCServer) ExtractUserId(ctx context.Context, req *auth.ExtractUserIdRequest) (*auth.ExtractUserIdResponse, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "no metadata")
+	}
+	authHeader := md.Get("Authorization")
+	if len(authHeader) == 0 {
+		return nil, status.Error(codes.Unauthenticated, "no auth header")
+	}
+	accessToken := strings.TrimPrefix(authHeader[0], "Bearer ")
+
+	userId, err := s.authService.ExtractUserId(accessToken)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, status.Error(codes.PermissionDenied, err.Error())
 	}
-	return &auth.RefreshResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-	}, nil
+	return &auth.ExtractUserIdResponse{UserId: userId}, nil
 }

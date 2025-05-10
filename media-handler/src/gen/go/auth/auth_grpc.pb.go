@@ -23,7 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AuthClient interface {
 	Authorize(ctx context.Context, in *AuthorizeRequest, opts ...grpc.CallOption) (*AuthorizeResponse, error)
-	Refresh(ctx context.Context, in *RefreshRequest, opts ...grpc.CallOption) (*RefreshResponse, error)
+	ExtractUserId(ctx context.Context, in *ExtractUserIdRequest, opts ...grpc.CallOption) (*ExtractUserIdResponse, error)
 }
 
 type authClient struct {
@@ -43,9 +43,9 @@ func (c *authClient) Authorize(ctx context.Context, in *AuthorizeRequest, opts .
 	return out, nil
 }
 
-func (c *authClient) Refresh(ctx context.Context, in *RefreshRequest, opts ...grpc.CallOption) (*RefreshResponse, error) {
-	out := new(RefreshResponse)
-	err := c.cc.Invoke(ctx, "/auth.Auth/Refresh", in, out, opts...)
+func (c *authClient) ExtractUserId(ctx context.Context, in *ExtractUserIdRequest, opts ...grpc.CallOption) (*ExtractUserIdResponse, error) {
+	out := new(ExtractUserIdResponse)
+	err := c.cc.Invoke(ctx, "/auth.Auth/ExtractUserId", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (c *authClient) Refresh(ctx context.Context, in *RefreshRequest, opts ...gr
 // for forward compatibility
 type AuthServer interface {
 	Authorize(context.Context, *AuthorizeRequest) (*AuthorizeResponse, error)
-	Refresh(context.Context, *RefreshRequest) (*RefreshResponse, error)
+	ExtractUserId(context.Context, *ExtractUserIdRequest) (*ExtractUserIdResponse, error)
 	mustEmbedUnimplementedAuthServer()
 }
 
@@ -68,8 +68,8 @@ type UnimplementedAuthServer struct {
 func (UnimplementedAuthServer) Authorize(context.Context, *AuthorizeRequest) (*AuthorizeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Authorize not implemented")
 }
-func (UnimplementedAuthServer) Refresh(context.Context, *RefreshRequest) (*RefreshResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Refresh not implemented")
+func (UnimplementedAuthServer) ExtractUserId(context.Context, *ExtractUserIdRequest) (*ExtractUserIdResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ExtractUserId not implemented")
 }
 func (UnimplementedAuthServer) mustEmbedUnimplementedAuthServer() {}
 
@@ -102,20 +102,20 @@ func _Auth_Authorize_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Auth_Refresh_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RefreshRequest)
+func _Auth_ExtractUserId_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExtractUserIdRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServer).Refresh(ctx, in)
+		return srv.(AuthServer).ExtractUserId(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/auth.Auth/Refresh",
+		FullMethod: "/auth.Auth/ExtractUserId",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServer).Refresh(ctx, req.(*RefreshRequest))
+		return srv.(AuthServer).ExtractUserId(ctx, req.(*ExtractUserIdRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -132,8 +132,8 @@ var Auth_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Auth_Authorize_Handler,
 		},
 		{
-			MethodName: "Refresh",
-			Handler:    _Auth_Refresh_Handler,
+			MethodName: "ExtractUserId",
+			Handler:    _Auth_ExtractUserId_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

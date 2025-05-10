@@ -99,3 +99,7 @@ func (s *AuthService) DeleteAccount(userId uuid.UUID, accessToken string, refres
 
 	return nil
 }
+
+func (s *AuthService) ExtractUserId(accessToken string) (string, error) {
+	return s.KeycloakClient.ExtractUserId(accessToken)
+}

@@ -134,6 +134,21 @@ func (k *KeycloakClient) DeleteAccount(userId string, accessToken string, refres
 	return k.client.DeleteUser(context.Background(), token.AccessToken, k.realm, userId)
 }
 
+func (k *KeycloakClient) ExtractUserId(accessToken string) (string, error) {
+	_, claims, err := k.client.DecodeAccessToken(context.Background(), accessToken, k.realm)
+	if err != nil {
+		slog.Error("KeycloakDecodeAccessToken failed: " + err.Error())
+		return "", err
+	}
+	subject, err := claims.GetSubject()
+	if err != nil {
+		slog.Error("KeycloakGetSubject failed: " + err.Error())
+		return "", err
+	}
+	slog.Info("User id: " + subject)
+	return subject, nil
+}
+
 type RedisClient struct {
 	Client                   *redis.Client
 	createAccountChannelName string

@@ -44,18 +44,6 @@ func (authClient *AuthGRPCClient) PerformAuthorize(r *http.Request) (*auth.Autho
 	return authClient.Authorize(ctx, &auth.AuthorizeRequest{})
 }
 
-func (authClient *AuthGRPCClient) PerformRefresh(r *http.Request) (*auth.RefreshResponse, error) {
-	refreshCookie, err := r.Cookie("X-Refresh-Token")
-	if err != nil {
-		slog.Error("PerformRefresh failed: " + err.Error())
-		return nil, fmt.Errorf("PerformRefresh failed: " + err.Error())
-	}
-	refreshToken := refreshCookie.Value
-	ctx := r.Context()
-	refreshRequest := &auth.RefreshRequest{RefreshToken: refreshToken}
-	return authClient.Refresh(ctx, refreshRequest)
-}
-
 type RedisClient struct {
 	Client *redis.Client
 }
