@@ -7,8 +7,8 @@ on:
   push:
     branches-ignore:
       - 'main'
-    paths: 
-      - 'chat-app/**'
+    paths:
+      - 'chat/**'
 
 jobs:
   build:
@@ -21,5 +21,5 @@ jobs:
         with:
           go-version: "1.22"
 
-      - name: Build Chat
-        run: cd chat-app/ && ./build.sh && cd ../
+      - name: Build Chat Management
+        run: cd chat/ && ./build.sh && cd ../

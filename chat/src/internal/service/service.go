@@ -636,6 +636,14 @@ func (s *ChatService) VerifyUserAction(chatId uuid.UUID, userId uuid.UUID, actio
 	return fmt.Errorf("permission denied")
 }
 
+func (s *ChatService) VerifyUserPersistance(chatId uuid.UUID, userId uuid.UUID) error {
+	_, err := s.ChatUserRepository.FindByChatAndUser(chatId, userId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func getAllPermissions() []models.Permission {
 	return []models.Permission{
 		models.CAN_WRITE_MESSAGE,

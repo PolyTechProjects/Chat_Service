@@ -8,6 +8,8 @@ service Chat {
     rpc GetChat (GetChatRequest) returns (ChatResponse) {}
 
     rpc VerifyUserAction (VerifyUserActionRequest) returns (VerifyUserActionResponse) {}
+
+    rpc VerifyUserPersistance (VerifyUserPersistanceRequest) returns (VerifyUserPersistanceResponse) {}
 }
 
 message ChatResponse {
@@ -34,5 +36,14 @@ message VerifyUserActionRequest {
 }
 
 message VerifyUserActionResponse {
+    bool isVerified = 1;
+}
+
+message VerifyUserPersistanceRequest {
+    string chatId = 1;
+    string userId = 2;
+}
+
+message VerifyUserPersistanceResponse {
     bool isVerified = 1;
 }

@@ -109,13 +109,12 @@ func (s *GRPCServer) VerifyUserAction(ctx context.Context, req *chat.VerifyUserA
 	}
 	userId, err := uuid.Parse(req.UserId)
 	if err != nil {
-		slog.Error("UUIDParse failed: " + err.Error())
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, err
 	}
 	err = s.chatService.VerifyUserAction(chatId, userId, req.Action)
 	if err != nil {
 		slog.Error("VerifyUserAction failed: " + err.Error())
-		if errors.Is(err, fmt.Errorf("Permission denied")) {
+		if errors.Is(err, fmt.Errorf("permission denied")) {
 			return nil, status.Error(codes.PermissionDenied, err.Error())
 		}
 		return nil, status.Error(codes.Internal, err.Error())
@@ -125,4 +124,26 @@ func (s *GRPCServer) VerifyUserAction(ctx context.Context, req *chat.VerifyUserA
 	}, nil
 }
 
-// /api/v1/messaging/{chatId}
+func (s *GRPCServer) VerifyUserPersistance(ctx context.Context, req *chat.VerifyUserPersistanceRequest) (*chat.VerifyUserPersistanceResponse, error) {
+	chatId, err := uuid.Parse(req.ChatId)
+	if err != nil {
+		slog.Error("UUIDParse failed: " + err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	userId, err := uuid.Parse(req.UserId)
+	if err != nil {
+		slog.Error("UUIDParse failed: " + err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	err = s.chatService.VerifyUserPersistance(chatId, userId)
+	if err != nil {
+		slog.Error("VerifyUserPersistance failed: " + err.Error())
+		if errors.Is(err, fmt.Errorf("permission denied")) {
+			return nil, status.Error(codes.PermissionDenied, err.Error())
+		}
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return &chat.VerifyUserPersistanceResponse{
+		IsVerified: true,
+	}, nil
+}
