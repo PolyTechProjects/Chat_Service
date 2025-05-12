@@ -8,6 +8,8 @@ service Auth {
     rpc Authorize (AuthorizeRequest) returns (AuthorizeResponse) {}
 
     rpc ExtractUserId (ExtractUserIdRequest) returns (ExtractUserIdResponse) {}
+
+    rpc GetLogin (GetLoginRequest) returns (GetLoginResponse) {}
 }
 
 message AuthorizeRequest {
@@ -22,4 +24,12 @@ message ExtractUserIdRequest {}
 
 message ExtractUserIdResponse {
     string userId = 1;
+}
+
+message GetLoginRequest {
+    string userId = 1;
+}
+
+message GetLoginResponse {
+    string login = 1;
 }

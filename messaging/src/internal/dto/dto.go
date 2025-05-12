@@ -26,8 +26,12 @@ type HistoryResponse struct {
 }
 
 type NewMessageNotificationEvent struct {
-	MessageId  string `json:"message_id"`
-	SenderId   string `json:"sender_id"`
-	Body       string `json:"body"`
-	FilesCount int    `json:"files_count"`
+	EventId       string `json:"event_id"`
+	MessageId     string `json:"message_id"`
+	SenderId      string `json:"sender_id"`
+	DestinationId string `json:"destination_id"`
+	ReceiverId    string `json:"receiver_id"`
+	Body          string `json:"body"`
+	IsDirect      bool   `json:"is_direct"`
+	FilesCount    int    `json:"files_count"`
 }

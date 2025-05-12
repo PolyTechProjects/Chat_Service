@@ -38,7 +38,7 @@ func Init(cfg *config.Config) {
 		panic(err)
 	}
 
-	db.AutoMigrate(&models.Chat{}, &models.ChatUser{}, &models.Role{}, &models.RolePermission{}, &models.ChatRole{})
+	db.AutoMigrate(&models.Chat{}, &models.ChatUser{}, &models.Role{}, &models.RolePermission{})
 	DB = db
 	slog.Info("Connected to DB")
 }

@@ -150,11 +150,13 @@ func (r *RedisClient) SendToNotificationChannel(notificationEvent *dto.NewMessag
 		slog.Error("Failed to marshal event: " + err.Error())
 		return err
 	}
+	slog.Debug(r.NotificationChannelName)
 	_, err = r.Client.Publish(r.NotificationChannelName, event).Result()
 	if err != nil {
 		slog.Error("Failed to publish event: " + err.Error())
 		return err
 	}
+	slog.Debug("Event sent", "event", notificationEvent)
 	return nil
 }
 
@@ -168,12 +170,12 @@ func (r *RedisClient) ConnectUser(userId uuid.UUID) error {
 }
 
 func (r *RedisClient) IsUserConnected(userId uuid.UUID) (bool, error) {
-	_, err := r.Client.Exists(userId.String()).Result()
+	isConnected, err := r.Client.Exists(userId.String()).Result()
 	if err != nil {
 		slog.Error("RedisClientIsUserConnected failed : " + err.Error())
 		return false, err
 	}
-	return true, nil
+	return isConnected == 1, nil
 }
 
 func (r *RedisClient) DisconnectUser(userId uuid.UUID) error {

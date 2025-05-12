@@ -10,11 +10,12 @@ type Config struct {
 	Users    UsersConfig
 	App      AppConfig
 	Database DatabaseConfig
+	Redis    RedisConfig
 }
 
 type AuthConfig struct {
-	AuthHost string `env:"AUTH_APP_HOST"`
-	AuthPort string `env:"AUTH_APP_PORT"`
+	AuthHost string `env:"AUTH_HOST"`
+	AuthPort string `env:"AUTH_PORT"`
 }
 
 type UsersConfig struct {
@@ -34,6 +35,15 @@ type DatabaseConfig struct {
 	Host         string `env:"DB_HOST"`
 	InnerPort    int    `env:"DB_PORT"`
 	SslMode      string `env:"DB_SSL_MODE"`
+}
+
+type RedisConfig struct {
+	Host                    string `env:"REDIS_HOST"`
+	InnerPort               int    `env:"REDIS_PORT"`
+	Db                      int    `env:"REDIS_DB"`
+	Password                string `env:"REDIS_PASSWORD"`
+	NotificationChannelName string `env:"REDIS_NOTIFICATION_CHANNEL_NAME"`
+	SubscriptionChannelName string `env:"REDIS_SUBSCRIPTION_CHANNEL_NAME"`
 }
 
 func MustLoad() *Config {

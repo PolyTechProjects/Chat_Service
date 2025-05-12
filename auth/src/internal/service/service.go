@@ -101,5 +101,29 @@ func (s *AuthService) DeleteAccount(userId uuid.UUID, accessToken string, refres
 }
 
 func (s *AuthService) ExtractUserId(accessToken string) (string, error) {
-	return s.KeycloakClient.ExtractUserId(accessToken)
+	keycloak, err := s.KeycloakClient.ExtractUserId(accessToken)
+	if err != nil {
+		return "", err
+	}
+	keycloakId, err := uuid.Parse(keycloak)
+	if err != nil {
+		return "", err
+	}
+	user, err := s.AuthRepository.FindByKeycloakId(keycloakId)
+	if err != nil {
+		return "", err
+	}
+	return user.Id.String(), nil
+}
+
+func (s *AuthService) GetLogin(userId string) (string, error) {
+	id, err := uuid.Parse(userId)
+	if err != nil {
+		return "", err
+	}
+	user, err := s.AuthRepository.FindById(id)
+	if err != nil {
+		return "", err
+	}
+	return user.Login, nil
 }

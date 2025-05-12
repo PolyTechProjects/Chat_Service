@@ -5,6 +5,7 @@ import (
 
 	"example.com/messaging/src/internal/dto"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 )
 
 type Message struct {
@@ -48,8 +49,10 @@ func MapMessageToResponse(message *Message) *dto.MessageResponse {
 	senderId := message.SenderId.String()
 	destinationId := message.DestinationId.String()
 	files := make([]string, message.FilesCount)
-	for i, file := range strings.Split(message.Files, ",") {
-		files[i] = file
+	if len(files) > 0 {
+		for i, file := range strings.Split(message.Files, ",") {
+			files[i] = file
+		}
 	}
 	return &dto.MessageResponse{
 		MessageId:     messageId,
@@ -62,4 +65,9 @@ func MapMessageToResponse(message *Message) *dto.MessageResponse {
 		CreatedAt:     message.CreatedAt,
 		Files:         files,
 	}
+}
+
+type ConnectionInfo struct {
+	ChatId       uuid.UUID
+	WsConnection *websocket.Conn
 }

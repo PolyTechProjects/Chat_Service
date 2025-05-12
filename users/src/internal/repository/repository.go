@@ -45,6 +45,16 @@ func (r *UsersRepository) GetAll() ([]models.User, error) {
 	return users, nil
 }
 
+func (r *UsersRepository) GetByIds(userIds []uuid.UUID) ([]models.User, error) {
+	var users []models.User
+	err := r.db.Where("id IN ?", userIds).Find(&users).Error
+	if err != nil {
+		slog.Error("RepositoryGetByIds failed: " + err.Error())
+		return nil, err
+	}
+	return users, nil
+}
+
 func (r *UsersRepository) GetById(userId uuid.UUID) (*models.User, error) {
 	user := &models.User{}
 	err := r.db.Where("id = ?", userId).First(user).Error

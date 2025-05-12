@@ -65,6 +65,28 @@ func (s *UsersService) GetUsers() (*dto.UsersResponse, error) {
 	return users, nil
 }
 
+func (s *UsersService) GetUsersByIds(userIds []uuid.UUID) (*dto.UsersResponse, error) {
+	users := &dto.UsersResponse{
+		Users: make([]dto.UserResponse, len(userIds)),
+	}
+	for i, userId := range userIds {
+		user, err := s.UsersRepository.GetById(userId)
+		if err != nil {
+			return nil, err
+		}
+		users.Users[i] = dto.UserResponse{
+			UserId:      user.Id.String(),
+			Name:        user.Name,
+			Firstname:   user.Firstname,
+			Lastname:    user.Lastname,
+			ProfilePic:  user.ProfilePic,
+			ProfileLink: user.ProfileLink,
+			Description: user.Description,
+		}
+	}
+	return users, nil
+}
+
 func (s *UsersService) GetUser(profileLink string) (*dto.UserResponse, error) {
 	user, err := s.UsersRepository.GetByProfileLink(profileLink)
 	if err != nil {

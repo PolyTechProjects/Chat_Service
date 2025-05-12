@@ -96,7 +96,7 @@ func (r *ChatUserRepository) FindByChatAndUser(chatId uuid.UUID, userId uuid.UUI
 	chatUser := &models.ChatUser{}
 	err := r.db.Where("chat_id = ? AND user_id = ?", chatId, userId).First(chatUser).Error
 	if err != nil {
-		slog.Error("ChatUserRepositoryFindByChatAndUser failed: " + err.Error())
+		slog.Error("ChatUserRepositoryFindByChatAndUser failed: "+err.Error(), "requested chatId", chatId, "requested userId", userId)
 		return nil, err
 	}
 	return chatUser, nil
@@ -122,6 +122,9 @@ func (r *ChatUserRepository) AddChatUser(chatUser *models.ChatUser) error {
 }
 
 func (r *ChatUserRepository) AddChatUsers(chatUsers []*models.ChatUser) error {
+	for _, chatUser := range chatUsers {
+		slog.Debug("User", "ptr", chatUser)
+	}
 	err := r.db.Create(chatUsers).Error
 	if err != nil {
 		slog.Error("ChatUserRepositoryAddChatUsers failed: " + err.Error())
@@ -226,6 +229,45 @@ func (r *RoleRepository) GetRoles() ([]*models.Role, error) {
 	return roles, nil
 }
 
+func (r *RoleRepository) FindByChat(chatId uuid.UUID) ([]*models.Role, error) {
+	var chatRoles []*models.Role
+	err := r.db.Where("chat_id = ?", chatId).Find(&chatRoles).Error
+	if err != nil {
+		slog.Error("ChatRoleRepositoryFindByChat failed: " + err.Error())
+		return nil, err
+	}
+	return chatRoles, nil
+}
+
+func (r *RoleRepository) FindByRole(roleId uuid.UUID) (*models.Role, error) {
+	chatRole := &models.Role{}
+	err := r.db.Where("role_id = ?", roleId).First(chatRole).Error
+	if err != nil {
+		slog.Error("ChatRoleRepositoryFindByRole failed: " + err.Error())
+		return nil, err
+	}
+	return chatRole, nil
+}
+
+func (r *RoleRepository) FindDefaultRole(chatId uuid.UUID) (*models.Role, error) {
+	chatRole := &models.Role{}
+	err := r.db.Where("chat_id = ? AND is_default = ?", chatId, true).Find(&chatRole).Error
+	if err != nil {
+		slog.Error("ChatRoleRepositoryFindDefaultRole failed: " + err.Error())
+		return nil, err
+	}
+	return chatRole, nil
+}
+
+func (r *RoleRepository) DeleteByChat(chatId uuid.UUID) error {
+	err := r.db.Where("chat_id = ?", chatId).Delete(&models.Role{}).Error
+	if err != nil {
+		slog.Error("ChatRoleRepositoryDeleteByChat failed: " + err.Error())
+		return err
+	}
+	return nil
+}
+
 type RolePermissionRepository struct {
 	db *gorm.DB
 }
@@ -254,7 +296,10 @@ func (r *RolePermissionRepository) AddRolePermission(rolePermission *models.Role
 }
 
 func (r *RolePermissionRepository) AddRolePermissions(rolePermissions []*models.RolePermission) error {
-	err := r.db.Create(rolePermissions).Error
+	if rolePermissions == nil {
+		slog.Info("NIL")
+	}
+	err := r.db.Save(rolePermissions).Error
 	if err != nil {
 		slog.Error("RolePermissionRepositoryAddRolePermissions failed: " + err.Error())
 		return err
@@ -289,71 +334,6 @@ func (r *RolePermissionRepository) DeleteByRole(roleId uuid.UUID) error {
 	err := r.db.Where("role_id = ?", roleId).Delete(&models.RolePermission{}).Error
 	if err != nil {
 		slog.Error("RolePermissionRepositoryDeleteByRole failed: " + err.Error())
-		return err
-	}
-	return nil
-}
-
-type ChatRoleRepository struct {
-	db *gorm.DB
-}
-
-func NewChatRoleRepository(db *gorm.DB) *ChatRoleRepository {
-	return &ChatRoleRepository{db: db}
-}
-
-func (r *ChatRoleRepository) FindByChat(chatId uuid.UUID) ([]*models.ChatRole, error) {
-	var chatRoles []*models.ChatRole
-	err := r.db.Where("chat_id = ?", chatId).Find(&chatRoles).Error
-	if err != nil {
-		slog.Error("ChatRoleRepositoryFindByChat failed: " + err.Error())
-		return nil, err
-	}
-	return chatRoles, nil
-}
-
-func (r *ChatRoleRepository) FindByRole(roleId uuid.UUID) (*models.ChatRole, error) {
-	chatRole := &models.ChatRole{}
-	err := r.db.Where("role_id = ?", roleId).First(chatRole).Error
-	if err != nil {
-		slog.Error("ChatRoleRepositoryFindByRole failed: " + err.Error())
-		return nil, err
-	}
-	return chatRole, nil
-}
-
-func (r *ChatRoleRepository) FindDefaultRole(chatId uuid.UUID) (*models.ChatRole, error) {
-	chatRole := &models.ChatRole{}
-	err := r.db.Where("chat_id = ? AND is_default = ?", chatId, true).Find(&chatRole).Error
-	if err != nil {
-		slog.Error("ChatRoleRepositoryFindDefaultRole failed: " + err.Error())
-		return nil, err
-	}
-	return chatRole, nil
-}
-
-func (r *ChatRoleRepository) AddChatRole(chatRole *models.ChatRole) error {
-	err := r.db.Create(chatRole).Error
-	if err != nil {
-		slog.Error("ChatRoleRepositoryAddChatRole failed: " + err.Error())
-		return err
-	}
-	return nil
-}
-
-func (r *ChatRoleRepository) DeleteChatRole(chatRole *models.ChatRole) error {
-	err := r.db.Where("chat_id = ? AND role_id = ?", chatRole.ChatId, chatRole.RoleId).Delete(&models.ChatRole{}).Error
-	if err != nil {
-		slog.Error("ChatRoleRepositoryDeleteChatRole failed: " + err.Error())
-		return err
-	}
-	return nil
-}
-
-func (r *ChatRoleRepository) DeleteByChat(chatId uuid.UUID) error {
-	err := r.db.Where("chat_id = ?", chatId).Delete(&models.ChatRole{}).Error
-	if err != nil {
-		slog.Error("ChatRoleRepositoryDeleteByChat failed: " + err.Error())
 		return err
 	}
 	return nil

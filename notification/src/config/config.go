@@ -6,22 +6,17 @@ import (
 )
 
 type Config struct {
-	App      AppConfig
-	Auth     AuthConfig
-	UserMgmt UserMgmtConfig
-	Fcm      FcmConfig
-	Db       DbConfig
-	Redis    RedisConfig
+	App   AppConfig
+	Auth  AuthConfig
+	Users UsersConfig
+	Chat  ChatConfig
+	Db    DbConfig
+	Redis RedisConfig
+	Smtp  SmtpConfig
 }
 
 type AppConfig struct {
-	HttpInnerPort int `env:"APP_HTTP_INNER_PORT"`
-	GRPCInnerPort int `env:"APP_GRPC_INNER_PORT"`
-}
-
-type FcmConfig struct {
-	ProjectId            string `env:"FCM_PROJECT_ID"`
-	PathToPrivateKeyFile string `env:"FCM_PATH_TO_PRIVATE_KEY_FILE"`
+	HttpInnerPort int `env:"APP_HTTP_PORT"`
 }
 
 type AuthConfig struct {
@@ -29,9 +24,14 @@ type AuthConfig struct {
 	AuthPort string `env:"AUTH_PORT"`
 }
 
-type UserMgmtConfig struct {
-	UserMgmtHost string `env:"USER_MGMT_HOST"`
-	UserMgmtPort string `env:"USER_MGMT_PORT"`
+type UsersConfig struct {
+	UsersHost string `env:"USERS_HOST"`
+	UsersPort string `env:"USERS_PORT"`
+}
+
+type ChatConfig struct {
+	ChatHost string `env:"CHAT_HOST"`
+	ChatPort string `env:"CHAT_PORT"`
 }
 
 type DbConfig struct {
@@ -39,15 +39,24 @@ type DbConfig struct {
 	UserName     string `env:"DB_USER"`
 	Password     string `env:"DB_PASSWORD"`
 	Host         string `env:"DB_HOST"`
-	InnerPort    int    `env:"DB_INNER_PORT"`
+	InnerPort    int    `env:"DB_PORT"`
 	SslMode      string `env:"DB_SSL_MODE"`
 }
 
 type RedisConfig struct {
-	Host      string `env:"REDIS_HOST"`
-	InnerPort int    `env:"REDIS_INNER_PORT"`
-	Db        int    `env:"REDIS_DB"`
-	Password  string `env:"REDIS_PASSWORD"`
+	Host                    string `env:"REDIS_HOST"`
+	InnerPort               int    `env:"REDIS_PORT"`
+	Db                      int    `env:"REDIS_DB"`
+	Password                string `env:"REDIS_PASSWORD"`
+	NotificationChannelName string `env:"REDIS_NOTIFICATION_CHANNEL_NAME"`
+	SubscriptionChannelName string `env:"REDIS_SUBSCRIPTION_CHANNEL_NAME"`
+}
+
+type SmtpConfig struct {
+	Host     string `env:"SMTP_HOST"`
+	Port     int    `env:"SMTP_PORT"`
+	User     string `env:"SMTP_USER"`
+	Password string `env:"SMTP_PASSWORD"`
 }
 
 func MustLoad() *Config {

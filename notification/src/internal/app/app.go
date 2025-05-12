@@ -12,17 +12,13 @@ import (
 
 type App struct {
 	httpServer *server.NotificationHttpServer
-	gRPCServer *server.NotificationGRPCServer
 	httpPort   int
-	gRPCPort   int
 }
 
-func New(httpServer *server.NotificationHttpServer, gRPCServer *server.NotificationGRPCServer, cfg *config.Config) *App {
+func New(httpServer *server.NotificationHttpServer, cfg *config.Config) *App {
 	return &App{
 		httpServer: httpServer,
 		httpPort:   cfg.App.HttpInnerPort,
-		gRPCServer: gRPCServer,
-		gRPCPort:   cfg.App.GRPCInnerPort,
 	}
 }
 
@@ -33,9 +29,7 @@ func (a *App) MustRun() {
 }
 
 func (a *App) Run() error {
-	go a.RunHttpServer()
-	a.RunGRPCServer()
-	return nil
+	return a.RunHttpServer()
 }
 
 func (a *App) RunHttpServer() error {
@@ -49,14 +43,5 @@ func (a *App) RunHttpServer() error {
 	if err := http.Serve(hl, nil); err != nil {
 		return err
 	}
-	return nil
-}
-
-func (a *App) RunGRPCServer() error {
-	gl, err := net.Listen("tcp", fmt.Sprintf(":%d", a.gRPCPort))
-	if err != nil {
-		return err
-	}
-	a.gRPCServer.Start(gl)
 	return nil
 }

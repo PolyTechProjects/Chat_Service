@@ -11,7 +11,7 @@ type Chat struct {
 	CreatorId   uuid.UUID `gorm:"type:uuid"`
 	IsChannel   bool      `gorm:"not null;default:false"`
 	IsClosed    bool      `gorm:"not null;default:true"`
-	JoinLink    string    `gorm:"unique"`
+	JoinLink    string    `gorm:"unique;default:NULL"`
 	ProfilePic  string    `gorm:"default:0;not null;check:profile_pic <> ''"`
 	Description string
 }
@@ -36,6 +36,9 @@ type Role struct {
 	Name        string    `gorm:"not null;check:name <> ''"`
 	Description string
 	Color       string
+	ChatId      uuid.UUID `gorm:"type:uuid"`
+	IsAdmin     bool      `gorm:"not null;default:false"`
+	IsDefault   bool      `gorm:"not null;default:false"`
 }
 
 type RolePermission struct {
@@ -66,11 +69,3 @@ const (
 	CAN_DELETE_USERS           Permission = "CAN_DELETE_USERS"
 	//CAN_REPOST_MESSAGE         Permission = "CAN_REPOST_MESSAGE"
 )
-
-type ChatRole struct {
-	Id        uint
-	ChatId    uuid.UUID `gorm:"type:uuid"`
-	RoleId    uuid.UUID `gorm:"type:uuid"`
-	IsDefault bool      `gorm:"not null;default:false"`
-	IsAdmin   bool      `gorm:"not null;default:false"`
-}

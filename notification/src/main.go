@@ -14,25 +14,35 @@ import (
 	"example.com/notification/src/internal/repository"
 	"example.com/notification/src/internal/server"
 	"example.com/notification/src/internal/service"
-	"example.com/notification/src/redis"
 )
 
 func main() {
 	cfg := config.MustLoad()
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	slog.SetDefault(log)
+	slog.Debug("Config: ", "cfg", cfg)
+
 	database.Init(cfg)
 	db := database.DB
-	redis.Init(cfg)
-	redis := redis.RedisClient
-	repository := repository.NewUserIdXDeviceTokenRepository(db, redis)
-	service := service.NewNotificationService(repository, cfg)
+	redisClient := client.NewRedisClient(cfg)
+	smtpClient := client.NewSmtpClient(cfg)
 	authClient := client.NewAuthClient(cfg)
-	userMgmtClient := client.NewUserMgmtClient(cfg)
-	controller := controller.NewNotificationController(service, authClient, userMgmtClient)
-	httpServer := server.NewNotificationHttpServer(controller)
-	gRPCServer := server.NewNotificationGRPCServer(service, authClient, userMgmtClient)
-	app := app.New(httpServer, gRPCServer, cfg)
+	chatClient := client.NewChatClient(cfg)
+	subscriptionRepository := repository.NewSubscriptionRepository(db)
+	notificationRepository := repository.NewNotificationRepository(db)
+	notificationService := service.NewNotificationService(
+		notificationRepository,
+		subscriptionRepository,
+		authClient,
+		chatClient,
+		redisClient,
+		smtpClient,
+	)
+	go redisClient.SubscribeToNotificationChannel(notificationService.SendNotification)
+	go redisClient.SubscribeToSubscriptionChannel(notificationService.Subscribe)
+	notificationController := controller.NewNotificationController(notificationService, authClient)
+	httpServer := server.NewNotificationHttpServer(notificationController)
+	app := app.New(httpServer, cfg)
 	go app.MustRun()
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)

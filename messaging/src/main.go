@@ -20,6 +20,8 @@ func main() {
 	cfg := config.MustLoad()
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	slog.SetDefault(log)
+	slog.Debug("Config: ", "cfg", cfg)
+
 	database.Init(cfg)
 	db := database.DB
 	authClient := client.NewAuthClient(cfg)
@@ -31,7 +33,6 @@ func main() {
 
 	messageService := service.NewMessageService(messageRepository, chatClient, redisClient)
 	go redisClient.SubscribeToMessageChannel(messageService.BroadcastMessageRedisChannel)
-	go messageService.BroadcastMessageGoChannel()
 	webSocketController := controller.NewWebsocketController(messageService, authClient, chatClient)
 	server := server.NewHttpServer(messageHistoryController, webSocketController)
 	app := app.New(server, cfg)

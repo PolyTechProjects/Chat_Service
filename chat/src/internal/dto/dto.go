@@ -14,7 +14,7 @@ type CreateChatRequest struct {
 	JoinLink           string      `json:"join_link"`
 	ProfilePic         string      `json:"profile_pic"`
 	Description        string      `json:"description"`
-	DefaultPermissions string      `json:"default_permissions"`
+	DefaultPermissions []string    `json:"default_permissions"`
 }
 
 type EditChatRequest struct {
@@ -102,4 +102,23 @@ type Participants struct {
 	UserId   string `json:"user_id"`
 	RoleId   string `json:"role_id"`
 	Nickname string `json:"nickname"`
+}
+
+type NotificationEvent interface{}
+
+type NewChatCreatedNotificationEvent struct {
+	ChatId     uuid.UUID `json:"chat_id"`
+	Name       string    `json:"name"`
+	ReceiverId uuid.UUID `json:"receiver_id"`
+}
+
+type NewUserInChatNotificationEvent struct {
+	ChatId     uuid.UUID `json:"chat_id"`
+	UserId     uuid.UUID `json:"user_id"`
+	ReceiverId uuid.UUID `json:"receiver_id"`
+}
+
+type NewSubscriptionNotificationEvent struct {
+	ChatId uuid.UUID `json:"chat_id"`
+	UserId uuid.UUID `json:"user_id"`
 }

@@ -91,3 +91,12 @@ func (s *GRPCServer) ExtractUserId(ctx context.Context, req *auth.ExtractUserIdR
 	}
 	return &auth.ExtractUserIdResponse{UserId: userId}, nil
 }
+
+func (s *GRPCServer) GetLogin(ctx context.Context, req *auth.GetLoginRequest) (*auth.GetLoginResponse, error) {
+	login, err := s.authService.GetLogin(req.UserId)
+	if err != nil {
+		slog.Error(err.Error())
+		return nil, status.Error(codes.PermissionDenied, err.Error())
+	}
+	return &auth.GetLoginResponse{Login: login}, nil
+}

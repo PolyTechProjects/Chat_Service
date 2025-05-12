@@ -25,6 +25,7 @@ type ChatClient interface {
 	GetChat(ctx context.Context, in *GetChatRequest, opts ...grpc.CallOption) (*ChatResponse, error)
 	VerifyUserAction(ctx context.Context, in *VerifyUserActionRequest, opts ...grpc.CallOption) (*VerifyUserActionResponse, error)
 	VerifyUserPersistance(ctx context.Context, in *VerifyUserPersistanceRequest, opts ...grpc.CallOption) (*VerifyUserPersistanceResponse, error)
+	GetChatAndUserNames(ctx context.Context, in *GetChatAndUserNamesRequest, opts ...grpc.CallOption) (*GetChatAndUserNamesResponse, error)
 }
 
 type chatClient struct {
@@ -62,6 +63,15 @@ func (c *chatClient) VerifyUserPersistance(ctx context.Context, in *VerifyUserPe
 	return out, nil
 }
 
+func (c *chatClient) GetChatAndUserNames(ctx context.Context, in *GetChatAndUserNamesRequest, opts ...grpc.CallOption) (*GetChatAndUserNamesResponse, error) {
+	out := new(GetChatAndUserNamesResponse)
+	err := c.cc.Invoke(ctx, "/chat.Chat/GetChatAndUserNames", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChatServer is the server API for Chat service.
 // All implementations must embed UnimplementedChatServer
 // for forward compatibility
@@ -69,6 +79,7 @@ type ChatServer interface {
 	GetChat(context.Context, *GetChatRequest) (*ChatResponse, error)
 	VerifyUserAction(context.Context, *VerifyUserActionRequest) (*VerifyUserActionResponse, error)
 	VerifyUserPersistance(context.Context, *VerifyUserPersistanceRequest) (*VerifyUserPersistanceResponse, error)
+	GetChatAndUserNames(context.Context, *GetChatAndUserNamesRequest) (*GetChatAndUserNamesResponse, error)
 	mustEmbedUnimplementedChatServer()
 }
 
@@ -84,6 +95,9 @@ func (UnimplementedChatServer) VerifyUserAction(context.Context, *VerifyUserActi
 }
 func (UnimplementedChatServer) VerifyUserPersistance(context.Context, *VerifyUserPersistanceRequest) (*VerifyUserPersistanceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method VerifyUserPersistance not implemented")
+}
+func (UnimplementedChatServer) GetChatAndUserNames(context.Context, *GetChatAndUserNamesRequest) (*GetChatAndUserNamesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChatAndUserNames not implemented")
 }
 func (UnimplementedChatServer) mustEmbedUnimplementedChatServer() {}
 
@@ -152,6 +166,24 @@ func _Chat_VerifyUserPersistance_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Chat_GetChatAndUserNames_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetChatAndUserNamesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServer).GetChatAndUserNames(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/chat.Chat/GetChatAndUserNames",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServer).GetChatAndUserNames(ctx, req.(*GetChatAndUserNamesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Chat_ServiceDesc is the grpc.ServiceDesc for Chat service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -170,6 +202,10 @@ var Chat_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "VerifyUserPersistance",
 			Handler:    _Chat_VerifyUserPersistance_Handler,
+		},
+		{
+			MethodName: "GetChatAndUserNames",
+			Handler:    _Chat_GetChatAndUserNames_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -9,58 +10,168 @@ import (
 
 	"example.com/notification/src/config"
 	"example.com/notification/src/gen/go/auth"
-	userMgmt "example.com/notification/src/gen/go/user_mgmt"
+	"example.com/notification/src/gen/go/chat"
+	"example.com/notification/src/internal/dto"
+	"github.com/go-redis/redis"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+	"gopkg.in/gomail.v2"
 )
 
-type AuthClient struct {
+type AuthGRPCClient struct {
 	auth.AuthClient
 }
 
-func NewAuthClient(cfg *config.Config) *AuthClient {
+func NewAuthClient(cfg *config.Config) *AuthGRPCClient {
 	connectionUrl := fmt.Sprintf("%s:%s", cfg.Auth.AuthHost, cfg.Auth.AuthPort)
 	conn, err := grpc.NewClient(connectionUrl, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic("failed to connect: " + err.Error())
 	}
-	slog.Info("Connected to Auth")
-	slog.Info(connectionUrl)
-	return &AuthClient{auth.NewAuthClient(conn)}
+	slog.Info("Connected to Auth: " + connectionUrl)
+	return &AuthGRPCClient{auth.NewAuthClient(conn)}
 }
 
-func (authClient *AuthClient) PerformAuthorize(ctx context.Context, r *http.Request, userId string) (*auth.AuthorizeResponse, error) {
-	var accessToken, refreshToken string
-	if r == nil {
-		accessToken = metadata.ValueFromIncomingContext(ctx, "authorization")[0]
-		refreshToken = metadata.ValueFromIncomingContext(ctx, "x-refresh-token")[0]
-	} else {
-		ctx = r.Context()
-		authHeader := r.Header.Get("Authorization")
-		accessToken = strings.Split(authHeader, " ")[1]
-		cookie, err := r.Cookie("X-Refresh-Token")
-		if err != nil {
-			return nil, err
-		}
-		refreshToken = cookie.Value
+func (authClient *AuthGRPCClient) PerformAuthorize(r *http.Request) (*auth.AuthorizeResponse, error) {
+	accessToken := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if accessToken == "" {
+		slog.Error("PerformAuthorize failed: No access token provided")
+		return nil, fmt.Errorf("PerformAuthorize failed: No access token provided")
 	}
-	return authClient.Authorize(ctx, &auth.AuthorizeRequest{UserId: userId, AccessToken: accessToken, RefreshToken: refreshToken})
+	ctx := metadata.AppendToOutgoingContext(r.Context(), "Authorization", "Bearer "+accessToken)
+	return authClient.Authorize(ctx, &auth.AuthorizeRequest{})
 }
 
-type UserMgmtClient struct {
-	userMgmt.UserMgmtClient
+func (authClient *AuthGRPCClient) PerformExtractUserId(r *http.Request) (*auth.ExtractUserIdResponse, error) {
+	accessToken := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if accessToken == "" {
+		slog.Error("PerformExtractUserId failed: No access token provided")
+		return nil, fmt.Errorf("PerformExtractUserId failed: No access token provided")
+	}
+	ctx := metadata.AppendToOutgoingContext(r.Context(), "Authorization", "Bearer "+accessToken)
+	return authClient.ExtractUserId(ctx, &auth.ExtractUserIdRequest{})
 }
 
-func NewUserMgmtClient(cfg *config.Config) *UserMgmtClient {
-	connectionUrl := fmt.Sprintf("%s:%s", cfg.UserMgmt.UserMgmtHost, cfg.UserMgmt.UserMgmtPort)
+func (c *AuthGRPCClient) PerformGetLogin(userId string) (*auth.GetLoginResponse, error) {
+	getLoginResponse, err := c.AuthClient.GetLogin(context.Background(), &auth.GetLoginRequest{UserId: userId})
+	if err != nil {
+		slog.Error("PerformGetLogin failed : " + err.Error())
+		return nil, err
+	}
+	return getLoginResponse, nil
+}
+
+type ChatGRPCClient struct {
+	chat.ChatClient
+}
+
+func NewChatClient(cfg *config.Config) *ChatGRPCClient {
+	connectionUrl := fmt.Sprintf("%s:%s", cfg.Chat.ChatHost, cfg.Chat.ChatPort)
 	conn, err := grpc.NewClient(connectionUrl, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic("failed to connect: " + err.Error())
 	}
-	return &UserMgmtClient{userMgmt.NewUserMgmtClient(conn)}
+	slog.Info("Connected to Chat: " + connectionUrl)
+	return &ChatGRPCClient{chat.NewChatClient(conn)}
 }
 
-func (c *UserMgmtClient) PerformGetUser(ctx context.Context, userId string) (*userMgmt.UserResponse, error) {
-	return c.UserMgmtClient.GetUser(ctx, &userMgmt.GetUserRequest{UserId: userId})
+func (c *ChatGRPCClient) PerformGetChatAndUserNames(chatId string, userId string) (*chat.GetChatAndUserNamesResponse, error) {
+	getChatAndUserNamesResponse, err := c.ChatClient.GetChatAndUserNames(context.Background(), &chat.GetChatAndUserNamesRequest{ChatId: chatId, UserId: userId})
+	if err != nil {
+		slog.Error("PerformGetChatAndUserNames failed : " + err.Error())
+		return nil, err
+	}
+	return getChatAndUserNamesResponse, nil
+}
+
+type RedisClient struct {
+	Client                  *redis.Client
+	NotificationChannelName string
+	SubscriptionChannelName string
+}
+
+func NewRedisClient(cfg *config.Config) *RedisClient {
+	client := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.InnerPort),
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.Db,
+	})
+	return &RedisClient{
+		Client:                  client,
+		NotificationChannelName: cfg.Redis.NotificationChannelName,
+		SubscriptionChannelName: cfg.Redis.SubscriptionChannelName,
+	}
+}
+
+func (r *RedisClient) SubscribeToNotificationChannel(handler func(event *dto.NewMessageNotificationEvent) error) {
+	pubsub := r.Client.Subscribe(r.NotificationChannelName)
+	defer pubsub.Close()
+	event := &dto.NewMessageNotificationEvent{}
+	for msg := range pubsub.Channel() {
+		slog.Debug("New msg received: " + msg.Payload)
+		err := json.Unmarshal([]byte(msg.Payload), event)
+		if err != nil {
+			slog.Error("Error while unmarshalling: " + err.Error())
+		}
+		err = handler(event)
+		if err != nil {
+			slog.Error("Error while handling event: " + err.Error())
+		}
+	}
+}
+
+func (r *RedisClient) SubscribeToSubscriptionChannel(handler func(event *dto.NewSubscriptionNotificationEvent) error) {
+	pubsub := r.Client.Subscribe(r.SubscriptionChannelName)
+	defer pubsub.Close()
+	event := &dto.NewSubscriptionNotificationEvent{}
+	for msg := range pubsub.Channel() {
+		slog.Debug("New msg received: " + msg.Payload)
+		err := json.Unmarshal([]byte(msg.Payload), event)
+		if err != nil {
+			slog.Error("Error while unmarshalling: " + err.Error())
+		}
+		err = handler(event)
+		if err != nil {
+			slog.Error("Error while handling event: " + err.Error())
+		}
+	}
+}
+
+type SmtpClient struct {
+	User   string
+	Dialer *gomail.Dialer
+}
+
+func NewSmtpClient(cfg *config.Config) *SmtpClient {
+	return &SmtpClient{
+		User:   cfg.Smtp.User,
+		Dialer: gomail.NewDialer(cfg.Smtp.Host, cfg.Smtp.Port, cfg.Smtp.User, cfg.Smtp.Password),
+	}
+}
+
+func (s *SmtpClient) SendEmail(senderName, receiverEmail, chatName, body string, filesCount int, isDirect bool) error {
+	message := gomail.NewMessage()
+	message.SetHeader("From", s.User)
+	message.SetHeader("To", receiverEmail)
+	if isDirect {
+		message.SetHeader("Subject", "New message from "+senderName)
+	} else {
+		message.SetHeader("Subject", "New message in "+chatName)
+	}
+	if filesCount > 0 {
+		message.SetBody("text/plain", s.buildFiles(senderName, body, filesCount))
+	} else {
+		message.SetBody("text/plain", s.build(senderName, body))
+	}
+	s.Dialer.DialAndSend(message)
+	return nil
+}
+
+func (s *SmtpClient) build(senderName string, body string) string {
+	return fmt.Sprintf("User %v has sent a new message to you. \"%v\"", senderName, body)
+}
+
+func (s *SmtpClient) buildFiles(senderName string, body string, filesCount int) string {
+	return fmt.Sprintf("User %v has sent a new message with %v files to you. \"%v\"\n\nPlease, check site to see files", senderName, filesCount, body)
 }

@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type AuthClient interface {
 	Authorize(ctx context.Context, in *AuthorizeRequest, opts ...grpc.CallOption) (*AuthorizeResponse, error)
 	ExtractUserId(ctx context.Context, in *ExtractUserIdRequest, opts ...grpc.CallOption) (*ExtractUserIdResponse, error)
+	GetLogin(ctx context.Context, in *GetLoginRequest, opts ...grpc.CallOption) (*GetLoginResponse, error)
 }
 
 type authClient struct {
@@ -52,12 +53,22 @@ func (c *authClient) ExtractUserId(ctx context.Context, in *ExtractUserIdRequest
 	return out, nil
 }
 
+func (c *authClient) GetLogin(ctx context.Context, in *GetLoginRequest, opts ...grpc.CallOption) (*GetLoginResponse, error) {
+	out := new(GetLoginResponse)
+	err := c.cc.Invoke(ctx, "/auth.Auth/GetLogin", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServer is the server API for Auth service.
 // All implementations must embed UnimplementedAuthServer
 // for forward compatibility
 type AuthServer interface {
 	Authorize(context.Context, *AuthorizeRequest) (*AuthorizeResponse, error)
 	ExtractUserId(context.Context, *ExtractUserIdRequest) (*ExtractUserIdResponse, error)
+	GetLogin(context.Context, *GetLoginRequest) (*GetLoginResponse, error)
 	mustEmbedUnimplementedAuthServer()
 }
 
@@ -70,6 +81,9 @@ func (UnimplementedAuthServer) Authorize(context.Context, *AuthorizeRequest) (*A
 }
 func (UnimplementedAuthServer) ExtractUserId(context.Context, *ExtractUserIdRequest) (*ExtractUserIdResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ExtractUserId not implemented")
+}
+func (UnimplementedAuthServer) GetLogin(context.Context, *GetLoginRequest) (*GetLoginResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLogin not implemented")
 }
 func (UnimplementedAuthServer) mustEmbedUnimplementedAuthServer() {}
 
@@ -120,6 +134,24 @@ func _Auth_ExtractUserId_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Auth_GetLogin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLoginRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).GetLogin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/auth.Auth/GetLogin",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).GetLogin(ctx, req.(*GetLoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Auth_ServiceDesc is the grpc.ServiceDesc for Auth service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -134,6 +166,10 @@ var Auth_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ExtractUserId",
 			Handler:    _Auth_ExtractUserId_Handler,
+		},
+		{
+			MethodName: "GetLogin",
+			Handler:    _Auth_GetLogin_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

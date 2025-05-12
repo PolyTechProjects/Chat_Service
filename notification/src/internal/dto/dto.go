@@ -1,21 +1,33 @@
 package dto
 
-type BindDeviceToUserRequest struct {
-	UserId      string
-	DeviceToken string
+import "github.com/google/uuid"
+
+type NotificationEvent interface{}
+
+type NewMessageNotificationEvent struct {
+	EventId       string `json:"event_id"`
+	MessageId     string `json:"message_id"`
+	SenderId      string `json:"sender_id"`
+	DestinationId string `json:"destination_id"`
+	ReceiverId    string `json:"receiver_id"`
+	Body          string `json:"body"`
+	IsDirect      bool   `json:"is_direct"`
+	FilesCount    int    `json:"files_count"`
 }
 
-type UnbindDeviceFromUserRequest struct {
-	UserId      string
-	DeviceToken string
+type NewChatCreatedNotificationEvent struct {
+	ChatId     uuid.UUID `json:"chat_id"`
+	Name       string    `json:"name"`
+	ReceiverId uuid.UUID `json:"receiver_id"`
 }
 
-type DeleteUserRequest struct {
-	UserId string
+type NewUserInChatNotificationEvent struct {
+	ChatId     uuid.UUID `json:"chat_id"`
+	UserId     uuid.UUID `json:"user_id"`
+	ReceiverId uuid.UUID `json:"receiver_id"`
 }
 
-type UpdateOldDeviceOnUserRequest struct {
-	UserId         string
-	OldDeviceToken string
-	NewDeviceToken string
+type NewSubscriptionNotificationEvent struct {
+	ChatId uuid.UUID `json:"chat_id"`
+	UserId uuid.UUID `json:"user_id"`
 }

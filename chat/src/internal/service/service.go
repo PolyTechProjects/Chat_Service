@@ -16,8 +16,8 @@ type ChatService struct {
 	ChatUserRepository       *repository.ChatUserRepository
 	RoleRepository           *repository.RoleRepository
 	RolePermissionRepository *repository.RolePermissionRepository
-	ChatRoleRepository       *repository.ChatRoleRepository
 	UsersClient              *client.UsersGRPCClient
+	RedisClient              *client.RedisClient
 }
 
 func NewChatService(
@@ -26,8 +26,8 @@ func NewChatService(
 	chatUserRepository *repository.ChatUserRepository,
 	roleRepository *repository.RoleRepository,
 	rolePermissionRepository *repository.RolePermissionRepository,
-	chatRoleRepository *repository.ChatRoleRepository,
 	usersClient *client.UsersGRPCClient,
+	redisClient *client.RedisClient,
 ) *ChatService {
 	return &ChatService{
 		ChatRepository:           chatRepository,
@@ -35,9 +35,21 @@ func NewChatService(
 		ChatUserRepository:       chatUserRepository,
 		RoleRepository:           roleRepository,
 		RolePermissionRepository: rolePermissionRepository,
-		ChatRoleRepository:       chatRoleRepository,
 		UsersClient:              usersClient,
+		RedisClient:              redisClient,
 	}
+}
+
+func (s *ChatService) GetChatAndUserNames(chatId uuid.UUID, userId uuid.UUID) (string, string, error) {
+	chat, err := s.ChatRepository.FindById(chatId)
+	if err != nil {
+		return "", "", err
+	}
+	user, err := s.ChatUserRepository.FindByChatAndUser(chatId, userId)
+	if err != nil {
+		return "", "", err
+	}
+	return chat.Name, user.Nickname, nil
 }
 
 func (s *ChatService) GetChat(chatId uuid.UUID, userId uuid.UUID) (*dto.GetChatResponse, error) {
@@ -83,7 +95,7 @@ func (s *ChatService) DeleteChat(chatId uuid.UUID, userId uuid.UUID) error {
 	if err != nil {
 		return err
 	}
-	role, err := s.ChatRoleRepository.FindByRole(chatUser.RoleId)
+	role, err := s.RoleRepository.FindByRole(chatUser.RoleId)
 	if err != nil {
 		return err
 	}
@@ -124,17 +136,10 @@ func (s *ChatService) CreateChat(req *dto.CreateChatRequest) (*dto.GetChatRespon
 		Name:        "default",
 		Description: "Default role",
 		Color:       "#000000",
+		ChatId:      chat.Id,
+		IsDefault:   true,
 	}
 	err = s.RoleRepository.AddRole(defaultRole)
-	if err != nil {
-		return nil, err
-	}
-	chatRole := &models.ChatRole{
-		ChatId:    chat.Id,
-		RoleId:    defaultRole.Id,
-		IsDefault: true,
-	}
-	err = s.ChatRoleRepository.AddChatRole(chatRole)
 	if err != nil {
 		return nil, err
 	}
@@ -145,28 +150,22 @@ func (s *ChatService) CreateChat(req *dto.CreateChatRequest) (*dto.GetChatRespon
 			Permission: string(permission),
 		}
 		rolePermissions[i] = rolePermission
+		err = s.RolePermissionRepository.AddRolePermission(rolePermission)
+		if err != nil {
+			return nil, err
+		}
 	}
-	err = s.RolePermissionRepository.AddRolePermissions(rolePermissions)
-	if err != nil {
-		return nil, err
-	}
+	//err = s.RolePermissionRepository.AddRolePermissions(rolePermissions)
 
 	defaultAdminRole := &models.Role{
 		Id:          uuid.New(),
 		Name:        "admin",
 		Description: "Admin role",
 		Color:       "#ffffff",
+		ChatId:      chat.Id,
+		IsAdmin:     true,
 	}
 	err = s.RoleRepository.AddRole(defaultAdminRole)
-	if err != nil {
-		return nil, err
-	}
-	chatRole = &models.ChatRole{
-		ChatId:  chat.Id,
-		RoleId:  defaultAdminRole.Id,
-		IsAdmin: true,
-	}
-	err = s.ChatRoleRepository.AddChatRole(chatRole)
 	if err != nil {
 		return nil, err
 	}
@@ -178,14 +177,15 @@ func (s *ChatService) CreateChat(req *dto.CreateChatRequest) (*dto.GetChatRespon
 			Permission: string(permission),
 		}
 		adminRolePermissions[i] = rolePermission
+		err = s.RolePermissionRepository.AddRolePermission(rolePermission)
+		if err != nil {
+			return nil, err
+		}
 	}
-	err = s.RolePermissionRepository.AddRolePermissions(adminRolePermissions)
-	if err != nil {
-		return nil, err
-	}
+	//err = s.RolePermissionRepository.AddRolePermissions(adminRolePermissions)
 
-	participants := make([]*dto.Participants, len(req.ParticipantsIds))
 	userIds := append(req.ParticipantsIds, req.CreatorId)
+	participants := make([]*dto.Participants, len(userIds))
 	names, err := s.UsersClient.PerformGetUsers(userIds)
 	if err != nil {
 		return nil, err
@@ -204,6 +204,18 @@ func (s *ChatService) CreateChat(req *dto.CreateChatRequest) (*dto.GetChatRespon
 			RoleId:   chatUser.RoleId.String(),
 			Nickname: chatUser.Nickname,
 		}
+		err = s.ChatUserRepository.AddChatUser(chatUser)
+		if err != nil {
+			return nil, err
+		}
+		event := &dto.NewSubscriptionNotificationEvent{
+			ChatId: chat.Id,
+			UserId: participantId,
+		}
+		err = s.RedisClient.SendToSubscriptionChannel(event)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	creator := &models.ChatUser{
@@ -218,7 +230,16 @@ func (s *ChatService) CreateChat(req *dto.CreateChatRequest) (*dto.GetChatRespon
 		RoleId:   creator.RoleId.String(),
 		Nickname: creator.Nickname,
 	}
-	err = s.ChatUserRepository.AddChatUsers(users)
+	err = s.ChatUserRepository.AddChatUser(creator)
+	//err = s.ChatUserRepository.AddChatUsers(users)
+	if err != nil {
+		return nil, err
+	}
+	event := &dto.NewSubscriptionNotificationEvent{
+		ChatId: chat.Id,
+		UserId: req.CreatorId,
+	}
+	err = s.RedisClient.SendToSubscriptionChannel(event)
 	if err != nil {
 		return nil, err
 	}
@@ -238,7 +259,7 @@ func (s *ChatService) EditChat(req *dto.EditChatRequest, userId uuid.UUID) error
 	if err != nil {
 		return err
 	}
-	role, err := s.ChatRoleRepository.FindByRole(chatUser.RoleId)
+	role, err := s.RoleRepository.FindByRole(chatUser.RoleId)
 	if err != nil {
 		return err
 	}
@@ -263,14 +284,14 @@ func (s *ChatService) JoinChat(joinLink string, userId uuid.UUID) (*dto.GetChatR
 	if err != nil {
 		return nil, err
 	}
-	defaultRole, err := s.ChatRoleRepository.FindDefaultRole(chat.Id)
+	defaultRole, err := s.RoleRepository.FindDefaultRole(chat.Id)
 	if err != nil {
 		return nil, err
 	}
 	chatUser := &models.ChatUser{
 		ChatId:   chat.Id,
 		UserId:   userId,
-		RoleId:   defaultRole.RoleId,
+		RoleId:   defaultRole.Id,
 		Nickname: "Anonymous",
 	}
 	err = s.ChatUserRepository.AddChatUser(chatUser)
@@ -292,7 +313,7 @@ func (s *ChatService) AddUsers(req *dto.AddUsersRequest, userId uuid.UUID) error
 	if err != nil {
 		return err
 	}
-	role, err := s.ChatRoleRepository.FindByRole(chatUser.RoleId)
+	role, err := s.RoleRepository.FindByRole(chatUser.RoleId)
 	if err != nil {
 		return err
 	}
@@ -324,7 +345,7 @@ func (s *ChatService) DeleteUsers(chatId uuid.UUID, userIds []uuid.UUID, userId 
 	if err != nil {
 		return err
 	}
-	role, err := s.ChatRoleRepository.FindByRole(chatUser.RoleId)
+	role, err := s.RoleRepository.FindByRole(chatUser.RoleId)
 	if err != nil {
 		return err
 	}
@@ -356,7 +377,7 @@ func (s *ChatService) ChangeUserNickname(req *dto.ChangeUserNicknameRequest, use
 	if err != nil {
 		return err
 	}
-	role, err := s.ChatRoleRepository.FindByRole(chatUser.RoleId)
+	role, err := s.RoleRepository.FindByRole(chatUser.RoleId)
 	if err != nil {
 		return err
 	}
@@ -393,7 +414,7 @@ func (s *ChatService) CreateRole(req *dto.CreateRoleRequest, userId uuid.UUID) (
 	if err != nil {
 		return nil, err
 	}
-	role, err := s.ChatRoleRepository.FindByRole(chatUser.RoleId)
+	role, err := s.RoleRepository.FindByRole(chatUser.RoleId)
 	if err != nil {
 		return nil, err
 	}
@@ -425,7 +446,7 @@ func (s *ChatService) EditRole(req *dto.UpdateRoleRequest, userId uuid.UUID) (*d
 	if err != nil {
 		return nil, err
 	}
-	role, err := s.ChatRoleRepository.FindByRole(chatUser.RoleId)
+	role, err := s.RoleRepository.FindByRole(chatUser.RoleId)
 	if err != nil {
 		return nil, err
 	}
@@ -457,14 +478,14 @@ func (s *ChatService) DeleteRole(chatId uuid.UUID, userId uuid.UUID, roleId uuid
 	if err != nil {
 		return err
 	}
-	targetRole, err := s.ChatRoleRepository.FindByRole(roleId)
+	targetRole, err := s.RoleRepository.FindByRole(roleId)
 	if err != nil {
 		return err
 	}
 	if targetRole.IsDefault || targetRole.IsAdmin {
 		return fmt.Errorf("cannot delete default/admin role")
 	}
-	role, err := s.ChatRoleRepository.FindByRole(roleId)
+	role, err := s.RoleRepository.FindByRole(roleId)
 	if err != nil {
 		return err
 	}
@@ -496,7 +517,7 @@ func (s *ChatService) SetRole(req *dto.SetRoleRequest, userId uuid.UUID) error {
 	if err != nil {
 		return err
 	}
-	role, err := s.ChatRoleRepository.FindByRole(chatUser.RoleId)
+	role, err := s.RoleRepository.FindByRole(chatUser.RoleId)
 	if err != nil {
 		return err
 	}
@@ -682,20 +703,20 @@ func (s *ChatService) doDeleteChat(chatId uuid.UUID) error {
 	if err != nil {
 		return err
 	}
-	chatRoles, err := s.ChatRoleRepository.FindByChat(chatId)
+	chatRoles, err := s.RoleRepository.FindByChat(chatId)
 	if err != nil {
 		return err
 	}
-	err = s.ChatRoleRepository.DeleteByChat(chatId)
+	err = s.RoleRepository.DeleteByChat(chatId)
 	if err != nil {
 		return err
 	}
 	for _, chatRole := range chatRoles {
-		err = s.RolePermissionRepository.DeleteByRole(chatRole.RoleId)
+		err = s.RolePermissionRepository.DeleteByRole(chatRole.Id)
 		if err != nil {
 			return err
 		}
-		err = s.RoleRepository.DeleteRole(chatRole.RoleId)
+		err = s.RoleRepository.DeleteRole(chatRole.Id)
 		if err != nil {
 			return err
 		}
@@ -725,7 +746,7 @@ func (s *ChatService) doEditChat(req *dto.EditChatRequest) error {
 
 func (s *ChatService) doAddUsers(req *dto.AddUsersRequest) error {
 	chatUsers := make([]*models.ChatUser, len(req.UserIds))
-	defaultRole, err := s.ChatRoleRepository.FindDefaultRole(req.ChatId)
+	defaultRole, err := s.RoleRepository.FindDefaultRole(req.ChatId)
 	if err != nil {
 		return err
 	}
@@ -737,8 +758,16 @@ func (s *ChatService) doAddUsers(req *dto.AddUsersRequest) error {
 		chatUsers[i] = &models.ChatUser{
 			ChatId:   req.ChatId,
 			UserId:   userId,
-			RoleId:   defaultRole.RoleId,
+			RoleId:   defaultRole.Id,
 			Nickname: users.Users[i].Name,
+		}
+		event := &dto.NewSubscriptionNotificationEvent{
+			ChatId: req.ChatId,
+			UserId: userId,
+		}
+		err = s.RedisClient.SendToSubscriptionChannel(event)
+		if err != nil {
+			return err
 		}
 	}
 	err = s.ChatUserRepository.AddChatUsers(chatUsers)
@@ -789,17 +818,10 @@ func (s *ChatService) doCreateRole(req *dto.CreateRoleRequest) (*dto.RoleRespons
 		Name:        req.Name,
 		Description: req.Description,
 		Color:       req.Color,
+		ChatId:      req.ChatId,
+		IsDefault:   false,
 	}
 	err := s.RoleRepository.AddRole(newRole)
-	if err != nil {
-		return nil, err
-	}
-	chatRole := &models.ChatRole{
-		ChatId:    req.ChatId,
-		RoleId:    newRole.Id,
-		IsDefault: false,
-	}
-	err = s.ChatRoleRepository.AddChatRole(chatRole)
 	if err != nil {
 		return nil, err
 	}
@@ -876,12 +898,12 @@ func (s *ChatService) doDeleteRole(chatId uuid.UUID, roleId uuid.UUID) error {
 	if err != nil {
 		return err
 	}
-	defaultRole, err := s.ChatRoleRepository.FindDefaultRole(chatId)
+	defaultRole, err := s.RoleRepository.FindDefaultRole(chatId)
 	if err != nil {
 		return err
 	}
 	for _, chatUser := range chatUsers {
-		chatUser.RoleId = defaultRole.RoleId
+		chatUser.RoleId = defaultRole.Id
 		err = s.ChatUserRepository.UpdateChatUser(chatUser)
 		if err != nil {
 			return err

@@ -23,23 +23,24 @@ func main() {
 	slog.SetDefault(log)
 	database.Init(cfg)
 	defer database.Close()
+	slog.Debug("Config: ", "cfg", cfg)
 
 	chatRepository := repository.NewChatRepository(database.DB)
 	directChatRepository := repository.NewDirectChatRepository(database.DB)
 	chatUserRepository := repository.NewChatUserRepository(database.DB)
 	roleRepository := repository.NewRoleRepository(database.DB)
 	rolePermissionRepository := repository.NewRolePermissionRepository(database.DB)
-	chatRoleRepository := repository.NewChatRoleRepository(database.DB)
 	authClient := client.NewAuthClient(cfg)
 	usersClient := client.NewUsersClient(cfg)
+	redisClient := client.NewRedisClient(cfg)
 	chatService := service.NewChatService(
 		chatRepository,
 		directChatRepository,
 		chatUserRepository,
 		roleRepository,
 		rolePermissionRepository,
-		chatRoleRepository,
 		usersClient,
+		redisClient,
 	)
 	chatController := controller.NewChatController(chatService, authClient)
 	grpcServer := server.NewGrpcServer(chatService)

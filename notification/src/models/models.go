@@ -1,25 +1,27 @@
 package models
 
-import "github.com/google/uuid"
+import (
+	"encoding/json"
 
-type UserIdXDeviceToken struct {
-	Id          uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primary_key"`
-	UserId      uuid.UUID `gorm:"type:uuid;"`
-	DeviceToken string
+	"github.com/google/uuid"
+)
+
+type Notification struct {
+	Id         uuid.UUID        `gorm:"primary_key"`
+	ReceiverId uuid.UUID        `gorm:"type:uuid;not null"`
+	Type       NotificationType `gorm:"not null"`
+	Body       *json.RawMessage `gorm:"not null;type:jsonb"`
 }
 
-type ReadyMessage struct {
-	Message      Message     `json:"message"`
-	AccessToken  string      `json:"access_token"`
-	RefreshToken string      `json:"refresh_token"`
-	ReceiversIds []uuid.UUID `json:"receivers_ids"`
+type Subscription struct {
+	Id     uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primary_key"`
+	ChatId uuid.UUID `gorm:"type:uuid;not null"`
+	UserId uuid.UUID `gorm:"type:uuid;not null"`
 }
 
-type Message struct {
-	Id         uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primary_key"`
-	SenderId   uuid.UUID `gorm:"type:uuid;default:gen_random_uuid()"`
-	ChatRoomId uuid.UUID `gorm:"type:uuid;default:gen_random_uuid()"`
-	Body       string
-	CreatedAt  uint64
-	WithMedia  int
-}
+type NotificationType string
+
+const (
+	PUSH NotificationType = "PUSH"
+	MAIL NotificationType = "MAIL"
+)

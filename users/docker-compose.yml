@@ -6,6 +6,7 @@ services:
       dockerfile: app.Dockerfile
     ports:
       - "${APP_HTTP_PORT}:${APP_HTTP_INNER_PORT}"
+      - "${APP_GRPC_PORT}:${APP_GRPC_INNER_PORT}"
     environment:
       - DB_HOST=users_db
       - DB_PORT=${DB_INNER_PORT}
@@ -14,6 +15,7 @@ services:
       - AUTH_HOST=auth_app
       - AUTH_PORT=${AUTH_INNER_PORT}
       - APP_HTTP_PORT=${APP_HTTP_INNER_PORT}
+      - APP_GRPC_PORT=${APP_GRPC_INNER_PORT}
     depends_on:
       - users_db
     networks:

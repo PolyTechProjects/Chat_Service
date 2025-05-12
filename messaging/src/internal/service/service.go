@@ -49,81 +49,77 @@ func (m *MessageHistoryService) GetHistory(destinationId uuid.UUID, userId uuid.
 }
 
 type MessageService struct {
-	messageRepository   *repository.MessageRepository
-	chatClient          *client.ChatGRPCClient
-	redisClient         *client.RedisClient
-	userIdXWsConnection map[uuid.UUID]*websocket.Conn
-	broadcastChannel    chan *models.Message
+	messageRepository  *repository.MessageRepository
+	chatClient         *client.ChatGRPCClient
+	redisClient        *client.RedisClient
+	connectionRegistry map[uuid.UUID]*models.ConnectionInfo
 }
 
 func NewMessageService(messageRepository *repository.MessageRepository, chatClient *client.ChatGRPCClient, redisClient *client.RedisClient) *MessageService {
 	return &MessageService{
-		messageRepository:   messageRepository,
-		chatClient:          chatClient,
-		redisClient:         redisClient,
-		userIdXWsConnection: make(map[uuid.UUID]*websocket.Conn),
-		broadcastChannel:    make(chan *models.Message),
+		messageRepository:  messageRepository,
+		chatClient:         chatClient,
+		redisClient:        redisClient,
+		connectionRegistry: make(map[uuid.UUID]*models.ConnectionInfo),
 	}
 }
 
 func (s *MessageService) ReadMessages(wsConnection *websocket.Conn, userId uuid.UUID, destinationId uuid.UUID) error {
-	var cerr error
-	cerr = s.redisClient.ConnectUser(userId)
-	if cerr != nil {
-		return cerr
-	}
-	s.userIdXWsConnection[userId] = wsConnection
-	for {
-		_, payload, err := wsConnection.ReadMessage()
-		if err != nil {
-			cerr = err
-			break
-		}
-
-		req := &dto.MessageRequest{}
-		err = json.Unmarshal(payload, req)
-		if err != nil {
-			cerr = err
-			break
-		}
-
-		if len(req.Files) > 0 {
-			verifyUserActionResp, err := s.chatClient.PerformVerifyUserAction(destinationId.String(), userId.String(), "SEND_FILE")
-			if err != nil {
-				cerr = err
-				break
-			}
-			if !verifyUserActionResp.IsVerified {
-				cerr = fmt.Errorf("permission denied")
-				break
-			}
-		}
-
-		message, err := models.MapRequestToMessage(req, userId, destinationId)
-		if err != nil {
-			cerr = err
-			break
-		}
-		err = s.messageRepository.SaveMessage(message)
-		if err != nil {
-			cerr = err
-			break
-		}
-
-		s.broadcastChannel <- message
-		s.redisClient.SendToMessageChannel(message)
-	}
-	delete(s.userIdXWsConnection, userId)
-	err := s.redisClient.DisconnectUser(userId)
+	err := s.redisClient.ConnectUser(userId)
 	if err != nil {
-		cerr = err
+		return err
 	}
-	return cerr
-}
-
-func (s *MessageService) BroadcastMessageGoChannel() {
-	for message := range s.broadcastChannel {
-		s.doBroadcastMessage(message)
+	s.connectionRegistry[userId] = &models.ConnectionInfo{
+		ChatId:       destinationId,
+		WsConnection: wsConnection,
+	}
+	stop := make(chan struct{})
+	for {
+		select {
+		case <-stop:
+			slog.Info("Closing connection")
+			s.closeConnection(userId)
+		default:
+			_, payload, err := wsConnection.ReadMessage()
+			if err != nil {
+				slog.Error("MessageServiceReadMessages failed: " + err.Error())
+				s.closeConnection(userId)
+				return err
+			}
+			req := &dto.MessageRequest{}
+			err = json.Unmarshal(payload, req)
+			if err != nil {
+				slog.Error("MessageServiceReadMessages failed: " + err.Error())
+				s.closeConnection(userId)
+				return err
+			}
+			if len(req.Files) > 0 && !req.IsDirect {
+				verifyUserActionResp, err := s.chatClient.PerformVerifyUserAction(destinationId.String(), userId.String(), "SEND_FILE")
+				if err != nil {
+					slog.Error("MessageServiceReadMessages failed: " + err.Error())
+					s.closeConnection(userId)
+					return err
+				}
+				if !verifyUserActionResp.IsVerified {
+					slog.Error("MessageServiceReadMessages failed: " + fmt.Errorf("permission denied").Error())
+					s.closeConnection(userId)
+					return err
+				}
+			}
+			message, err := models.MapRequestToMessage(req, userId, destinationId)
+			if err != nil {
+				slog.Error("MessageServiceReadMessages failed: " + err.Error())
+				s.closeConnection(userId)
+				return err
+			}
+			err = s.messageRepository.SaveMessage(message)
+			if err != nil {
+				slog.Error("MessageServiceReadMessages failed: " + err.Error())
+				s.closeConnection(userId)
+				return err
+			}
+			s.redisClient.SendToMessageChannel(message)
+		}
 	}
 }
 
@@ -132,42 +128,70 @@ func (s *MessageService) BroadcastMessageRedisChannel(message *models.Message) {
 }
 
 func (s *MessageService) doBroadcastMessage(message *models.Message) {
-	getChatResponse, err := s.chatClient.PerformGetChat(message.DestinationId.String(), message.SenderId.String())
-	if err != nil {
-		slog.Error(err.Error())
+	notificationEvent := &dto.NewMessageNotificationEvent{
+		EventId:       uuid.NewString(),
+		MessageId:     message.Id.String(),
+		SenderId:      message.SenderId.String(),
+		DestinationId: message.DestinationId.String(),
+		Body:          message.Body,
+		IsDirect:      message.IsDirect,
+		FilesCount:    len(message.Files),
+	}
+	if message.IsDirect {
+		s.broadcast(message, message.DestinationId, notificationEvent)
 		return
 	}
-	notificationEvent := &dto.NewMessageNotificationEvent{
-		MessageId:  message.Id.String(),
-		SenderId:   message.SenderId.String(),
-		Body:       message.Body,
-		FilesCount: len(message.Files),
+	getChatResponse, err := s.chatClient.PerformGetChat(message.DestinationId.String(), message.SenderId.String())
+	if err != nil {
+		slog.Error("MessageService doBroadcastMessage failed: " + err.Error())
+		s.closeConnection(message.SenderId)
+		return
 	}
 	for _, participant := range getChatResponse.ParticipantsIds {
 		participantId := uuid.MustParse(participant)
-		wsConnection, ok := s.userIdXWsConnection[participantId]
-		if ok {
+		if participantId == message.SenderId {
+			continue
+		}
+		s.broadcast(message, participantId, notificationEvent)
+	}
+}
+
+func (s *MessageService) broadcast(message *models.Message, receiverId uuid.UUID, notificationEvent *dto.NewMessageNotificationEvent) {
+	notificationEvent.ReceiverId = receiverId.String()
+	connectionInfo, ok := s.connectionRegistry[receiverId]
+	// if opened on this instance and this endpoint - write to connection
+	// if opened on this instance and other endpoint - send notification
+	// if opened on other instance and this endpoint - do nothing
+	// if opened on other instance and other endpoint - send notification
+	// if not opened at all - send notification
+	if ok {
+		if connectionInfo.ChatId == message.DestinationId {
 			messageResp := models.MapMessageToResponse(message)
-			messageJson, err := json.Marshal(messageResp)
+			err := connectionInfo.WsConnection.WriteJSON(messageResp)
 			if err != nil {
-				slog.Error(err.Error())
-				return
+				slog.Error("MessageService broadcast failed: " + err.Error())
+				s.closeConnection(receiverId)
 			}
-			err = wsConnection.WriteJSON(messageJson)
-			if err != nil {
-				slog.Error(fmt.Sprintf("Disconnect user %s due to error %v", participantId, err.Error()))
-				wsConnection.Close()
-				delete(s.userIdXWsConnection, participantId)
-			}
+			return
 		} else {
-			isConnected, err := s.redisClient.IsUserConnected(participantId)
-			if err != nil {
-				slog.Error(err.Error())
-				return
-			}
-			if !isConnected {
-				s.redisClient.SendToNotificationChannel(notificationEvent)
-			}
+			s.redisClient.SendToNotificationChannel(notificationEvent)
+			return
+		}
+	} else {
+		isConnected, err := s.redisClient.IsUserConnected(receiverId)
+		if err != nil {
+			slog.Error("MessageService broadcast failed: " + err.Error())
+			s.closeConnection(receiverId)
+		}
+		if !isConnected {
+			s.redisClient.SendToNotificationChannel(notificationEvent)
 		}
 	}
+}
+
+func (s *MessageService) closeConnection(userId uuid.UUID) {
+	slog.Debug("Closing connection...")
+	s.connectionRegistry[userId].WsConnection.Close()
+	delete(s.connectionRegistry, userId)
+	s.redisClient.DisconnectUser(userId)
 }

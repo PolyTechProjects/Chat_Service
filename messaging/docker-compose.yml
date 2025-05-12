@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: app.Dockerfile
+    container_name: messaging_app
     ports:
       - "${APP_HTTP_PORT}:${APP_HTTP_INNER_PORT}"
     environment:
@@ -22,6 +23,7 @@ services:
 
   messaging_db:
     image: postgres:15.3
+    container_name: messaging_db
     ports:
       - "${DB_PORT}:5432"
     environment:

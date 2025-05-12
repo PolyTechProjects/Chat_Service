@@ -30,7 +30,7 @@ func (h *HttpServer) StartServer() {
 	http.HandleFunc("DELETE /api/v1/chats/{chatId}", h.chatController.DeleteChatHandler)
 	http.HandleFunc("POST /api/v1/chats", h.chatController.CreateChatHandler)
 	http.HandleFunc("PUT /api/v1/chats/{chatId}", h.chatController.EditChatHandler)
-	http.HandleFunc("POST /api/v1/chats/join/{joinLink}", h.chatController.JoinChatHandler)
+	http.HandleFunc("POST /api/v1/chats/{joinLink}", h.chatController.JoinChatHandler)
 	http.HandleFunc("POST /api/v1/chats/{chatId}/users", h.chatController.AddUsersInChatHandler)
 	http.HandleFunc("DELETE /api/v1/chats/{chatId}/users", h.chatController.DeleteUsersInChatHandler)
 	http.HandleFunc("POST /api/v1/chats/{chatId}/roles", h.chatController.CreateRoleHandler)
@@ -38,11 +38,11 @@ func (h *HttpServer) StartServer() {
 	http.HandleFunc("DELETE /api/v1/chats/{chatId}/roles/{roleId}", h.chatController.DeleteRoleHandler)
 	http.HandleFunc("PUT /api/v1/chats/{chatId}/users/{userId}/role", h.chatController.SetRoleHandler)
 	http.HandleFunc("PATCH /api/v1/chats/{chatId}/users/{userId}/nickname", h.chatController.ChangeUserNicknameHandler)
-	http.HandleFunc("GET /api/v1/chats/direct/{chatId}", h.chatController.GetDirectChatHandler)
+	/*http.HandleFunc("GET /api/v1/chats/direct/{chatId}", h.chatController.GetDirectChatHandler)
 	http.HandleFunc("DELETE /api/v1/chats/direct/{chatId}", h.chatController.DeleteDirectChatHandler)
 	http.HandleFunc("DELETE /api/v1/chats/direct", h.chatController.DeleteDirectChatsHandler)
 	http.HandleFunc("POST /api/v1/chats/direct", h.chatController.CreateDirectChatHandler)
-	http.HandleFunc("GET /api/v1/chats/direct", h.chatController.SearchDirectChatHandler)
+	http.HandleFunc("GET /api/v1/chats/direct", h.chatController.SearchDirectChatHandler)*/
 	http.HandleFunc("GET /api/v1/chats", h.chatController.GetAllAvailableChatsHandler)
 }
 
@@ -104,11 +104,12 @@ func (s *GRPCServer) GetChat(ctx context.Context, req *chat.GetChatRequest) (*ch
 func (s *GRPCServer) VerifyUserAction(ctx context.Context, req *chat.VerifyUserActionRequest) (*chat.VerifyUserActionResponse, error) {
 	chatId, err := uuid.Parse(req.ChatId)
 	if err != nil {
-		slog.Error("UUIDParse failed: " + err.Error())
+		slog.Error("VerifyUserAction: UUIDParse failed: "+err.Error(), "chat_id", req.ChatId)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	userId, err := uuid.Parse(req.UserId)
 	if err != nil {
+		slog.Error("VerifyUserAction: UUIDParse failed: "+err.Error(), "user_id", req.UserId)
 		return nil, err
 	}
 	err = s.chatService.VerifyUserAction(chatId, userId, req.Action)
@@ -127,12 +128,12 @@ func (s *GRPCServer) VerifyUserAction(ctx context.Context, req *chat.VerifyUserA
 func (s *GRPCServer) VerifyUserPersistance(ctx context.Context, req *chat.VerifyUserPersistanceRequest) (*chat.VerifyUserPersistanceResponse, error) {
 	chatId, err := uuid.Parse(req.ChatId)
 	if err != nil {
-		slog.Error("UUIDParse failed: " + err.Error())
+		slog.Error("VerifyUserPersistance: UUIDParse failed: "+err.Error(), "chat_id", req.ChatId)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	userId, err := uuid.Parse(req.UserId)
 	if err != nil {
-		slog.Error("UUIDParse failed: " + err.Error())
+		slog.Error("VerifyUserPersistance: UUIDParse failed: "+err.Error(), "user_id", req.UserId)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	err = s.chatService.VerifyUserPersistance(chatId, userId)
@@ -145,5 +146,27 @@ func (s *GRPCServer) VerifyUserPersistance(ctx context.Context, req *chat.Verify
 	}
 	return &chat.VerifyUserPersistanceResponse{
 		IsVerified: true,
+	}, nil
+}
+
+func (s *GRPCServer) GetChatAndUserNames(ctx context.Context, req *chat.GetChatAndUserNamesRequest) (*chat.GetChatAndUserNamesResponse, error) {
+	chatId, err := uuid.Parse(req.ChatId)
+	if err != nil {
+		slog.Error("GetChatAndUserNames: UUIDParse failed: "+err.Error(), "chat_id", req.ChatId)
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	userId, err := uuid.Parse(req.UserId)
+	if err != nil {
+		slog.Error("GetChatAndUserNames: UUIDParse failed: "+err.Error(), "user_id", req.UserId)
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	chatName, userName, err := s.chatService.GetChatAndUserNames(chatId, userId)
+	if err != nil {
+		slog.Error("GetChatAndUserNames error", "error", err.Error())
+		return nil, err
+	}
+	return &chat.GetChatAndUserNamesResponse{
+		ChatName: chatName,
+		UserName: userName,
 	}, nil
 }

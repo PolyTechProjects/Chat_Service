@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -10,6 +11,8 @@ import (
 	"example.com/chat/src/config"
 	"example.com/chat/src/gen/go/auth"
 	"example.com/chat/src/gen/go/users"
+	"example.com/chat/src/internal/dto"
+	"github.com/go-redis/redis"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -74,4 +77,51 @@ func (c *UsersGRPCClient) PerformGetUsers(userUUIds []uuid.UUID) (*users.UsersRe
 		userIds[i] = id.String()
 	}
 	return c.UsersClient.GetUsers(context.Background(), &users.GetUsersRequest{UserIds: userIds})
+}
+
+type RedisClient struct {
+	Client                  *redis.Client
+	NotificationChannelName string
+	SubscriptionChannelName string
+}
+
+func NewRedisClient(cfg *config.Config) *RedisClient {
+	client := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.InnerPort),
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.Db,
+	})
+	return &RedisClient{
+		Client:                  client,
+		NotificationChannelName: cfg.Redis.NotificationChannelName,
+		SubscriptionChannelName: cfg.Redis.SubscriptionChannelName,
+	}
+}
+
+func (r *RedisClient) SendToNotificationChannel(notificationEvent *dto.NotificationEvent) error {
+	event, err := json.Marshal(notificationEvent)
+	if err != nil {
+		slog.Error("Failed to marshal event: " + err.Error())
+		return err
+	}
+	_, err = r.Client.Publish(r.NotificationChannelName, event).Result()
+	if err != nil {
+		slog.Error("Failed to publish event: " + err.Error())
+		return err
+	}
+	return nil
+}
+
+func (r *RedisClient) SendToSubscriptionChannel(subscriptionEvent *dto.NewSubscriptionNotificationEvent) error {
+	event, err := json.Marshal(subscriptionEvent)
+	if err != nil {
+		slog.Error("Failed to marshal event: " + err.Error())
+		return err
+	}
+	_, err = r.Client.Publish(r.SubscriptionChannelName, event).Result()
+	if err != nil {
+		slog.Error("Failed to publish event: " + err.Error())
+		return err
+	}
+	return nil
 }

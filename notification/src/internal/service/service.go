@@ -1,76 +1,111 @@
 package service
 
 import (
-	"context"
-	"fmt"
+	"encoding/json"
+	"errors"
 	"log/slog"
 
-	"example.com/notification/src/config"
+	"example.com/notification/src/internal/client"
+	"example.com/notification/src/internal/dto"
 	"example.com/notification/src/internal/repository"
 	"example.com/notification/src/models"
-	"firebase.google.com/go/v4/messaging"
-	"github.com/appleboy/go-fcm"
-	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
+	"github.com/jinzhu/gorm"
 )
 
 type NotificationService struct {
-	userIdXDeviceTokenRepository *repository.UserIdXDeviceTokenRepository
-	fcmClient                    *fcm.Client
+	notificationRepository *repository.NotificationRepository
+	subscriptionRepository *repository.SubscriptionRepository
+	authClient             *client.AuthGRPCClient
+	chatClient             *client.ChatGRPCClient
+	redisClient            *client.RedisClient
+	smtpClient             *client.SmtpClient
 }
 
-func NewNotificationService(userIdXDeviceTokenRepository *repository.UserIdXDeviceTokenRepository, cfg *config.Config) *NotificationService {
-	fcmClient, err := fcm.NewClient(context.Background(), fcm.WithCredentialsFile(cfg.Fcm.PathToPrivateKeyFile))
-	if err != nil {
-		slog.Error("failed to connect: " + err.Error())
-	}
+func NewNotificationService(
+	notificationRepository *repository.NotificationRepository,
+	subscriptionRepository *repository.SubscriptionRepository,
+	authClient *client.AuthGRPCClient,
+	chatClient *client.ChatGRPCClient,
+	redisClient *client.RedisClient,
+	smtpClient *client.SmtpClient,
+) *NotificationService {
 	return &NotificationService{
-		userIdXDeviceTokenRepository: userIdXDeviceTokenRepository,
-		fcmClient:                    fcmClient,
+		notificationRepository: notificationRepository,
+		subscriptionRepository: subscriptionRepository,
+		authClient:             authClient,
+		chatClient:             chatClient,
+		redisClient:            redisClient,
+		smtpClient:             smtpClient,
 	}
 }
 
-func (ns *NotificationService) SubscribeToRedisChannel(channelName string) *redis.PubSub {
-	return ns.userIdXDeviceTokenRepository.SubscribeToRedisChannel(channelName)
+func (s *NotificationService) Unsubscribe(chatId uuid.UUID, userId uuid.UUID) error {
+	return s.subscriptionRepository.DeleteSubscriptionsByChatIdAndUserId(chatId, userId)
 }
 
-func (ns *NotificationService) NotifyUsers(receiversIds []uuid.UUID, messageTimestamp uint64, messageBody string, name string, avatar string) error {
-	slog.Info("Sending notification")
-	users, _ := ns.userIdXDeviceTokenRepository.GetByUserIds(receiversIds)
-	deviceTokens := make([]string, 0)
-	for _, user := range users {
-		deviceTokens = append(deviceTokens, user.DeviceToken)
+func (s *NotificationService) Subscribe(event *dto.NewSubscriptionNotificationEvent) error {
+	return s.subscriptionRepository.AddSubscription(&models.Subscription{
+		ChatId: event.ChatId,
+		UserId: event.UserId,
+	})
+}
+
+func (s *NotificationService) SendNotification(event *dto.NewMessageNotificationEvent) error {
+	_, err := s.notificationRepository.FindById(uuid.MustParse(event.EventId))
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil
 	}
-	message := messaging.MulticastMessage{
-		Notification: &messaging.Notification{
-			Title: name,
-			Body:  messageBody,
-		},
-		Tokens: deviceTokens,
-		Data: map[string]string{
-			"message_timestamp": fmt.Sprintf("%v", messageTimestamp),
-			"message_body":      messageBody,
-			"name":              name,
-			"avatar":            avatar,
-		},
+	if err != nil {
+		slog.Error("Failed to find notification: " + err.Error())
+		return err
 	}
-	ns.fcmClient.SendMulticast(context.Background(), &message)
+
+	chatId, err := uuid.Parse(event.DestinationId)
+	if err != nil {
+		slog.Error("Failed to parse chat id: " + err.Error())
+		return err
+	}
+	senderId, err := uuid.Parse(event.SenderId)
+	if err != nil {
+		slog.Error("Failed to parse sender id: " + err.Error())
+		return err
+	}
+	_, err = s.subscriptionRepository.FindSubscriptionsByChatIdAndUserId(chatId, senderId)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil
+	}
+	if err != nil {
+		slog.Error("Failed to find subscription: " + err.Error())
+		return err
+	}
+
+	chatResp, err := s.chatClient.PerformGetChatAndUserNames(chatId.String(), senderId.String())
+	if err != nil {
+		return err
+	}
+	loginResp, err := s.authClient.PerformGetLogin(event.ReceiverId)
+	if err != nil {
+		return err
+	}
+	err = s.smtpClient.SendEmail(chatResp.UserName, loginResp.Login, chatResp.ChatName, event.Body, event.FilesCount, event.IsDirect)
+	if err != nil {
+		slog.Error("Failed to send email: " + err.Error())
+		return err
+	}
+
+	e, err := json.Marshal(event)
+	if err != nil {
+		slog.Error("Failed to marshal event: " + err.Error())
+		return err
+	}
+	eventJson := json.RawMessage(e)
+	notification := &models.Notification{
+		Id:         uuid.MustParse(event.EventId),
+		ReceiverId: uuid.MustParse(event.ReceiverId),
+		Type:       models.MAIL,
+		Body:       &eventJson,
+	}
+	s.notificationRepository.AddNotification(notification)
 	return nil
-}
-
-func (ns *NotificationService) BindDeviceToUser(userId uuid.UUID, deviceToken string) error {
-	userIdXDeviceToken := &models.UserIdXDeviceToken{UserId: userId, DeviceToken: deviceToken}
-	return ns.userIdXDeviceTokenRepository.BindDeviceTokenToUser(userIdXDeviceToken)
-}
-
-func (ns *NotificationService) UnbindDeviceFromUser(userId uuid.UUID, deviceToken string) error {
-	return ns.userIdXDeviceTokenRepository.UnbindDeviceTokenFromUser(userId, deviceToken)
-}
-
-func (ns *NotificationService) DeleteUser(userId uuid.UUID) error {
-	return ns.userIdXDeviceTokenRepository.DeleteUser(userId)
-}
-
-func (ns *NotificationService) UpdateOldDeviceOnUser(userId uuid.UUID, oldDeviceToken string, newDeviceToken string) error {
-	return ns.userIdXDeviceTokenRepository.UpdateDeviceTokensByUserId(userId, oldDeviceToken, newDeviceToken)
 }

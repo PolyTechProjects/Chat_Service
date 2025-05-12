@@ -36,6 +36,6 @@ func Init(cfg *config.Config) {
 		panic(err.Error())
 	}
 	db.LogMode(true)
-	db.AutoMigrate(&models.UserIdXDeviceToken{})
+	db.AutoMigrate(&models.Notification{}, &models.Subscription{})
 	DB = db
 }

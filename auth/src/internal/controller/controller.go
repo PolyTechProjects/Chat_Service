@@ -63,8 +63,8 @@ func (a *AuthController) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly; Secure", accessToken))
-	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly; Secure", refreshToken))
+	w.Header().Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly; SameSite=Strict", refreshToken))
 }
 
 func (a *AuthController) LogoutHandler(w http.ResponseWriter, r *http.Request) {
@@ -116,6 +116,6 @@ func (a *AuthController) RefreshHandler(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	w.Header().Add("Set-Cookie", fmt.Sprintf("Authorization=%s; HttpOnly; Secure", accessToken))
-	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly; Secure", refreshToken))
+	w.Header().Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly; SameSite=Strict", refreshToken))
 }

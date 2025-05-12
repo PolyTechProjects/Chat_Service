@@ -52,3 +52,12 @@ func (r *AuthRepository) DeleteById(id uuid.UUID) error {
 	}
 	return nil
 }
+
+func (r *AuthRepository) FindByKeycloakId(keycloakId uuid.UUID) (*models.User, error) {
+	user := &models.User{}
+	err := r.db.Where("keycloak_id = ?", keycloakId).Find(user).Error
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}

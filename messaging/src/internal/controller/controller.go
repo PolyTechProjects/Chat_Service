@@ -168,7 +168,7 @@ func (ws *WebsocketController) SendMessageHandler(w http.ResponseWriter, r *http
 		http.Error(w, fmt.Errorf("permission denied").Error(), http.StatusForbidden)
 		return
 	}
-	verifyPersistanceResp, err := ws.chatClient.PerformVerifyUserPersistance(r.URL.Path, userId.String())
+	verifyPersistanceResp, err := ws.chatClient.PerformVerifyUserPersistance(chatId.String(), userId.String())
 	if err != nil {
 		wsConnection.Close()
 		http.Error(w, err.Error(), http.StatusInternalServerError)

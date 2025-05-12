@@ -14,6 +14,8 @@ services:
       - AUTH_PORT=${AUTH_INNER_PORT}
       - USERS_HOST=users_app
       - USERS_PORT=${USERS_INNER_PORT}
+      - REDIS_HOST=redis
+      - REDIS_PORT=${REDIS_INNER_PORT}
       - APP_HTTP_PORT=${APP_HTTP_INNER_PORT}
       - APP_GRPC_PORT=${APP_GRPC_INNER_PORT}
     depends_on:

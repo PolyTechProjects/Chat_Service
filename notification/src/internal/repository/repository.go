@@ -1,64 +1,114 @@
 package repository
 
 import (
-	"context"
+	"log/slog"
 
 	"example.com/notification/src/models"
-	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm"
 )
 
-type UserIdXDeviceTokenRepository struct {
-	db    *gorm.DB
-	redis *redis.Client
+type SubscriptionRepository struct {
+	db *gorm.DB
 }
 
-func NewUserIdXDeviceTokenRepository(db *gorm.DB, redis *redis.Client) *UserIdXDeviceTokenRepository {
-	return &UserIdXDeviceTokenRepository{
-		db:    db,
-		redis: redis,
+func NewSubscriptionRepository(db *gorm.DB) *SubscriptionRepository {
+	return &SubscriptionRepository{db: db}
+}
+
+func (r *SubscriptionRepository) AddSubscription(subscription *models.Subscription) error {
+	return r.db.Create(subscription).Error
+}
+
+func (r *SubscriptionRepository) DeleteSubscriptions(subscriptions []*models.Subscription) error {
+	r.db.Begin()
+	for _, subscription := range subscriptions {
+		err := r.db.Where("chat_id = ? AND user_id = ?", subscription.ChatId, subscription.UserId).Delete(&models.Subscription{}).Error
+		if err != nil {
+			slog.Error("RepositoryDeleteSubscriptions failed: " + err.Error())
+			r.db.Rollback()
+			return err
+		}
 	}
+	r.db.Commit()
+	return nil
 }
 
-func (udtr *UserIdXDeviceTokenRepository) GetByUserId(userId uuid.UUID) ([]*models.UserIdXDeviceToken, error) {
-	var userIdXDeviceTokens []*models.UserIdXDeviceToken
-	err := udtr.db.Where("user_id = ?", userId).Find(&userIdXDeviceTokens).Error
+func (r *SubscriptionRepository) DeleteSubscriptionsByChatId(chatId uuid.UUID) error {
+	err := r.db.Where("chat_id = ?", chatId).Delete(&models.Subscription{}).Error
 	if err != nil {
+		slog.Error("RepositoryDeleteSubscriptionsByChatId failed: " + err.Error())
+		return err
+	}
+	return nil
+}
+
+func (r *SubscriptionRepository) DeleteSubscriptionsByUserId(userId uuid.UUID) error {
+	err := r.db.Where("user_id = ?", userId).Delete(&models.Subscription{}).Error
+	if err != nil {
+		slog.Error("RepositoryDeleteSubscriptionsByUserId failed: " + err.Error())
+		return err
+	}
+	return nil
+}
+
+func (r *SubscriptionRepository) DeleteSubscriptionsByChatIdAndUserId(chatId uuid.UUID, userId uuid.UUID) error {
+	err := r.db.Where("chat_id = ? AND user_id = ?", chatId, userId).Delete(&models.Subscription{}).Error
+	if err != nil {
+		slog.Error("RepositoryDeleteSubscriptionsByChatIdAndUserId failed: " + err.Error())
+		return err
+	}
+	return nil
+}
+
+func (r *SubscriptionRepository) FindSubscriptionsByChatId(chatId uuid.UUID) ([]*models.Subscription, error) {
+	var subscriptions []*models.Subscription
+	err := r.db.Where("chat_id = ?", chatId).Find(&subscriptions).Error
+	if err != nil {
+		slog.Error("RepositoryFindSubscriptionsByChatId failed: " + err.Error())
 		return nil, err
 	}
-	return userIdXDeviceTokens, nil
+	return subscriptions, nil
 }
 
-func (udtr *UserIdXDeviceTokenRepository) GetByUserIds(userId []uuid.UUID) ([]*models.UserIdXDeviceToken, error) {
-	var userIdXDeviceTokens []*models.UserIdXDeviceToken
-	err := udtr.db.Where("user_id IN (?)", userId).Find(&userIdXDeviceTokens).Error
+func (r *SubscriptionRepository) FindSubscriptionsByUserId(userId uuid.UUID) ([]*models.Subscription, error) {
+	var subscriptions []*models.Subscription
+	err := r.db.Where("user_id = ?", userId).Find(&subscriptions).Error
 	if err != nil {
+		slog.Error("RepositoryFindSubscriptionsByUserId failed: " + err.Error())
 		return nil, err
 	}
-	return userIdXDeviceTokens, nil
+	return subscriptions, nil
 }
 
-func (udtr *UserIdXDeviceTokenRepository) BindDeviceTokenToUser(userIdXDeviceToken *models.UserIdXDeviceToken) error {
-	return udtr.db.Create(userIdXDeviceToken).Error
+func (r *SubscriptionRepository) FindSubscriptionsByChatIdAndUserId(chatId uuid.UUID, userId uuid.UUID) (*models.Subscription, error) {
+	subscription := &models.Subscription{}
+	err := r.db.Where("chat_id = ? AND user_id = ?", chatId, userId).First(subscription).Error
+	if err != nil {
+		slog.Error("RepositoryFindSubscriptionsByChatIdAndUserId failed: " + err.Error())
+		return nil, err
+	}
+	return subscription, nil
 }
 
-func (udtr *UserIdXDeviceTokenRepository) UnbindDeviceTokenFromUser(userId uuid.UUID, deviceToken string) error {
-	return udtr.db.Where("user_id = ? AND device_token = ?", userId, deviceToken).Delete(&models.UserIdXDeviceToken{}).Error
+type NotificationRepository struct {
+	db *gorm.DB
 }
 
-func (udtr *UserIdXDeviceTokenRepository) DeleteUser(userId uuid.UUID) error {
-	return udtr.db.Where("user_id = ?", userId).Delete(&models.UserIdXDeviceToken{}).Error
+func NewNotificationRepository(db *gorm.DB) *NotificationRepository {
+	return &NotificationRepository{db: db}
 }
 
-func (udtr *UserIdXDeviceTokenRepository) UpdateDeviceTokensByUserId(userId uuid.UUID, oldDeviceToken string, newDeviceToken string) error {
-	return udtr.db.Where("user_id = ? AND device_token = ?", userId, oldDeviceToken).Update("device_token", newDeviceToken).Error
+func (r *NotificationRepository) AddNotification(notification *models.Notification) error {
+	return r.db.Create(notification).Error
 }
 
-func (udtr *UserIdXDeviceTokenRepository) SubscribeToRedisChannel(channelName string) *redis.PubSub {
-	return udtr.redis.Subscribe(context.Background(), channelName)
-}
-
-func (udtr *UserIdXDeviceTokenRepository) PublishToRedisChannel(channelName string, message interface{}) error {
-	return udtr.redis.Publish(context.Background(), channelName, message).Err()
+func (r *NotificationRepository) FindById(notificationId uuid.UUID) (*models.Notification, error) {
+	notification := &models.Notification{}
+	err := r.db.Where("id = ?", notificationId).First(notification).Error
+	if err != nil {
+		slog.Error("NotificationRepositoryFindById failed: " + err.Error())
+		return nil, err
+	}
+	return notification, nil
 }
