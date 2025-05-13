@@ -53,10 +53,9 @@ func (s *NotificationService) Subscribe(event *dto.NewSubscriptionNotificationEv
 
 func (s *NotificationService) SendNotification(event *dto.NewMessageNotificationEvent) error {
 	_, err := s.notificationRepository.FindById(uuid.MustParse(event.EventId))
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err == nil {
 		return nil
-	}
-	if err != nil {
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 		slog.Error("Failed to find notification: " + err.Error())
 		return err
 	}
@@ -74,8 +73,7 @@ func (s *NotificationService) SendNotification(event *dto.NewMessageNotification
 	_, err = s.subscriptionRepository.FindSubscriptionsByChatIdAndUserId(chatId, senderId)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil
-	}
-	if err != nil {
+	} else if err != nil {
 		slog.Error("Failed to find subscription: " + err.Error())
 		return err
 	}

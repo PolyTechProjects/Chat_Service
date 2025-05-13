@@ -41,6 +41,7 @@ type CreateRoleRequest struct {
 	Description string    `json:"description"`
 	Color       string    `json:"color"`
 	Permissions []string  `json:"permissions"`
+	BaseRoleId  uuid.UUID `json:"base_role_id"`
 }
 
 type UpdateRoleRequest struct {
@@ -65,12 +66,16 @@ type ChangeUserNicknameRequest struct {
 }
 
 type CreateDirectChatRequest struct {
-	FirstUserId  uuid.UUID `json:"first_user_id"`
-	SecondUserId uuid.UUID `json:"second_user_id"`
+	UserId uuid.UUID `json:"user_id"`
 }
 
-type DeleteDirectChatsRequest struct {
-	ChatIds []uuid.UUID `json:"chat_ids"`
+type LeaveFromChatsRequest struct {
+	Request []LeaveFromChatRequest `json:"request"`
+}
+
+type LeaveFromChatRequest struct {
+	ChatId   uuid.UUID `json:"chat_id"`
+	IsDirect bool      `json:"is_direct"`
 }
 
 type GetChatResponse struct {

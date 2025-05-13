@@ -21,6 +21,9 @@ func NewHttpServer(messageHistoryController *controller.MessageHistoryController
 func (h *HttpServer) StartServer() {
 	http.HandleFunc("GET /api/v1/messaging/history/direct/{userId}", h.messageHistoryController.GetDirectHistoryHandler)
 	http.HandleFunc("GET /api/v1/messaging/history/{chatId}", h.messageHistoryController.GetHistoryHandler)
+	//http.HandleFunc("DELETE /api/v1/messaging/history", h.messageHistoryController.DeleteHistoryHandler)
+	http.HandleFunc("DELETE /api/v1/messaging/history/{messageId}", h.messageHistoryController.DeleteMessageHandler)
+	http.HandleFunc("PUT /api/v1/messaging/history", h.messageHistoryController.EditMessageHandler)
 	http.HandleFunc("/api/v1/messaging/ws/{chatId}", h.websocketController.SendMessageHandler)
 	http.HandleFunc("/api/v1/messaging/ws/direct/{userId}", h.websocketController.SendDirectMessageHandler)
 }

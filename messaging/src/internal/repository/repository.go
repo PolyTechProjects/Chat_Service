@@ -29,7 +29,7 @@ func (r *MessageRepository) SaveMessage(message *models.Message) error {
 
 func (r *MessageRepository) GetDirectMessages(userId uuid.UUID, destinationId uuid.UUID) ([]models.Message, error) {
 	var messages []models.Message
-	err := r.DB.Where("user_id = ? AND destination_id = ? OR destination_id = ? AND user_id = ?", userId, destinationId, userId, destinationId).Find(&messages).Error
+	err := r.DB.Where("user_id = ? AND destination_id = ? OR destination_id = ? AND user_id = ? AND is_deleted=false", userId, destinationId, userId, destinationId).Find(&messages).Error
 	if err != nil {
 		slog.Error("MessageRepositoryGetDirectMessages failed: " + err.Error())
 		return nil, err
@@ -39,10 +39,29 @@ func (r *MessageRepository) GetDirectMessages(userId uuid.UUID, destinationId uu
 
 func (r *MessageRepository) GetMessagesByDestinationId(destinationId uuid.UUID) ([]models.Message, error) {
 	var messages []models.Message
-	err := r.DB.Where("destination_id = ?", destinationId).Find(&messages).Error
+	err := r.DB.Where("destination_id = ? AND is_deleted=false", destinationId).Find(&messages).Error
 	if err != nil {
 		slog.Error("MessageRepositoryGetMessagesByDestinationId failed: " + err.Error())
 		return nil, err
 	}
 	return messages, nil
+}
+
+func (r *MessageRepository) FindById(id uuid.UUID) (*models.Message, error) {
+	message := &models.Message{}
+	err := r.DB.Where("id = ?", id).First(message).Error
+	if err != nil {
+		slog.Error("MessageRepositoryFindById failed: " + err.Error())
+		return nil, err
+	}
+	return message, nil
+}
+
+func (r *MessageRepository) DeleteMessage(message *models.Message) error {
+	err := r.DB.Delete(message).Error
+	if err != nil {
+		slog.Error("MessageRepositoryDeleteMessage failed: " + err.Error())
+		return err
+	}
+	return nil
 }

@@ -237,7 +237,7 @@ func (c *ChatController) JoinChatHandler(w http.ResponseWriter, r *http.Request)
 
 func (c *ChatController) AddUsersInChatHandler(w http.ResponseWriter, r *http.Request) {
 	req := &dto.AddUsersRequest{}
-	err := json.NewDecoder(r.Body).Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -269,7 +269,7 @@ func (c *ChatController) AddUsersInChatHandler(w http.ResponseWriter, r *http.Re
 
 func (c *ChatController) DeleteUsersInChatHandler(w http.ResponseWriter, r *http.Request) {
 	req := &dto.DeleteUsersRequest{}
-	err := json.NewDecoder(r.Body).Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -300,7 +300,7 @@ func (c *ChatController) DeleteUsersInChatHandler(w http.ResponseWriter, r *http
 
 func (c *ChatController) CreateRoleHandler(w http.ResponseWriter, r *http.Request) {
 	req := &dto.CreateRoleRequest{}
-	err := json.NewDecoder(r.Body).Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -339,7 +339,7 @@ func (c *ChatController) CreateRoleHandler(w http.ResponseWriter, r *http.Reques
 
 func (c *ChatController) EditRoleHandler(w http.ResponseWriter, r *http.Request) {
 	req := &dto.UpdateRoleRequest{}
-	err := json.NewDecoder(r.Body).Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -416,7 +416,7 @@ func (c *ChatController) DeleteRoleHandler(w http.ResponseWriter, r *http.Reques
 
 func (c *ChatController) SetRoleHandler(w http.ResponseWriter, r *http.Request) {
 	req := &dto.SetRoleRequest{}
-	err := json.NewDecoder(r.Body).Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -448,7 +448,7 @@ func (c *ChatController) SetRoleHandler(w http.ResponseWriter, r *http.Request) 
 
 func (c *ChatController) ChangeUserNicknameHandler(w http.ResponseWriter, r *http.Request) {
 	req := &dto.ChangeUserNicknameRequest{}
-	err := json.NewDecoder(r.Body).Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -481,7 +481,7 @@ func (c *ChatController) ChangeUserNicknameHandler(w http.ResponseWriter, r *htt
 func (c *ChatController) GetDirectChatHandler(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	segments := strings.Split(path, "/")
-	chatId, err := uuid.Parse(segments[len(segments)-1])
+	firstUserId, err := uuid.Parse(segments[len(segments)-1])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -497,13 +497,13 @@ func (c *ChatController) GetDirectChatHandler(w http.ResponseWriter, r *http.Req
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	userId, err := uuid.Parse(extractResp.UserId)
+	secondUserId, err := uuid.Parse(extractResp.UserId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	chat, err := c.chatService.GetDirectChat(chatId, userId)
+	chat, err := c.chatService.GetDirectChat(firstUserId, secondUserId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -517,72 +517,9 @@ func (c *ChatController) GetDirectChatHandler(w http.ResponseWriter, r *http.Req
 	w.Write(resp)
 }
 
-func (c *ChatController) DeleteDirectChatHandler(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path
-	segments := strings.Split(path, "/")
-	chatId, err := uuid.Parse(segments[len(segments)-2])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	_, err = c.authClient.PerformAuthorize(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-	extractResp, err := c.authClient.PerformExtractUserId(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-	userId, err := uuid.Parse(extractResp.UserId)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	err = c.chatService.DeleteDirectChat(chatId, userId)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-}
-
-func (c *ChatController) DeleteDirectChatsHandler(w http.ResponseWriter, r *http.Request) {
-	req := &dto.DeleteDirectChatsRequest{}
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	_, err = c.authClient.PerformAuthorize(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-	extractResp, err := c.authClient.PerformExtractUserId(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-	userId, err := uuid.Parse(extractResp.UserId)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	err = c.chatService.DeleteDirectChats(req.ChatIds, userId)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-}
-
 func (c *ChatController) CreateDirectChatHandler(w http.ResponseWriter, r *http.Request) {
 	req := &dto.CreateDirectChatRequest{}
-	err := json.NewDecoder(r.Body).Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -604,7 +541,7 @@ func (c *ChatController) CreateDirectChatHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	directChat, err := c.chatService.CreateDirectChat(req, userId)
+	directChat, err := c.chatService.CreateDirectChat(req.UserId, userId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -618,11 +555,15 @@ func (c *ChatController) CreateDirectChatHandler(w http.ResponseWriter, r *http.
 	w.Write(directChatResp)
 }
 
-func (c *ChatController) SearchDirectChatHandler(w http.ResponseWriter, r *http.Request) {
-	firstUserId := r.URL.Query().Get("first_user_id")
-	secondUserId := r.URL.Query().Get("second_user_id")
+func (c *ChatController) LeaveFromChatsHandler(w http.ResponseWriter, r *http.Request) {
+	req := &dto.LeaveFromChatsRequest{}
+	err := json.NewDecoder(r.Body).Decode(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	_, err := c.authClient.PerformAuthorize(r)
+	_, err = c.authClient.PerformAuthorize(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -638,39 +579,11 @@ func (c *ChatController) SearchDirectChatHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	if firstUserId == "" || secondUserId == "" {
-		http.Error(w, "first_user_id or second_user_id is empty", http.StatusBadRequest)
-		return
-	}
-
-	firstUserIdUUID, err := uuid.Parse(firstUserId)
+	err = c.chatService.LeaveFromChats(req, userId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	secondUserIdUUID, err := uuid.Parse(secondUserId)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if firstUserIdUUID != userId && secondUserIdUUID != userId {
-		http.Error(w, "user is not in chat", http.StatusBadRequest)
-		return
-	}
-
-	directChat, err := c.chatService.SearchDirectChat(firstUserIdUUID, secondUserIdUUID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	directChatResp, err := json.Marshal(directChat)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Write(directChatResp)
 }
 
 func (c *ChatController) GetAllAvailableChatsHandler(w http.ResponseWriter, r *http.Request) {

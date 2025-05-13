@@ -38,7 +38,12 @@ func Init(cfg *config.Config) {
 		panic(err)
 	}
 
-	db.AutoMigrate(&models.Chat{}, &models.ChatUser{}, &models.Role{}, &models.RolePermission{})
+	db.AutoMigrate(&models.Chat{}, &models.ChatUser{}, &models.Role{}, &models.RolePermission{}, &models.DirectChat{})
+	db.Exec(`
+    	CREATE UNIQUE INDEX idx_direct_chat_unique_users 
+    	ON direct_chats (LEAST(first_user_id::text, second_user_id::text), 
+        	            GREATEST(first_user_id::text, second_user_id::text));
+	`)
 	DB = db
 	slog.Info("Connected to DB")
 }

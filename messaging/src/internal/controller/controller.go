@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"example.com/messaging/src/internal/client"
+	"example.com/messaging/src/internal/dto"
 	"example.com/messaging/src/internal/service"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -106,6 +107,69 @@ func (m *MessageHistoryController) GetHistoryHandler(w http.ResponseWriter, r *h
 	w.Write(response)
 }
 
+func (c *MessageHistoryController) DeleteMessageHandler(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	segments := strings.Split(path, "/")
+	messageId, err := uuid.Parse(segments[len(segments)-1])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	_, err = c.authClient.PerformAuthorize(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	extractResp, err := c.authClient.PerformExtractUserId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	userId, err := uuid.Parse(extractResp.UserId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = c.messageHistoryService.DeleteMessage(messageId, userId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+}
+
+func (c *MessageHistoryController) EditMessageHandler(w http.ResponseWriter, r *http.Request) {
+	req := &dto.EditMessageRequest{}
+	err := json.NewDecoder(r.Body).Decode(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	_, err = c.authClient.PerformAuthorize(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	extractResp, err := c.authClient.PerformExtractUserId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	userId, err := uuid.Parse(extractResp.UserId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = c.messageHistoryService.EditMessage(req.MessageId, req.Body, userId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+}
+
 type WebsocketController struct {
 	messageService *service.MessageService
 	authClient     *client.AuthGRPCClient
@@ -155,17 +219,6 @@ func (ws *WebsocketController) SendMessageHandler(w http.ResponseWriter, r *http
 	if err != nil {
 		wsConnection.Close()
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	verifyUserAction, err := ws.chatClient.PerformVerifyUserAction(chatId.String(), userId.String(), "WRITE_MESSAGE")
-	if err != nil {
-		wsConnection.Close()
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if !verifyUserAction.IsVerified {
-		wsConnection.Close()
-		http.Error(w, fmt.Errorf("permission denied").Error(), http.StatusForbidden)
 		return
 	}
 	verifyPersistanceResp, err := ws.chatClient.PerformVerifyUserPersistance(chatId.String(), userId.String())

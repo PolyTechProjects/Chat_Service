@@ -10,6 +10,7 @@ import (
 
 	"example.com/chat/src/gen/go/chat"
 	"example.com/chat/src/internal/controller"
+	"example.com/chat/src/internal/models"
 	"example.com/chat/src/internal/service"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -30,7 +31,7 @@ func (h *HttpServer) StartServer() {
 	http.HandleFunc("DELETE /api/v1/chats/{chatId}", h.chatController.DeleteChatHandler)
 	http.HandleFunc("POST /api/v1/chats", h.chatController.CreateChatHandler)
 	http.HandleFunc("PUT /api/v1/chats/{chatId}", h.chatController.EditChatHandler)
-	http.HandleFunc("POST /api/v1/chats/{joinLink}", h.chatController.JoinChatHandler)
+	http.HandleFunc("PUT /api/v1/chats/join/{joinLink}", h.chatController.JoinChatHandler)
 	http.HandleFunc("POST /api/v1/chats/{chatId}/users", h.chatController.AddUsersInChatHandler)
 	http.HandleFunc("DELETE /api/v1/chats/{chatId}/users", h.chatController.DeleteUsersInChatHandler)
 	http.HandleFunc("POST /api/v1/chats/{chatId}/roles", h.chatController.CreateRoleHandler)
@@ -38,11 +39,9 @@ func (h *HttpServer) StartServer() {
 	http.HandleFunc("DELETE /api/v1/chats/{chatId}/roles/{roleId}", h.chatController.DeleteRoleHandler)
 	http.HandleFunc("PUT /api/v1/chats/{chatId}/users/{userId}/role", h.chatController.SetRoleHandler)
 	http.HandleFunc("PATCH /api/v1/chats/{chatId}/users/{userId}/nickname", h.chatController.ChangeUserNicknameHandler)
-	/*http.HandleFunc("GET /api/v1/chats/direct/{chatId}", h.chatController.GetDirectChatHandler)
-	http.HandleFunc("DELETE /api/v1/chats/direct/{chatId}", h.chatController.DeleteDirectChatHandler)
-	http.HandleFunc("DELETE /api/v1/chats/direct", h.chatController.DeleteDirectChatsHandler)
+	http.HandleFunc("GET /api/v1/chats/direct/{userId}", h.chatController.GetDirectChatHandler)
 	http.HandleFunc("POST /api/v1/chats/direct", h.chatController.CreateDirectChatHandler)
-	http.HandleFunc("GET /api/v1/chats/direct", h.chatController.SearchDirectChatHandler)*/
+	http.HandleFunc("DELETE /api/v1/chats", h.chatController.LeaveFromChatsHandler)
 	http.HandleFunc("GET /api/v1/chats", h.chatController.GetAllAvailableChatsHandler)
 }
 
@@ -112,11 +111,14 @@ func (s *GRPCServer) VerifyUserAction(ctx context.Context, req *chat.VerifyUserA
 		slog.Error("VerifyUserAction: UUIDParse failed: "+err.Error(), "user_id", req.UserId)
 		return nil, err
 	}
-	err = s.chatService.VerifyUserAction(chatId, userId, req.Action)
+	action := models.Permission(req.Action)
+	err = s.chatService.VerifyUserAction(chatId, userId, action)
 	if err != nil {
 		slog.Error("VerifyUserAction failed: " + err.Error())
 		if errors.Is(err, fmt.Errorf("permission denied")) {
-			return nil, status.Error(codes.PermissionDenied, err.Error())
+			return &chat.VerifyUserActionResponse{
+				IsVerified: false,
+			}, status.Error(codes.PermissionDenied, err.Error())
 		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -140,7 +142,9 @@ func (s *GRPCServer) VerifyUserPersistance(ctx context.Context, req *chat.Verify
 	if err != nil {
 		slog.Error("VerifyUserPersistance failed: " + err.Error())
 		if errors.Is(err, fmt.Errorf("permission denied")) {
-			return nil, status.Error(codes.PermissionDenied, err.Error())
+			return &chat.VerifyUserPersistanceResponse{
+				IsVerified: false,
+			}, status.Error(codes.PermissionDenied, err.Error())
 		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -168,5 +172,40 @@ func (s *GRPCServer) GetChatAndUserNames(ctx context.Context, req *chat.GetChatA
 	return &chat.GetChatAndUserNamesResponse{
 		ChatName: chatName,
 		UserName: userName,
+	}, nil
+}
+
+func (s *GRPCServer) VerifyUserActionOnSomebody(
+	ctx context.Context,
+	req *chat.VerifyUserActionOnSomebodyRequest,
+) (*chat.VerifyUserActionOnSomebodyResponse, error) {
+	chatId, err := uuid.Parse(req.ChatId)
+	if err != nil {
+		slog.Error("VerifyUserAction: UUIDParse failed: "+err.Error(), "chat_id", req.ChatId)
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	userId, err := uuid.Parse(req.UserId)
+	if err != nil {
+		slog.Error("VerifyUserAction: UUIDParse failed: "+err.Error(), "user_id", req.UserId)
+		return nil, err
+	}
+	targetUserId, err := uuid.Parse(req.TargetUserId)
+	if err != nil {
+		slog.Error("VerifyUserAction: UUIDParse failed: "+err.Error(), "target_user_id", req.TargetUserId)
+		return nil, err
+	}
+	action := models.Permission(req.Action)
+	err = s.chatService.VerifyUserActionOnSomebody(chatId, userId, targetUserId, action)
+	if err != nil {
+		slog.Error("VerifyUserAction failed: " + err.Error())
+		if errors.Is(err, fmt.Errorf("permission denied")) {
+			return &chat.VerifyUserActionOnSomebodyResponse{
+				IsVerified: false,
+			}, status.Error(codes.PermissionDenied, err.Error())
+		}
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return &chat.VerifyUserActionOnSomebodyResponse{
+		IsVerified: true,
 	}, nil
 }

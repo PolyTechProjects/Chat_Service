@@ -23,7 +23,6 @@ func main() {
 	slog.SetDefault(log)
 	database.Init(cfg)
 	defer database.Close()
-	slog.Debug("Config: ", "cfg", cfg)
 
 	chatRepository := repository.NewChatRepository(database.DB)
 	directChatRepository := repository.NewDirectChatRepository(database.DB)

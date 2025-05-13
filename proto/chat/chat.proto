@@ -12,6 +12,8 @@ service Chat {
     rpc VerifyUserPersistance (VerifyUserPersistanceRequest) returns (VerifyUserPersistanceResponse) {}
 
     rpc GetChatAndUserNames (GetChatAndUserNamesRequest) returns (GetChatAndUserNamesResponse) {}
+
+    rpc VerifyUserActionOnSomebody (VerifyUserActionOnSomebodyRequest) returns (VerifyUserActionOnSomebodyResponse) {}
 }
 
 message ChatResponse {
@@ -58,4 +60,15 @@ message GetChatAndUserNamesRequest {
 message GetChatAndUserNamesResponse {
     string chatName = 1;
     string userName = 2;
+}
+
+message VerifyUserActionOnSomebodyRequest {
+    string chatId = 1;
+    string userId = 2;
+    string targetUserId = 3;
+    string action = 4;
+}
+
+message VerifyUserActionOnSomebodyResponse {
+    bool isVerified = 1;
 }

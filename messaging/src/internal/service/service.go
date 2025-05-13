@@ -25,27 +25,131 @@ func NewMessageHistoryService(messageRepository *repository.MessageRepository, c
 	}
 }
 
-func (m *MessageHistoryService) GetDirectHistory(destinationId uuid.UUID, userId uuid.UUID) ([]models.Message, error) {
-	messages, err := m.messageRepository.GetDirectMessages(userId, destinationId)
+func (s *MessageHistoryService) GetDirectHistory(destinationId uuid.UUID, userId uuid.UUID) ([]models.Message, error) {
+	messages, err := s.messageRepository.GetDirectMessages(userId, destinationId)
 	if err != nil {
 		return nil, err
 	}
 	return messages, nil
 }
 
-func (m *MessageHistoryService) GetHistory(destinationId uuid.UUID, userId uuid.UUID) ([]models.Message, error) {
-	verifyPersistanceResp, err := m.chatClient.PerformVerifyUserPersistance(destinationId.String(), userId.String())
+func (s *MessageHistoryService) GetHistory(destinationId uuid.UUID, userId uuid.UUID) ([]models.Message, error) {
+	verifyPersistanceResp, err := s.chatClient.PerformVerifyUserPersistance(destinationId.String(), userId.String())
 	if err != nil {
 		return nil, err
 	}
 	if !verifyPersistanceResp.IsVerified {
 		return nil, fmt.Errorf("permission denied")
 	}
-	messages, err := m.messageRepository.GetMessagesByDestinationId(destinationId)
+	messages, err := s.messageRepository.GetMessagesByDestinationId(destinationId)
 	if err != nil {
 		return nil, err
 	}
 	return messages, nil
+}
+
+func (s *MessageHistoryService) DeleteMessage(messageId uuid.UUID, userId uuid.UUID) error {
+	message, err := s.messageRepository.FindById(messageId)
+	if err != nil {
+		return err
+	}
+	if message.IsDirect {
+		if message.SenderId != userId {
+			return fmt.Errorf("permission denied")
+		}
+		return s.doDeleteMessage(message)
+	}
+	verifyPersistanceResp, err := s.chatClient.PerformVerifyUserPersistance(message.DestinationId.String(), userId.String())
+	if err != nil {
+		return err
+	}
+	if !verifyPersistanceResp.IsVerified {
+		return fmt.Errorf("permission denied")
+	}
+	if message.SenderId == userId {
+		verifyAction, err := s.chatClient.PerformVerifyUserAction(message.DestinationId.String(), userId.String(), "CAN_DELETE_MESSAGE")
+		if err != nil {
+			return err
+		}
+		if !verifyAction.IsVerified {
+			return fmt.Errorf("permission denied")
+		}
+	} else {
+		verifyAction, err := s.chatClient.PerformVerifyUserActionOnSomebody(
+			message.DestinationId.String(),
+			userId.String(),
+			message.SenderId.String(),
+			"CAN_DELETE_OTHERS_MESSAGE",
+		)
+		if err != nil {
+			return err
+		}
+		if !verifyAction.IsVerified {
+			return fmt.Errorf("permission denied")
+		}
+	}
+	return s.doDeleteMessage(message)
+}
+
+func (s *MessageHistoryService) EditMessage(messageId uuid.UUID, newBody string, userId uuid.UUID) error {
+	message, err := s.messageRepository.FindById(messageId)
+	if err != nil {
+		return err
+	}
+	if message.IsDirect {
+		if message.SenderId != userId {
+			return fmt.Errorf("permission denied")
+		}
+		return s.doEditMessage(message, newBody)
+	}
+	verifyPersistanceResp, err := s.chatClient.PerformVerifyUserPersistance(message.DestinationId.String(), userId.String())
+	if err != nil {
+		return err
+	}
+	if !verifyPersistanceResp.IsVerified {
+		return fmt.Errorf("permission denied")
+	}
+	if message.SenderId == userId {
+		verifyAction, err := s.chatClient.PerformVerifyUserAction(message.DestinationId.String(), userId.String(), "CAN_EDIT_MESSAGE")
+		if err != nil {
+			return err
+		}
+		if !verifyAction.IsVerified {
+			return fmt.Errorf("permission denied")
+		}
+	} else {
+		verifyAction, err := s.chatClient.PerformVerifyUserActionOnSomebody(
+			message.DestinationId.String(),
+			userId.String(),
+			message.SenderId.String(),
+			"CAN_EDIT_OTHERS_MESSAGE",
+		)
+		if err != nil {
+			return err
+		}
+		if !verifyAction.IsVerified {
+			return fmt.Errorf("permission denied")
+		}
+	}
+	return s.doEditMessage(message, newBody)
+}
+
+func (s *MessageHistoryService) doDeleteMessage(message *models.Message) error {
+	message.IsDeleted = true
+	err := s.messageRepository.SaveMessage(message)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *MessageHistoryService) doEditMessage(message *models.Message, newBody string) error {
+	message.Body = newBody
+	err := s.messageRepository.SaveMessage(message)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type MessageService struct {
@@ -86,6 +190,17 @@ func (s *MessageService) ReadMessages(wsConnection *websocket.Conn, userId uuid.
 				s.closeConnection(userId)
 				return err
 			}
+			verifyAction, err := s.chatClient.PerformVerifyUserAction(destinationId.String(), userId.String(), "CAN_WRITE_MESSAGE")
+			if err != nil {
+				slog.Error("MessageServiceReadMessages failed: " + err.Error())
+				s.closeConnection(userId)
+				return err
+			}
+			if !verifyAction.IsVerified {
+				slog.Error("MessageServiceReadMessages failed: " + fmt.Errorf("permission denied").Error())
+				s.closeConnection(userId)
+				return err
+			}
 			req := &dto.MessageRequest{}
 			err = json.Unmarshal(payload, req)
 			if err != nil {
@@ -94,13 +209,13 @@ func (s *MessageService) ReadMessages(wsConnection *websocket.Conn, userId uuid.
 				return err
 			}
 			if len(req.Files) > 0 && !req.IsDirect {
-				verifyUserActionResp, err := s.chatClient.PerformVerifyUserAction(destinationId.String(), userId.String(), "SEND_FILE")
+				verifyAction, err := s.chatClient.PerformVerifyUserAction(destinationId.String(), userId.String(), "CAN_SEND_FILE")
 				if err != nil {
 					slog.Error("MessageServiceReadMessages failed: " + err.Error())
 					s.closeConnection(userId)
 					return err
 				}
-				if !verifyUserActionResp.IsVerified {
+				if !verifyAction.IsVerified {
 					slog.Error("MessageServiceReadMessages failed: " + fmt.Errorf("permission denied").Error())
 					s.closeConnection(userId)
 					return err
@@ -129,7 +244,6 @@ func (s *MessageService) BroadcastMessageRedisChannel(message *models.Message) {
 
 func (s *MessageService) doBroadcastMessage(message *models.Message) {
 	notificationEvent := &dto.NewMessageNotificationEvent{
-		EventId:       uuid.NewString(),
 		MessageId:     message.Id.String(),
 		SenderId:      message.SenderId.String(),
 		DestinationId: message.DestinationId.String(),
@@ -158,6 +272,7 @@ func (s *MessageService) doBroadcastMessage(message *models.Message) {
 
 func (s *MessageService) broadcast(message *models.Message, receiverId uuid.UUID, notificationEvent *dto.NewMessageNotificationEvent) {
 	notificationEvent.ReceiverId = receiverId.String()
+	notificationEvent.EventId = uuid.NewString()
 	connectionInfo, ok := s.connectionRegistry[receiverId]
 	// if opened on this instance and this endpoint - write to connection
 	// if opened on this instance and other endpoint - send notification

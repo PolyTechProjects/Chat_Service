@@ -97,6 +97,16 @@ func (c *ChatGRPCClient) PerformVerifyUserPersistance(chatId string, userId stri
 	return verifyResponse, nil
 }
 
+func (c *ChatGRPCClient) PerformVerifyUserActionOnSomebody(chatId, userId, targetUserId, action string) (*chat.VerifyUserActionOnSomebodyResponse, error) {
+	verifyRequest := &chat.VerifyUserActionOnSomebodyRequest{ChatId: chatId, UserId: userId, TargetUserId: targetUserId, Action: action}
+	verifyResponse, err := c.ChatClient.VerifyUserActionOnSomebody(context.Background(), verifyRequest)
+	if err != nil {
+		slog.Error("PerformVerifyUserActionOnSomebody failed : " + err.Error())
+		return nil, err
+	}
+	return verifyResponse, nil
+}
+
 type RedisClient struct {
 	Client                  *redis.Client
 	MessagesChannelName     string

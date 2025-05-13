@@ -20,7 +20,6 @@ func main() {
 	cfg := config.MustLoad()
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	slog.SetDefault(log)
-	slog.Debug("Config: ", "cfg", cfg)
 
 	database.Init(cfg)
 	db := database.DB

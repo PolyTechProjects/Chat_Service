@@ -2,6 +2,20 @@ package dto
 
 import "github.com/google/uuid"
 
+type DeleteHistoryRequest struct {
+	ChatId   uuid.UUID `json:"chat_id"`
+	IsDirect bool      `json:"is_direct"`
+}
+
+type EditMessageRequest struct {
+	MessageId uuid.UUID `json:"message_id"`
+	Body      string    `json:"body"`
+}
+
+type HistoryResponse struct {
+	Messages []MessageResponse `json:"messages"`
+}
+
 type MessageRequest struct {
 	Body      string      `json:"body"`
 	IsDirect  bool        `json:"is_direct"`
@@ -19,10 +33,6 @@ type MessageResponse struct {
 	IsDeleted     bool     `json:"is_deleted"`
 	CreatedAt     uint64   `json:"created_at"`
 	Files         []string `json:"files"`
-}
-
-type HistoryResponse struct {
-	Messages []MessageResponse `json:"messages"`
 }
 
 type NewMessageNotificationEvent struct {

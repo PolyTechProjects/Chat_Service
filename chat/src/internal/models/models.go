@@ -18,8 +18,8 @@ type Chat struct {
 
 type DirectChat struct {
 	Id           uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primary_key"`
-	FirstUserId  uuid.UUID
-	SecondUserId uuid.UUID
+	FirstUserId  uuid.UUID `gorm:"type:uuid;not null;index:idx_direct_chat_users"`
+	SecondUserId uuid.UUID `gorm:"type:uuid;not null;index:idx_direct_chat_users"`
 }
 
 type ChatUser struct {
@@ -32,19 +32,20 @@ type ChatUser struct {
 
 // IsAdmin and IsDefault cannot be deleted
 type Role struct {
-	Id          uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primary_key"`
-	Name        string    `gorm:"not null;check:name <> ''"`
-	Description string
-	Color       string
-	ChatId      uuid.UUID `gorm:"type:uuid"`
-	IsAdmin     bool      `gorm:"not null;default:false"`
-	IsDefault   bool      `gorm:"not null;default:false"`
+	Id             uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primary_key"`
+	Name           string    `gorm:"not null;check:name <> ''"`
+	Description    string
+	Color          string
+	ChatId         uuid.UUID `gorm:"type:uuid"`
+	IsAdmin        bool      `gorm:"not null;default:false"`
+	IsDefault      bool      `gorm:"not null;default:false"`
+	BasedOnDefault bool      `gorm:"not null;default:true"`
 }
 
 type RolePermission struct {
 	Id         uint
 	RoleId     uuid.UUID `gorm:"type:uuid"`
-	Permission string
+	Permission Permission
 }
 
 type Permission string
