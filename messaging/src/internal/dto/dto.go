@@ -13,7 +13,7 @@ type EditMessageRequest struct {
 }
 
 type HistoryResponse struct {
-	Messages []MessageResponse `json:"messages"`
+	Messages []*MessageResponse `json:"messages"`
 }
 
 type MessageRequest struct {
@@ -24,9 +24,9 @@ type MessageRequest struct {
 }
 
 type MessageResponse struct {
-	MessageId     string   `json:"messageId"`
-	SenderId      string   `json:"senderId"`
-	DestinationId string   `json:"chatRoomId"`
+	MessageId     string   `json:"message_id"`
+	SenderId      string   `json:"sender_id"`
+	DestinationId string   `json:"chat_id"`
 	IsDirect      bool     `json:"is_direct"`
 	Body          string   `json:"body"`
 	IsEdited      bool     `json:"is_edited"`

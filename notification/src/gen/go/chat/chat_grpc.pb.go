@@ -23,6 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ChatClient interface {
 	GetChat(ctx context.Context, in *GetChatRequest, opts ...grpc.CallOption) (*ChatResponse, error)
+	GetDirectChat(ctx context.Context, in *GetDirectChatRequest, opts ...grpc.CallOption) (*DirectChatResponse, error)
 	VerifyUserAction(ctx context.Context, in *VerifyUserActionRequest, opts ...grpc.CallOption) (*VerifyUserActionResponse, error)
 	VerifyUserPersistance(ctx context.Context, in *VerifyUserPersistanceRequest, opts ...grpc.CallOption) (*VerifyUserPersistanceResponse, error)
 	GetChatAndUserNames(ctx context.Context, in *GetChatAndUserNamesRequest, opts ...grpc.CallOption) (*GetChatAndUserNamesResponse, error)
@@ -40,6 +41,15 @@ func NewChatClient(cc grpc.ClientConnInterface) ChatClient {
 func (c *chatClient) GetChat(ctx context.Context, in *GetChatRequest, opts ...grpc.CallOption) (*ChatResponse, error) {
 	out := new(ChatResponse)
 	err := c.cc.Invoke(ctx, "/chat.Chat/GetChat", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatClient) GetDirectChat(ctx context.Context, in *GetDirectChatRequest, opts ...grpc.CallOption) (*DirectChatResponse, error) {
+	out := new(DirectChatResponse)
+	err := c.cc.Invoke(ctx, "/chat.Chat/GetDirectChat", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -87,6 +97,7 @@ func (c *chatClient) VerifyUserActionOnSomebody(ctx context.Context, in *VerifyU
 // for forward compatibility
 type ChatServer interface {
 	GetChat(context.Context, *GetChatRequest) (*ChatResponse, error)
+	GetDirectChat(context.Context, *GetDirectChatRequest) (*DirectChatResponse, error)
 	VerifyUserAction(context.Context, *VerifyUserActionRequest) (*VerifyUserActionResponse, error)
 	VerifyUserPersistance(context.Context, *VerifyUserPersistanceRequest) (*VerifyUserPersistanceResponse, error)
 	GetChatAndUserNames(context.Context, *GetChatAndUserNamesRequest) (*GetChatAndUserNamesResponse, error)
@@ -100,6 +111,9 @@ type UnimplementedChatServer struct {
 
 func (UnimplementedChatServer) GetChat(context.Context, *GetChatRequest) (*ChatResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetChat not implemented")
+}
+func (UnimplementedChatServer) GetDirectChat(context.Context, *GetDirectChatRequest) (*DirectChatResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetDirectChat not implemented")
 }
 func (UnimplementedChatServer) VerifyUserAction(context.Context, *VerifyUserActionRequest) (*VerifyUserActionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method VerifyUserAction not implemented")
@@ -140,6 +154,24 @@ func _Chat_GetChat_Handler(srv interface{}, ctx context.Context, dec func(interf
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChatServer).GetChat(ctx, req.(*GetChatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Chat_GetDirectChat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetDirectChatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServer).GetDirectChat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/chat.Chat/GetDirectChat",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServer).GetDirectChat(ctx, req.(*GetDirectChatRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -226,6 +258,10 @@ var Chat_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetChat",
 			Handler:    _Chat_GetChat_Handler,
+		},
+		{
+			MethodName: "GetDirectChat",
+			Handler:    _Chat_GetDirectChat_Handler,
 		},
 		{
 			MethodName: "VerifyUserAction",

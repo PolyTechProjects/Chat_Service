@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"log/slog"
 
 	"example.com/chat/src/internal/client"
 	"example.com/chat/src/internal/dto"
@@ -129,6 +130,8 @@ func (s *ChatService) CreateChat(req *dto.CreateChatRequest) (*dto.GetChatRespon
 	}
 	rolePermissions := make([]*models.RolePermission, len(req.DefaultPermissions))
 	for i, permission := range req.DefaultPermissions {
+		slog.Info("Permission", "idx", i, "permission", permission)
+		slog.Info("Converted Permission", "idx", i, "permission", models.Permission(permission))
 		rolePermission := &models.RolePermission{
 			RoleId:     defaultRole.Id,
 			Permission: models.Permission(permission),
@@ -298,6 +301,7 @@ func (s *ChatService) DeleteUsers(chatId uuid.UUID, userIds []uuid.UUID, userId 
 			return err
 		}
 	}
+	slog.Debug("Deleting users...")
 	return s.doDeleteUsers(chatId, userIds)
 }
 
@@ -393,11 +397,77 @@ func (s *ChatService) SetRole(req *dto.SetRoleRequest, userId uuid.UUID) error {
 	return s.doSetRole(req)
 }
 
+func (s *ChatService) GetChatRoles(chatId uuid.UUID) (*dto.RolesResponse, error) {
+	roles, err := s.RoleRepository.FindByChat(chatId)
+	if err != nil {
+		return nil, err
+	}
+	rolesResp := make([]*dto.RoleResponse, len(roles))
+	for i, role := range roles {
+		rolePermissions, err := s.RolePermissionRepository.FindByRole(role.Id)
+		if err != nil {
+			return nil, err
+		}
+		permissions := make([]string, len(rolePermissions))
+		for j, rolePermission := range rolePermissions {
+			permissions[j] = string(rolePermission.Permission)
+		}
+		rolesResp[i] = &dto.RoleResponse{
+			RoleId:      role.Id,
+			ChatId:      role.ChatId,
+			Name:        role.Name,
+			Description: role.Description,
+			Color:       role.Color,
+			Permissions: permissions,
+		}
+	}
+	return &dto.RolesResponse{Roles: rolesResp}, nil
+}
+
+func (s *ChatService) GetChatRole(chatId uuid.UUID, roleId uuid.UUID) (*dto.RoleResponse, error) {
+	role, err := s.RoleRepository.FindById(roleId)
+	if err != nil {
+		return nil, err
+	}
+	rolePermissions, err := s.RolePermissionRepository.FindByRole(role.Id)
+	if err != nil {
+		return nil, err
+	}
+	permissions := make([]string, len(rolePermissions))
+	for j, rolePermission := range rolePermissions {
+		permissions[j] = string(rolePermission.Permission)
+	}
+	roleResp := &dto.RoleResponse{
+		RoleId:      role.Id,
+		ChatId:      role.ChatId,
+		Name:        role.Name,
+		Description: role.Description,
+		Color:       role.Color,
+		Permissions: permissions,
+	}
+	return roleResp, nil
+}
+
 func (s *ChatService) GetDirectChat(firstUserId uuid.UUID, secondUserId uuid.UUID) (*dto.DirectChatResponse, error) {
 	firstUserId, secondUserId = s.sortUUIDs(firstUserId, secondUserId)
 	directChat, err := s.DirectChatRepository.FindByUsers(firstUserId, secondUserId)
 	if err != nil {
 		return nil, err
+	}
+	return &dto.DirectChatResponse{
+		ChatId:       directChat.Id,
+		FirstUserId:  directChat.FirstUserId,
+		SecondUserId: directChat.SecondUserId,
+	}, nil
+}
+
+func (s *ChatService) GetDirectChatById(chatId uuid.UUID, ownUserId uuid.UUID) (*dto.DirectChatResponse, error) {
+	directChat, err := s.DirectChatRepository.FindByChat(chatId)
+	if err != nil {
+		return nil, err
+	}
+	if directChat.FirstUserId != ownUserId && directChat.SecondUserId != ownUserId {
+		return nil, fmt.Errorf("user is not in chat")
 	}
 	return &dto.DirectChatResponse{
 		ChatId:       directChat.Id,
@@ -479,6 +549,19 @@ func (s *ChatService) GetChats(userId uuid.UUID) (*dto.ChatsResponse, error) {
 	return &dto.ChatsResponse{Chats: responseChats, DirectChats: responseDirectChats}, nil
 }
 
+func (s *ChatService) GetChatUser(chatId uuid.UUID, userId uuid.UUID) (*dto.ChatUserResponse, error) {
+	chatUser, err := s.ChatUserRepository.FindByChatAndUser(chatId, userId)
+	if err != nil {
+		return nil, err
+	}
+	return &dto.ChatUserResponse{
+		ChatId:   chatUser.ChatId,
+		UserId:   chatUser.UserId,
+		RoleId:   chatUser.RoleId,
+		Nickname: chatUser.Nickname,
+	}, nil
+}
+
 func (s *ChatService) VerifyUserAction(chatId uuid.UUID, userId uuid.UUID, action models.Permission) error {
 	chatUser, err := s.ChatUserRepository.FindByChatAndUser(chatId, userId)
 	if err != nil {
@@ -511,7 +594,7 @@ func (s *ChatService) VerifyUserActionOnSomebody(chatId, userId, targetUserId uu
 		return err
 	}
 	roleId := chatUser.RoleId
-	role, err := s.RoleRepository.FindByRole(roleId)
+	role, err := s.RoleRepository.FindById(roleId)
 	if err != nil {
 		return err
 	}
@@ -525,7 +608,7 @@ func (s *ChatService) VerifyUserActionOnSomebody(chatId, userId, targetUserId uu
 			if err != nil {
 				return err
 			}
-			targetRole, err := s.RoleRepository.FindByRole(targetChatUser.RoleId)
+			targetRole, err := s.RoleRepository.FindById(targetChatUser.RoleId)
 			if err != nil {
 				return err
 			}
@@ -538,7 +621,7 @@ func (s *ChatService) VerifyUserActionOnSomebody(chatId, userId, targetUserId uu
 }
 
 func (s *ChatService) VerifyUserActionOnRole(chatId, userId, roleId uuid.UUID, action models.Permission) error {
-	targetRole, err := s.RoleRepository.FindByRole(roleId)
+	targetRole, err := s.RoleRepository.FindById(roleId)
 	if err != nil {
 		return err
 	}
@@ -550,7 +633,7 @@ func (s *ChatService) VerifyUserActionOnRole(chatId, userId, roleId uuid.UUID, a
 	if err != nil {
 		return err
 	}
-	role, err := s.RoleRepository.FindByRole(chatUser.RoleId)
+	role, err := s.RoleRepository.FindById(chatUser.RoleId)
 	if err != nil {
 		return err
 	}
@@ -558,6 +641,10 @@ func (s *ChatService) VerifyUserActionOnRole(chatId, userId, roleId uuid.UUID, a
 		return nil
 	}
 	return fmt.Errorf("permission denied")
+}
+
+func (s *ChatService) GetAllPermissions() ([]models.Permission, error) {
+	return getAllPermissions(), nil
 }
 
 func getAllPermissions() []models.Permission {
@@ -733,10 +820,10 @@ func (s *ChatService) doCreateRole(req *dto.CreateRoleRequest) (*dto.RoleRespons
 			RoleId:     newRole.Id,
 		}
 		newRolePermissions[i] = rolePermission
-	}
-	err = s.RolePermissionRepository.AddRolePermissions(newRolePermissions)
-	if err != nil {
-		return nil, err
+		err = s.RolePermissionRepository.AddRolePermission(rolePermission)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &dto.RoleResponse{
 		RoleId:      newRole.Id,
@@ -764,21 +851,23 @@ func (s *ChatService) doEditRole(req *dto.UpdateRoleRequest) (*dto.RoleResponse,
 	if err != nil {
 		return nil, err
 	}
+	err = s.RolePermissionRepository.DeleteRolePermissions(oldRolePermissions)
+	if err != nil {
+		return nil, err
+	}
 	rolePermissions := make([]*models.RolePermission, len(req.Permissions))
 	for i, permission := range req.Permissions {
+		slog.Debug("Permission", "idx", i, "permission", permission)
+		slog.Debug("Converted permission", "idx", i, "permission", models.Permission(permission))
 		rolePermission := &models.RolePermission{
 			Permission: models.Permission(permission),
 			RoleId:     req.RoleId,
 		}
 		rolePermissions[i] = rolePermission
-	}
-	err = s.RolePermissionRepository.DeleteRolePermissions(oldRolePermissions)
-	if err != nil {
-		return nil, err
-	}
-	err = s.RolePermissionRepository.AddRolePermissions(rolePermissions)
-	if err != nil {
-		return nil, err
+		err = s.RolePermissionRepository.AddRolePermission(rolePermission)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &dto.RoleResponse{
 		RoleId:      req.RoleId,

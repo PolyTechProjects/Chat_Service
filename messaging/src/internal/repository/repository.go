@@ -18,10 +18,19 @@ func New(db *gorm.DB) *MessageRepository {
 	}
 }
 
-func (r *MessageRepository) SaveMessage(message *models.Message) error {
+func (r *MessageRepository) CreateMessage(message *models.Message) error {
 	err := r.DB.Begin().Create(message).Commit().Error
 	if err != nil {
-		slog.Error("MessageRepositorySaveMessage failed: " + err.Error())
+		slog.Error("MessageRepositoryCreateMessage failed: " + err.Error())
+		return err
+	}
+	return nil
+}
+
+func (r *MessageRepository) UpdateMessage(message *models.Message) error {
+	err := r.DB.Begin().Save(message).Commit().Error
+	if err != nil {
+		slog.Error("MessageRepositoryUpdateMessage failed: " + err.Error())
 		return err
 	}
 	return nil
@@ -29,7 +38,7 @@ func (r *MessageRepository) SaveMessage(message *models.Message) error {
 
 func (r *MessageRepository) GetDirectMessages(userId uuid.UUID, destinationId uuid.UUID) ([]models.Message, error) {
 	var messages []models.Message
-	err := r.DB.Where("user_id = ? AND destination_id = ? OR destination_id = ? AND user_id = ? AND is_deleted=false", userId, destinationId, userId, destinationId).Find(&messages).Error
+	err := r.DB.Where("destination_id = ? AND is_deleted=false", destinationId).Order("created_at").Find(&messages).Error
 	if err != nil {
 		slog.Error("MessageRepositoryGetDirectMessages failed: " + err.Error())
 		return nil, err
@@ -39,7 +48,7 @@ func (r *MessageRepository) GetDirectMessages(userId uuid.UUID, destinationId uu
 
 func (r *MessageRepository) GetMessagesByDestinationId(destinationId uuid.UUID) ([]models.Message, error) {
 	var messages []models.Message
-	err := r.DB.Where("destination_id = ? AND is_deleted=false", destinationId).Find(&messages).Error
+	err := r.DB.Where("destination_id = ? AND is_deleted=false", destinationId).Order("created_at").Find(&messages).Error
 	if err != nil {
 		slog.Error("MessageRepositoryGetMessagesByDestinationId failed: " + err.Error())
 		return nil, err

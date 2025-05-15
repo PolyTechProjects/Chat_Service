@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -115,6 +116,7 @@ func (c *ChatController) CreateChatHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	if len(req.ParticipantsIds) < 2 {
+		slog.Error("Not enough participants", "participants", len(req.ParticipantsIds))
 		http.Error(w, "Not enough participants", http.StatusBadRequest)
 		return
 	}
@@ -444,6 +446,104 @@ func (c *ChatController) SetRoleHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func (c *ChatController) GetChatRolesHandler(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	segments := strings.Split(path, "/")
+	chatId, err := uuid.Parse(segments[len(segments)-2])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	roles, err := c.chatService.GetChatRoles(chatId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	rolesResp, err := json.Marshal(roles)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(rolesResp)
+}
+
+func (c *ChatController) GetChatRoleHandler(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	segments := strings.Split(path, "/")
+	chatId, err := uuid.Parse(segments[len(segments)-3])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	roleId, err := uuid.Parse(segments[len(segments)-1])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	role, err := c.chatService.GetChatRole(chatId, roleId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	roleResp, err := json.Marshal(role)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(roleResp)
+}
+
+func (c *ChatController) GetChatUserHandler(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	segments := strings.Split(path, "/")
+	chatId, err := uuid.Parse(segments[len(segments)-3])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	userId, err := uuid.Parse(segments[len(segments)-1])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	user, err := c.chatService.GetChatUser(chatId, userId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	userResp, err := json.Marshal(user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(userResp)
+}
+
+func (c *ChatController) GetAllPermissionsHandler(w http.ResponseWriter, r *http.Request) {
+	permissions, err := c.chatService.GetAllPermissions()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	permissionsResp, err := json.Marshal(permissions)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(permissionsResp)
 }
 
 func (c *ChatController) ChangeUserNicknameHandler(w http.ResponseWriter, r *http.Request) {

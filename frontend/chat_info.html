@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Информация о чате</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .chat-info-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .checkbox-group {
+            margin: 10px 0;
+        }
+        .checkbox-item {
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+        }
+        .checkbox-item input {
+            margin-right: 10px;
+        }
+        .avatar-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+        }
+        .participants-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .participant-item {
+            display: flex;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .participant-item:last-child {
+            border-bottom: none;
+        }
+        .participant-checkbox {
+            margin-right: 10px;
+        }
+        .participant-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .action-buttons {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+            gap: 10px;
+        }
+        button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .save-btn {
+            background: #4CAF50;
+            color: white;
+        }
+        .cancel-btn {
+            background: #f44336;
+            color: white;
+        }
+        .success-message {
+            color: #4CAF50;
+            text-align: center;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .role-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+
+        .role-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: inline-block;
+        }
+
+        .role-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .participant-role {
+            margin-left: auto;
+            margin-right: 15px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .participant-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .action-btn {
+            padding: 3px 8px;
+            font-size: 0.8em;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .view-btn {
+            background: #2196F3;
+            color: white;
+        }
+
+        .remove-btn {
+            background: #f44336;
+            color: white;
+        }
+
+        .change-btn {
+            background: #FFC107;
+            color: black;
+        }
+
+        /* Стили для модального окна создания роли */
+        #createRoleModal .modal-content {
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .permissions-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .checkbox-item input {
+            margin-right: 8px;
+        }
+        
+        .edit-nickname-btn {
+            background: #9C27B0;
+            color: white;
+            padding: 3px 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .edit-nickname-btn svg {
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-info-container" id="chatInfoContainer">
+        <h1 id="pageTitle">Создание нового чата</h1>
+        
+        <div id="successMessage" class="success-message" style="display: none;">
+            Чат успешно создан
+        </div>
+        
+        <div id="formContent">
+            <div class="form-group">
+                <label for="chatName">Название чата</label>
+                <input type="text" id="chatName" required>
+            </div>
+            
+            <div class="form-group">
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isChannel">
+                    <label for="isChannel">Это канал</label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isPrivate">
+                    <label for="isPrivate">Закрытый чат (не отображается в поиске)</label>
+                </div>
+            </div>
+            
+            <div class="form-group" id="inviteLinkContainer" style="display: none;">
+                <label for="inviteLink">Пригласительная ссылка</label>
+                <input type="text" id="inviteLink" readonly>
+            </div>
+            
+            <div class="form-group">
+                <label for="chatDescription">Описание чата</label>
+                <textarea id="chatDescription"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="chatAvatar">Аватар чата</label>
+                <img id="avatarPreview" class="avatar-preview" src="https://via.placeholder.com/100" alt="Превью аватара">
+                <input type="file" id="chatAvatar" accept="image/*">
+            </div>
+            
+            <div class="form-group">
+                <label>Участники</label>
+                <div class="participants-list" id="participantsList">
+                    <!-- Участники будут загружены здесь -->
+                </div>
+            </div>
+
+            <div class="form-group" id="rolesContainer">
+                <label>Роли в чате</label>
+                <button id="createRoleBtn" class="action-btn" style="margin-left: 10px;">+ Создать новую роль</button>
+                <div id="rolesList">
+                    <!-- Роли будут загружены здесь -->
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="remove-btn" id="deleteChatBtn" style="margin-right: auto;">Удалить чат</button>
+                <button class="cancel-btn" id="cancelBtn">Отмена</button>
+                <button class="save-btn" id="saveBtn">Создать чат</button>
+                <button class="save-btn" id="updateBtn" style="display: none;">Обновить чат</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно создания роли -->
+    <div id="createRoleModal" class="modal" style="display: none;">
+        <div class="modal-content" style="width: 500px; background: white; padding: 20px; border-radius: 8px;">
+            <h3>Создание новой роли</h3>
+            
+            <div class="form-group">
+                <label>Базовая роль</label>
+                <select id="baseRoleSelect" class="form-control">
+                    <!-- Опции будут заполнены через JS -->
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="newRoleName">Название роли</label>
+                <input type="text" id="newRoleName" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="newRoleColor">Цвет роли</label>
+                <input type="color" id="newRoleColor" value="#ffffff">
+            </div>
+            
+            <div class="form-group">
+                <label for="newRoleDescription">Описание роли</label>
+                <textarea id="newRoleDescription" class="form-control"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Права роли</label>
+                <div class="permissions-list" id="newRolePermissions">
+                    <!-- Права будут загружены здесь -->
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button id="cancelCreateRoleBtn" class="cancel-btn">Отмена</button>
+                <button id="confirmCreateRoleBtn" class="save-btn">Создать роль</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно редактирования никнейма -->
+    <div id="editNicknameModal" style="
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+    ">
+        <div style="
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 300px;
+        ">
+            <h3 style="margin-top: 0;">Изменение никнейма</h3>
+            <input type="text" id="nicknameInput" style="width: 100%; padding: 8px; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button id="cancelNicknameEdit" style="padding: 8px 15px; background: #f44336; color: white; border: none; border-radius: 4px;">Отмена</button>
+                <button id="saveNicknameEdit" style="padding: 8px 15px; background: #4CAF50; color: white; border: none; border-radius: 4px;">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="chat_info.js"></script>
+</body>
+</html>

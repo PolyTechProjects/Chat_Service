@@ -9,6 +9,7 @@ import (
 	"example.com/users/src/internal/client"
 	"example.com/users/src/internal/dto"
 	"example.com/users/src/internal/service"
+	"github.com/google/uuid"
 )
 
 type UsersController struct {
@@ -66,7 +67,7 @@ func (c *UsersController) GetProfilesHandler(w http.ResponseWriter, r *http.Requ
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if !params.Has("profileLink") {
+	if !params.Has("profileLink") && !params.Has("userId") {
 		users, err := c.UsersService.GetUsers()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -78,7 +79,7 @@ func (c *UsersController) GetProfilesHandler(w http.ResponseWriter, r *http.Requ
 			return
 		}
 		w.Write(resp)
-	} else {
+	} else if params.Has("profileLink") {
 		profileLink := params.Get("profileLink")
 		users, err := c.UsersService.GetUser(profileLink)
 		if err != nil {
@@ -91,6 +92,23 @@ func (c *UsersController) GetProfilesHandler(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
+		w.Write(resp)
+	} else if params.Has("userId") {
+		userId, err := uuid.Parse(params.Get("userId"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		users, err := c.UsersService.GetUserById(userId)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		resp, err := json.Marshal(users)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		w.Write(resp)
 	}
 }

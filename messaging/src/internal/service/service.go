@@ -25,15 +25,19 @@ func NewMessageHistoryService(messageRepository *repository.MessageRepository, c
 	}
 }
 
-func (s *MessageHistoryService) GetDirectHistory(destinationId uuid.UUID, userId uuid.UUID) ([]models.Message, error) {
+func (s *MessageHistoryService) GetDirectHistory(destinationId uuid.UUID, userId uuid.UUID) (*dto.HistoryResponse, error) {
 	messages, err := s.messageRepository.GetDirectMessages(userId, destinationId)
 	if err != nil {
 		return nil, err
 	}
-	return messages, nil
+	response := make([]*dto.MessageResponse, len(messages))
+	for i, message := range messages {
+		response[i] = models.MapMessageToResponse(&message)
+	}
+	return &dto.HistoryResponse{Messages: response}, nil
 }
 
-func (s *MessageHistoryService) GetHistory(destinationId uuid.UUID, userId uuid.UUID) ([]models.Message, error) {
+func (s *MessageHistoryService) GetHistory(destinationId uuid.UUID, userId uuid.UUID) (*dto.HistoryResponse, error) {
 	verifyPersistanceResp, err := s.chatClient.PerformVerifyUserPersistance(destinationId.String(), userId.String())
 	if err != nil {
 		return nil, err
@@ -45,7 +49,11 @@ func (s *MessageHistoryService) GetHistory(destinationId uuid.UUID, userId uuid.
 	if err != nil {
 		return nil, err
 	}
-	return messages, nil
+	response := make([]*dto.MessageResponse, len(messages))
+	for i, message := range messages {
+		response[i] = models.MapMessageToResponse(&message)
+	}
+	return &dto.HistoryResponse{Messages: response}, nil
 }
 
 func (s *MessageHistoryService) DeleteMessage(messageId uuid.UUID, userId uuid.UUID) error {
@@ -136,7 +144,7 @@ func (s *MessageHistoryService) EditMessage(messageId uuid.UUID, newBody string,
 
 func (s *MessageHistoryService) doDeleteMessage(message *models.Message) error {
 	message.IsDeleted = true
-	err := s.messageRepository.SaveMessage(message)
+	err := s.messageRepository.DeleteMessage(message)
 	if err != nil {
 		return err
 	}
@@ -145,7 +153,7 @@ func (s *MessageHistoryService) doDeleteMessage(message *models.Message) error {
 
 func (s *MessageHistoryService) doEditMessage(message *models.Message, newBody string) error {
 	message.Body = newBody
-	err := s.messageRepository.SaveMessage(message)
+	err := s.messageRepository.UpdateMessage(message)
 	if err != nil {
 		return err
 	}
@@ -190,23 +198,25 @@ func (s *MessageService) ReadMessages(wsConnection *websocket.Conn, userId uuid.
 				s.closeConnection(userId)
 				return err
 			}
-			verifyAction, err := s.chatClient.PerformVerifyUserAction(destinationId.String(), userId.String(), "CAN_WRITE_MESSAGE")
-			if err != nil {
-				slog.Error("MessageServiceReadMessages failed: " + err.Error())
-				s.closeConnection(userId)
-				return err
-			}
-			if !verifyAction.IsVerified {
-				slog.Error("MessageServiceReadMessages failed: " + fmt.Errorf("permission denied").Error())
-				s.closeConnection(userId)
-				return err
-			}
 			req := &dto.MessageRequest{}
 			err = json.Unmarshal(payload, req)
 			if err != nil {
 				slog.Error("MessageServiceReadMessages failed: " + err.Error())
 				s.closeConnection(userId)
 				return err
+			}
+			if !req.IsDirect {
+				verifyAction, err := s.chatClient.PerformVerifyUserAction(destinationId.String(), userId.String(), "CAN_WRITE_MESSAGE")
+				if err != nil {
+					slog.Error("MessageServiceReadMessages failed: " + err.Error())
+					s.closeConnection(userId)
+					return err
+				}
+				if !verifyAction.IsVerified {
+					slog.Error("MessageServiceReadMessages failed: " + fmt.Errorf("permission denied").Error())
+					s.closeConnection(userId)
+					return err
+				}
 			}
 			if len(req.Files) > 0 && !req.IsDirect {
 				verifyAction, err := s.chatClient.PerformVerifyUserAction(destinationId.String(), userId.String(), "CAN_SEND_FILE")
@@ -227,7 +237,7 @@ func (s *MessageService) ReadMessages(wsConnection *websocket.Conn, userId uuid.
 				s.closeConnection(userId)
 				return err
 			}
-			err = s.messageRepository.SaveMessage(message)
+			err = s.messageRepository.CreateMessage(message)
 			if err != nil {
 				slog.Error("MessageServiceReadMessages failed: " + err.Error())
 				s.closeConnection(userId)
@@ -252,7 +262,13 @@ func (s *MessageService) doBroadcastMessage(message *models.Message) {
 		FilesCount:    len(message.Files),
 	}
 	if message.IsDirect {
-		s.broadcast(message, message.DestinationId, notificationEvent)
+		getDirectChatResponse, err := s.chatClient.PerformGetDirectChat(message.DestinationId.String(), message.SenderId.String())
+		if err != nil {
+			slog.Error("MessageService doBroadcastMessage failed: " + err.Error())
+			s.closeConnection(message.SenderId)
+			return
+		}
+		s.broadcast(message, uuid.MustParse(getDirectChatResponse.TargetUserId), notificationEvent)
 		return
 	}
 	getChatResponse, err := s.chatClient.PerformGetChat(message.DestinationId.String(), message.SenderId.String())

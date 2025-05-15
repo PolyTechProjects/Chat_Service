@@ -24,10 +24,16 @@ type Message struct {
 func MapRequestToMessage(req *dto.MessageRequest, senderId uuid.UUID, destinationId uuid.UUID) (*Message, error) {
 	messageUUID := uuid.New()
 	files := strings.Builder{}
-	for _, file := range req.Files {
-		_, err := files.WriteString(file.String() + ",")
+	for i, file := range req.Files {
+		_, err := files.WriteString(file.String())
 		if err != nil {
 			return nil, err
+		}
+		if i < len(req.Files)-1 {
+			_, err := files.WriteString(",")
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	return &Message{

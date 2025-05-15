@@ -1,5 +1,7 @@
 package dto
 
+import "github.com/google/uuid"
+
 type RegisterRequest struct {
 	Login     string `json:"login"`
 	Username  string `json:"username"`
@@ -19,6 +21,14 @@ type RegisterResponse struct {
 type LoginRequest struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
+}
+
+type LoginResponse struct {
+	AccessToken string `json:"access_token"`
+}
+
+type MeResponse struct {
+	UserId uuid.UUID `json:"user_id"`
 }
 
 type AccountCreatedEvent struct {

@@ -26,12 +26,27 @@ func NewHttpServer(authController *controller.AuthController) *HttpServer {
 	}
 }
 
-func (h *HttpServer) StartServer() {
-	http.HandleFunc("POST /api/v1/auth/register", h.authController.RegisterHandler)
-	http.HandleFunc("POST /api/v1/auth/login", h.authController.LoginHandler)
-	http.HandleFunc("POST /api/v1/auth/logout", h.authController.LogoutHandler)
-	http.HandleFunc("DELETE /api/v1/auth/{userId}", h.authController.DeleteAccountHandler)
-	http.HandleFunc("POST /api/v1/auth/refresh", h.authController.RefreshHandler)
+func (h *HttpServer) StartServer(mux *http.ServeMux) {
+	mux.HandleFunc("POST /api/v1/auth/register", h.authController.RegisterHandler)
+	mux.HandleFunc("POST /api/v1/auth/login", h.authController.LoginHandler)
+	mux.HandleFunc("POST /api/v1/auth/logout", h.authController.LogoutHandler)
+	mux.HandleFunc("DELETE /api/v1/auth/{userId}", h.authController.DeleteAccountHandler)
+	mux.HandleFunc("POST /api/v1/auth/refresh", h.authController.RefreshHandler)
+	mux.HandleFunc("GET /api/v1/auth/me", h.authController.MeHandler)
+}
+
+func (h *HttpServer) ConfigureCors(mux *http.ServeMux) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		mux.ServeHTTP(w, r)
+	})
 }
 
 type GRPCServer struct {

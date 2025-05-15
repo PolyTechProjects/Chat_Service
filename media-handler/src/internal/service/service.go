@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"example.com/media/src/internal/client"
+	"example.com/media/src/internal/dto"
 	"example.com/media/src/internal/models"
 	"example.com/media/src/internal/repository"
 	"github.com/google/uuid"
@@ -28,23 +29,23 @@ func New(mediaHandlerRepository *repository.MediaHandlerRepository, redisClient 
 	}
 }
 
-func (m *MediaHandlerService) UploadMedia(file multipart.File, fileHeader *multipart.FileHeader) error {
+func (m *MediaHandlerService) UploadMedia(file multipart.File, fileHeader *multipart.FileHeader) (*dto.MediaResponse, error) {
 	assignResponse, err := m.seaweedFSClient.AssignAndUpload(file, fileHeader.Filename)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	err = m.redisClient.CacheVolumeIp(strings.Split(assignResponse.Fid, ",")[0], assignResponse.Url)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	id := uuid.New()
 	media := models.NewMedia(id, assignResponse.Fid)
 	err = m.mediaHandlerRepository.Save(media)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &dto.MediaResponse{MediaId: id}, nil
 }
 
 func (m *MediaHandlerService) GetMedia(id uuid.UUID) ([]byte, error) {

@@ -3,6 +3,7 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -62,9 +63,16 @@ func (a *AuthController) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	response, err := json.Marshal(&dto.LoginResponse{
+		AccessToken: accessToken,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly; SameSite=Strict", refreshToken))
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly; Path=/api/v1/auth/refresh", refreshToken))
+	w.Write(response)
 }
 
 func (a *AuthController) LogoutHandler(w http.ResponseWriter, r *http.Request) {
@@ -106,7 +114,13 @@ func (a *AuthController) DeleteAccountHandler(w http.ResponseWriter, r *http.Req
 }
 
 func (a *AuthController) RefreshHandler(w http.ResponseWriter, r *http.Request) {
-	refreshToken := r.Header.Get("X-Refresh-Token")
+	slog.Info("RefreshHandler")
+	refreshTokenCookie, err := r.Cookie("X-Refresh-Token")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	refreshToken := refreshTokenCookie.Value
 	if refreshToken == "" {
 		http.Error(w, "no refresh token", http.StatusUnauthorized)
 		return
@@ -116,6 +130,35 @@ func (a *AuthController) RefreshHandler(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	w.Header().Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly; SameSite=Strict", refreshToken))
+	response, err := json.Marshal(&dto.LoginResponse{
+		AccessToken: accessToken,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Set-Cookie", fmt.Sprintf("X-Refresh-Token=%s; HttpOnly; SameSite=None; Path=/api/v1/auth/refresh", refreshToken))
+	w.WriteHeader(http.StatusOK)
+	w.Write(response)
+}
+
+func (a *AuthController) MeHandler(w http.ResponseWriter, r *http.Request) {
+	accessToken := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if accessToken == "" {
+		http.Error(w, "no access token", http.StatusUnauthorized)
+		return
+	}
+	userId, err := a.authService.ExtractUserId(accessToken)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	response, err := json.Marshal(&dto.MeResponse{UserId: uuid.MustParse(userId)})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(response)
 }

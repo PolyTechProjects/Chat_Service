@@ -26,23 +26,40 @@ func NewHttpServer(chatController *controller.ChatController) *HttpServer {
 	return &HttpServer{chatController: chatController}
 }
 
-func (h *HttpServer) StartServer() {
-	http.HandleFunc("GET /api/v1/chats/{chatId}", h.chatController.GetChatHandler)
-	http.HandleFunc("DELETE /api/v1/chats/{chatId}", h.chatController.DeleteChatHandler)
-	http.HandleFunc("POST /api/v1/chats", h.chatController.CreateChatHandler)
-	http.HandleFunc("PUT /api/v1/chats/{chatId}", h.chatController.EditChatHandler)
-	http.HandleFunc("PUT /api/v1/chats/join/{joinLink}", h.chatController.JoinChatHandler)
-	http.HandleFunc("POST /api/v1/chats/{chatId}/users", h.chatController.AddUsersInChatHandler)
-	http.HandleFunc("DELETE /api/v1/chats/{chatId}/users", h.chatController.DeleteUsersInChatHandler)
-	http.HandleFunc("POST /api/v1/chats/{chatId}/roles", h.chatController.CreateRoleHandler)
-	http.HandleFunc("PUT /api/v1/chats/{chatId}/roles/{roleId}", h.chatController.EditRoleHandler)
-	http.HandleFunc("DELETE /api/v1/chats/{chatId}/roles/{roleId}", h.chatController.DeleteRoleHandler)
-	http.HandleFunc("PUT /api/v1/chats/{chatId}/users/{userId}/role", h.chatController.SetRoleHandler)
-	http.HandleFunc("PATCH /api/v1/chats/{chatId}/users/{userId}/nickname", h.chatController.ChangeUserNicknameHandler)
-	http.HandleFunc("GET /api/v1/chats/direct/{userId}", h.chatController.GetDirectChatHandler)
-	http.HandleFunc("POST /api/v1/chats/direct", h.chatController.CreateDirectChatHandler)
-	http.HandleFunc("DELETE /api/v1/chats", h.chatController.LeaveFromChatsHandler)
-	http.HandleFunc("GET /api/v1/chats", h.chatController.GetAllAvailableChatsHandler)
+func (h *HttpServer) StartServer(mux *http.ServeMux) {
+	mux.HandleFunc("GET /api/v1/chats/{chatId}", h.chatController.GetChatHandler)
+	mux.HandleFunc("DELETE /api/v1/chats/{chatId}", h.chatController.DeleteChatHandler)
+	mux.HandleFunc("POST /api/v1/chats", h.chatController.CreateChatHandler)
+	mux.HandleFunc("PUT /api/v1/chats/{chatId}", h.chatController.EditChatHandler)
+	mux.HandleFunc("PUT /api/v1/chats/join/{joinLink}", h.chatController.JoinChatHandler)
+	mux.HandleFunc("POST /api/v1/chats/{chatId}/users", h.chatController.AddUsersInChatHandler)
+	mux.HandleFunc("DELETE /api/v1/chats/{chatId}/users", h.chatController.DeleteUsersInChatHandler)
+	mux.HandleFunc("POST /api/v1/chats/{chatId}/roles", h.chatController.CreateRoleHandler)
+	mux.HandleFunc("PUT /api/v1/chats/{chatId}/roles/{roleId}", h.chatController.EditRoleHandler)
+	mux.HandleFunc("DELETE /api/v1/chats/{chatId}/roles/{roleId}", h.chatController.DeleteRoleHandler)
+	mux.HandleFunc("PUT /api/v1/chats/{chatId}/users/{userId}/role", h.chatController.SetRoleHandler)
+	mux.HandleFunc("GET /api/v1/chats/{chatId}/roles", h.chatController.GetChatRolesHandler)
+	mux.HandleFunc("GET /api/v1/chats/{chatId}/roles/{roleId}", h.chatController.GetChatRoleHandler)
+	mux.HandleFunc("GET /api/v1/chats/{chatId}/permissions", h.chatController.GetAllPermissionsHandler)
+	mux.HandleFunc("PATCH /api/v1/chats/{chatId}/users/{userId}/nickname", h.chatController.ChangeUserNicknameHandler)
+	//mux.HandleFunc("GET /api/v1/chats/direct/{userId}", h.chatController.GetDirectChatHandler)
+	mux.HandleFunc("GET /api/v1/chats/{chatId}/users/{userId}", h.chatController.GetChatUserHandler)
+	mux.HandleFunc("POST /api/v1/chats/direct", h.chatController.CreateDirectChatHandler)
+	mux.HandleFunc("DELETE /api/v1/chats", h.chatController.LeaveFromChatsHandler)
+	mux.HandleFunc("GET /api/v1/chats", h.chatController.GetAllAvailableChatsHandler)
+}
+
+func (h *HttpServer) ConfigureCors(mux *http.ServeMux) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		mux.ServeHTTP(w, r)
+	})
 }
 
 type GRPCServer struct {
@@ -97,6 +114,32 @@ func (s *GRPCServer) GetChat(ctx context.Context, req *chat.GetChatRequest) (*ch
 		JoinLink:        chatEntity.Chat.JoinLink,
 		CreatorId:       chatEntity.Chat.CreatorId.String(),
 		ParticipantsIds: users,
+	}, nil
+}
+
+func (s *GRPCServer) GetDirectChat(ctx context.Context, req *chat.GetDirectChatRequest) (*chat.DirectChatResponse, error) {
+	chatId, err := uuid.Parse(req.ChatId)
+	if err != nil {
+		slog.Error("Invalid chat Id", "error", err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	userId, err := uuid.Parse(req.OwnUserId)
+	if err != nil {
+		slog.Error("Invalid user Id", "error", err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	chatEntity, err := s.chatService.GetDirectChatById(chatId, userId)
+	if err != nil {
+		slog.Error("GetChat error", "error", err.Error())
+		return nil, err
+	}
+	if chatEntity.FirstUserId != userId {
+		chatEntity.FirstUserId, chatEntity.SecondUserId = chatEntity.SecondUserId, chatEntity.FirstUserId
+	}
+	return &chat.DirectChatResponse{
+		ChatId:       chatEntity.ChatId.String(),
+		OwnUserId:    chatEntity.FirstUserId.String(),
+		TargetUserId: chatEntity.SecondUserId.String(),
 	}, nil
 }
 

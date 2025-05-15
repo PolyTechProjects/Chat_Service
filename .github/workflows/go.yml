@@ -30,17 +30,17 @@ jobs:
       - name: Upload Auth
         uses: actions/upload-artifact@v3
         with:
-          name: auth-app-build
+          name: auth-build
           path: auth/build/AuthApp-001-build
 
-      - name: Build Chat
-        run: cd chat-app/ && ./build.sh && cd ../
+      - name: Build Messaging
+        run: cd messaging/ && ./build.sh && cd ../
 
-      - name: Upload Chat
+      - name: Upload Messaging
         uses: actions/upload-artifact@v3
         with:
-          name: chat-app-build
-          path: chat-app/build/ChatApp-001-build
+          name: messaging-build
+          path: messaging/build/MessagingApp-001-build
 
       - name: Build Media Handler
         run: cd media-handler/ && ./build.sh && cd ../
@@ -51,32 +51,23 @@ jobs:
           name: media-handler-build
           path: media-handler/build/MediaHandlerApp-001-build
 
-      - name: Build User Management
-        run: cd user-mgmt/ && ./build.sh && cd ../
+      - name: Build Users
+        run: cd users/ && ./build.sh && cd ../
 
-      - name: Upload User Management
+      - name: Upload Users
         uses: actions/upload-artifact@v3
         with:
-          name: user-mgmt-build
-          path: user-mgmt/build/UserMgmtApp-001-build
+          name: users-build
+          path: users/build/UsersApp-001-build
 
-      - name: Build Chat Room Management
-        run: cd chat-management/ && ./build.sh && cd ../
+      - name: Build Chat
+        run: cd chat/ && ./build.sh && cd ../
 
-      - name: Upload Chat Room Management
+      - name: Upload Chat
         uses: actions/upload-artifact@v3
         with:
-          name: chat-management-build
-          path: chat-management/build/ChatManagementService-001-build
-
-      - name: Build Channel Management
-        run: cd channel-management/ && ./build.sh && cd ../
-
-      - name: Upload Channel Management
-        uses: actions/upload-artifact@v3
-        with:
-          name: channel-management-build
-          path: channel-management/build/ChannelManagementService-001-build
+          name: chat-build
+          path: chat/build/ChatApp-001-build
 
       - name: Build Notification
         run: cd notification/ && ./build.sh && cd ../
@@ -111,7 +102,7 @@ jobs:
       - name: Download Auth
         uses: actions/download-artifact@v3
         with:
-          name: auth-app-build
+          name: auth-build
           path: auth/build
       - name: Decode Auth.env
         uses: mobiledevops/secret-to-file-action@v1
@@ -128,26 +119,26 @@ jobs:
           push: true
           tags: ghcr.io/polytechprojects/chat_service/auth:latest
 
-      ### Chat ###
-      - name: Download Chat
+      ### Messaging ###
+      - name: Download Messaging
         uses: actions/download-artifact@v3
         with:
-          name: chat-app-build
-          path: chat-app/build
+          name: messaging-build
+          path: messaging/build
       - name: Decode Chat.env
         uses: mobiledevops/secret-to-file-action@v1
         with:
           base64-encoded-secret: ${{ secrets.CHAT_ENV }}
           filename: ".env"
-          working-directory: "${{ github.workspace }}/chat-app"
+          working-directory: "${{ github.workspace }}/messaging"
       - name: Build multiplatform Chat.env
         uses: docker/build-push-action@v5
         with:
-          context: ./chat-app
-          file: ./chat-app/app.Dockerfile
+          context: ./messaging
+          file: ./messaging/app.Dockerfile
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          tags: ghcr.io/polytechprojects/chat_service/chat-app:latest
+          tags: ghcr.io/polytechprojects/chat_service/messaging:latest
 
       ### Media Handler ###
       - name: Download Media Handler
@@ -170,68 +161,47 @@ jobs:
           push: true
           tags: ghcr.io/polytechprojects/chat_service/media-handler:latest
 
-      ### User Management ###
-      - name: Download User Management
+      ### Users ###
+      - name: Download Users
         uses: actions/download-artifact@v3
         with:
-          name: user-mgmt-build
-          path: user-mgmt/build
+          name: users-build
+          path: users/build
       - name: Decode User Management.env
         uses: mobiledevops/secret-to-file-action@v1
         with:
           base64-encoded-secret: ${{ secrets.USER_MGMT_ENV }}
           filename: ".env"
-          working-directory: "${{ github.workspace }}/user-mgmt"
+          working-directory: "${{ github.workspace }}/users"
       - name: Build multiplatform User Management
         uses: docker/build-push-action@v5
         with:
-          context: ./user-mgmt
-          file: ./user-mgmt/app.Dockerfile
+          context: ./users
+          file: ./users/app.Dockerfile
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          tags: ghcr.io/polytechprojects/chat_service/user-mgmt:latest
+          tags: ghcr.io/polytechprojects/chat_service/users:latest
 
-      ### Channel Management ###
-      - name: Download Channel Management
+      ### Chat ###
+      - name: Download Chat
         uses: actions/download-artifact@v3
         with:
-          name: channel-management-build
-          path: channel-management/build
-      - name: Decode Channel Management.env
-        uses: mobiledevops/secret-to-file-action@v1
-        with:
-          base64-encoded-secret: ${{ secrets.CHANNEL_MGMT_ENV }}
-          filename: ".env"
-          working-directory: "${{ github.workspace }}/channel-management"
-      - name: Build multiplatform Channel Management
-        uses: docker/build-push-action@v5
-        with:
-          context: ./channel-management
-          file: ./channel-management/app.Dockerfile
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: true
-          tags: ghcr.io/polytechprojects/chat_service/channel-management:latest
-
-      ### Chat Room Management ###
-      - name: Download Chat Room Management
-        uses: actions/download-artifact@v3
-        with:
-          name: chat-management-build
-          path: chat-management/build
-      - name: Decode Chat Room Management.env
+          name: chat-build
+          path: chat/build
+      - name: Decode Chat.env
         uses: mobiledevops/secret-to-file-action@v1
         with:
           base64-encoded-secret: ${{ secrets.CHAT_MGMT_ENV }}
           filename: ".env"
-          working-directory: "${{ github.workspace }}/chat-management"
+          working-directory: "${{ github.workspace }}/chat"
       - name: Build multiplatform Chat Room Management
         uses: docker/build-push-action@v5
         with:
-          context: ./chat-management
-          file: ./chat-management/app.Dockerfile
+          context: ./chat
+          file: ./chat/app.Dockerfile
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          tags: ghcr.io/polytechprojects/chat_service/chat-management:latest
+          tags: ghcr.io/polytechprojects/chat_service/chat:latest
 
       ### Notification ###
       - name: Download Notification

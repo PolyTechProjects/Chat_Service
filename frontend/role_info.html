@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Информация о роли</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .role-info-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"],
+        textarea,
+        input[type="color"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .permissions-list {
+            margin-top: 15px;
+        }
+        .action-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .save-btn {
+            background: #4CAF50;
+            color: white;
+        }
+        .delete-btn {
+            background: #f44336;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="role-info-container" id="roleInfoContainer">
+        <h1 id="pageTitle">Информация о роли</h1>
+        
+        <div id="formContent">
+            <div class="form-group">
+                <label for="roleName">Название роли</label>
+                <input type="text" id="roleName" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="roleColor">Цвет роли</label>
+                <input type="color" id="roleColor" value="#ffffff">
+            </div>
+            
+            <div class="form-group">
+                <label for="roleDescription">Описание роли</label>
+                <textarea id="roleDescription"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Права роли</label>
+                <div class="permissions-list" id="permissionsList">
+                    <!-- Права будут загружены здесь -->
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="delete-btn" id="deleteRoleBtn">Удалить роль</button>
+                <button class="save-btn" id="saveRoleBtn">Сохранить изменения</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="role_info.js"></script>
+</body>
+</html>

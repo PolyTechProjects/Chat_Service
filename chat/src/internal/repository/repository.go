@@ -143,16 +143,13 @@ func (r *ChatUserRepository) DeleteChatUser(chatUser *models.ChatUser) error {
 }
 
 func (r *ChatUserRepository) DeleteChatUsers(chatUsers []*models.ChatUser) error {
-	r.db.Begin()
 	for _, chatUser := range chatUsers {
 		err := r.db.Where("chat_id = ? AND user_id = ?", chatUser.ChatId, chatUser.UserId).Delete(&models.ChatUser{}).Error
 		if err != nil {
 			slog.Error("ChatUserRepositoryDeleteChatUsers failed: " + err.Error())
-			r.db.Rollback()
 			return err
 		}
 	}
-	r.db.Commit()
 	return nil
 }
 
@@ -233,27 +230,17 @@ func (r *RoleRepository) FindByChat(chatId uuid.UUID) ([]*models.Role, error) {
 	var chatRoles []*models.Role
 	err := r.db.Where("chat_id = ?", chatId).Find(&chatRoles).Error
 	if err != nil {
-		slog.Error("ChatRoleRepositoryFindByChat failed: " + err.Error())
+		slog.Error("RoleRepositoryFindByChat failed: " + err.Error())
 		return nil, err
 	}
 	return chatRoles, nil
-}
-
-func (r *RoleRepository) FindByRole(roleId uuid.UUID) (*models.Role, error) {
-	chatRole := &models.Role{}
-	err := r.db.Where("role_id = ?", roleId).First(chatRole).Error
-	if err != nil {
-		slog.Error("ChatRoleRepositoryFindByRole failed: " + err.Error())
-		return nil, err
-	}
-	return chatRole, nil
 }
 
 func (r *RoleRepository) FindDefaultRole(chatId uuid.UUID) (*models.Role, error) {
 	chatRole := &models.Role{}
 	err := r.db.Where("chat_id = ? AND is_default = ?", chatId, true).Find(&chatRole).Error
 	if err != nil {
-		slog.Error("ChatRoleRepositoryFindDefaultRole failed: " + err.Error())
+		slog.Error("RoleRepositoryFindDefaultRole failed: " + err.Error())
 		return nil, err
 	}
 	return chatRole, nil
@@ -262,7 +249,7 @@ func (r *RoleRepository) FindDefaultRole(chatId uuid.UUID) (*models.Role, error)
 func (r *RoleRepository) DeleteByChat(chatId uuid.UUID) error {
 	err := r.db.Where("chat_id = ?", chatId).Delete(&models.Role{}).Error
 	if err != nil {
-		slog.Error("ChatRoleRepositoryDeleteByChat failed: " + err.Error())
+		slog.Error("RoleRepositoryDeleteByChat failed: " + err.Error())
 		return err
 	}
 	return nil
@@ -317,16 +304,13 @@ func (r *RolePermissionRepository) DeleteRolePermission(rolePermission *models.R
 }
 
 func (r *RolePermissionRepository) DeleteRolePermissions(rolePermissions []*models.RolePermission) error {
-	r.db.Begin()
 	for _, rolePermission := range rolePermissions {
 		err := r.db.Where("role_id = ? AND permission = ?", rolePermission.RoleId, rolePermission.Permission).Delete(&models.RolePermission{}).Error
 		if err != nil {
 			slog.Error("RepositoryDeleteRolePermissions failed: " + err.Error())
-			r.db.Rollback()
 			return err
 		}
 	}
-	r.db.Commit()
 	return nil
 }
 

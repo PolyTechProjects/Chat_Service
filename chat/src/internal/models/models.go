@@ -6,14 +6,14 @@ import (
 )
 
 type Chat struct {
-	Id          uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primary_key"`
-	Name        string    `gorm:"not null;check:name <> ''"`
-	CreatorId   uuid.UUID `gorm:"type:uuid"`
-	IsChannel   bool      `gorm:"not null;default:false"`
-	IsClosed    bool      `gorm:"not null;default:true"`
-	JoinLink    string    `gorm:"unique;default:NULL"`
-	ProfilePic  string    `gorm:"default:0;not null;check:profile_pic <> ''"`
-	Description string
+	Id          uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primary_key" json:"id"`
+	Name        string    `gorm:"not null;check:name <> ''" json:"name"`
+	CreatorId   uuid.UUID `gorm:"type:uuid" json:"creator_id"`
+	IsChannel   bool      `gorm:"not null;default:false" json:"is_channel"`
+	IsClosed    bool      `gorm:"not null;default:true" json:"is_closed"`
+	JoinLink    string    `gorm:"unique;default:NULL" json:"join_link"`
+	ProfilePic  string    `gorm:"default:0;not null;check:profile_pic <> ''" json:"profile_pic"`
+	Description string    `json:"description"`
 }
 
 type DirectChat struct {

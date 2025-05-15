@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="auth-container">
+        <h1>Вход</h1>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="login-login">Логин:</label>
+                <input type="text" id="login-login" required>
+            </div>
+            <div class="form-group">
+                <label for="login-password">Пароль:</label>
+                <input type="password" id="login-password" required>
+            </div>
+            <button type="submit">Войти</button>
+        </form>
+        <p>Нет аккаунта? <a href="/register">Зарегистрироваться</a></p>
+        <div id="login-message" class="message"></div>
+    </div>
+    
+    <script src="auth.js"></script>
+</body>
+</html>

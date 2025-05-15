@@ -21,9 +21,23 @@ func NewHttpServer(UsersController *controller.UsersController) *HttpServer {
 	return &HttpServer{UsersController: UsersController}
 }
 
-func (h *HttpServer) StartServer() {
-	http.HandleFunc("PUT /api/v1/users/profiles/{profileLink}", h.UsersController.UpdateProfileHandler)
-	http.HandleFunc("GET /api/v1/users/profiles", h.UsersController.GetProfilesHandler)
+func (h *HttpServer) StartServer(mux *http.ServeMux) {
+	mux.HandleFunc("PUT /api/v1/users/profiles/{profileLink}", h.UsersController.UpdateProfileHandler)
+	mux.HandleFunc("GET /api/v1/users/profiles", h.UsersController.GetProfilesHandler)
+	//mux.HandleFunc("GET /api/v1/users/profiles/{profileLink}", h.UsersController.GetProfileHandler)
+}
+
+func (h *HttpServer) ConfigureCors(mux *http.ServeMux) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		mux.ServeHTTP(w, r)
+	})
 }
 
 type GRPCServer struct {

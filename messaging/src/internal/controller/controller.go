@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"example.com/messaging/src/internal/client"
@@ -186,9 +187,10 @@ func NewWebsocketController(messageService *service.MessageService, authClient *
 
 func (ws *WebsocketController) SendMessageHandler(w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{}
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 	wsConnection, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		slog.Error("Error has occurred while trying to connect to websocket server.")
+		slog.Error("Error has occurred while trying to connect to websocket server: " + err.Error())
 		return
 	}
 	slog.Debug("Connected to websocket server")
@@ -203,13 +205,25 @@ func (ws *WebsocketController) SendMessageHandler(w http.ResponseWriter, r *http
 		return
 	}
 
-	_, err = ws.authClient.PerformAuthorize(r)
+	params, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil {
+		wsConnection.Close()
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if !params.Has("token") {
+		wsConnection.Close()
+		http.Error(w, "URL query params are invalid", http.StatusBadRequest)
+	}
+	accessToken := params.Get("token")
+
+	_, err = ws.authClient.PerformAuthorizeDirect(accessToken)
 	if err != nil {
 		wsConnection.Close()
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	extractResp, err := ws.authClient.PerformExtractUserId(r)
+	extractResp, err := ws.authClient.PerformExtractUserIdDirect(accessToken)
 	if err != nil {
 		wsConnection.Close()
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -238,9 +252,10 @@ func (ws *WebsocketController) SendMessageHandler(w http.ResponseWriter, r *http
 
 func (ws *WebsocketController) SendDirectMessageHandler(w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{}
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 	wsConnection, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		slog.Error("Error has occurred while trying to connect to websocket server.")
+		slog.Error("Error has occurred while trying to connect to websocket server: " + err.Error())
 		return
 	}
 	slog.Debug("Connected to websocket server")
@@ -255,13 +270,25 @@ func (ws *WebsocketController) SendDirectMessageHandler(w http.ResponseWriter, r
 		return
 	}
 
-	_, err = ws.authClient.PerformAuthorize(r)
+	params, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil {
+		wsConnection.Close()
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if !params.Has("token") {
+		wsConnection.Close()
+		http.Error(w, "URL query params are invalid", http.StatusBadRequest)
+	}
+	accessToken := params.Get("token")
+
+	_, err = ws.authClient.PerformAuthorizeDirect(accessToken)
 	if err != nil {
 		wsConnection.Close()
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	extractResp, err := ws.authClient.PerformExtractUserId(r)
+	extractResp, err := ws.authClient.PerformExtractUserIdDirect(accessToken)
 	if err != nil {
 		wsConnection.Close()
 		http.Error(w, err.Error(), http.StatusUnauthorized)

@@ -7,6 +7,8 @@ option go_package = "example.com/proto/chat";
 service Chat {
     rpc GetChat (GetChatRequest) returns (ChatResponse) {}
 
+    rpc GetDirectChat (GetDirectChatRequest) returns (DirectChatResponse) {}
+
     rpc VerifyUserAction (VerifyUserActionRequest) returns (VerifyUserActionResponse) {}
 
     rpc VerifyUserPersistance (VerifyUserPersistanceRequest) returns (VerifyUserPersistanceResponse) {}
@@ -14,6 +16,11 @@ service Chat {
     rpc GetChatAndUserNames (GetChatAndUserNamesRequest) returns (GetChatAndUserNamesResponse) {}
 
     rpc VerifyUserActionOnSomebody (VerifyUserActionOnSomebodyRequest) returns (VerifyUserActionOnSomebodyResponse) {}
+}
+
+message GetChatRequest {
+    string chatId = 1;
+    string userId = 2;
 }
 
 message ChatResponse {
@@ -28,9 +35,15 @@ message ChatResponse {
     repeated string participantsIds = 9;
 }
 
-message GetChatRequest {
+message GetDirectChatRequest {
     string chatId = 1;
-    string userId = 2;
+    string ownUserId = 2;
+}
+
+message DirectChatResponse {
+    string chatId = 1;
+    string ownUserId = 2;
+    string targetUserId = 3;
 }
 
 message VerifyUserActionRequest {

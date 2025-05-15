@@ -92,6 +92,10 @@ type RoleResponse struct {
 	Permissions []string  `json:"permissions"`
 }
 
+type RolesResponse struct {
+	Roles []*RoleResponse `json:"roles"`
+}
+
 type DirectChatResponse struct {
 	ChatId       uuid.UUID `json:"chat_id"`
 	FirstUserId  uuid.UUID `json:"first_user_id"`
@@ -101,6 +105,13 @@ type DirectChatResponse struct {
 type ChatsResponse struct {
 	Chats       []*models.Chat        `json:"chats"`
 	DirectChats []*DirectChatResponse `json:"direct_chats"`
+}
+
+type ChatUserResponse struct {
+	ChatId   uuid.UUID `json:"chat_id"`
+	UserId   uuid.UUID `json:"user_id"`
+	RoleId   uuid.UUID `json:"role_id"`
+	Nickname string    `json:"nickname"`
 }
 
 type Participants struct {

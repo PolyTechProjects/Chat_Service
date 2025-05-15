@@ -1,5 +1,7 @@
 package dto
 
+import "github.com/google/uuid"
+
 type SeaweedFSAssignResponse struct {
 	Count     int    `json:"count"`
 	Fid       string `json:"fid"`
@@ -15,4 +17,8 @@ type SeaweedFSLookupResponse struct {
 type PublicUrlXUrl struct {
 	PublicUrl string `json:"publicUrl"`
 	Url       string `json:"url"`
+}
+
+type MediaResponse struct {
+	MediaId uuid.UUID `json:"media_id"`
 }

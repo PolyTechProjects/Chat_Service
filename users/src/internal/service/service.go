@@ -103,6 +103,22 @@ func (s *UsersService) GetUser(profileLink string) (*dto.UserResponse, error) {
 	}, nil
 }
 
+func (s *UsersService) GetUserById(userId uuid.UUID) (*dto.UserResponse, error) {
+	user, err := s.UsersRepository.GetById(userId)
+	if err != nil {
+		return nil, err
+	}
+	return &dto.UserResponse{
+		UserId:      user.Id.String(),
+		Name:        user.Name,
+		Firstname:   user.Firstname,
+		Lastname:    user.Lastname,
+		ProfilePic:  user.ProfilePic,
+		ProfileLink: user.ProfileLink,
+		Description: user.Description,
+	}, nil
+}
+
 func (s *UsersService) UpdateUser(profileLink string, updateUserRequest *dto.UpdateUserRequest) (*dto.UserResponse, error) {
 	user, err := s.UsersRepository.GetByProfileLink(profileLink)
 	if err != nil {

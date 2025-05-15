@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/url"
 
@@ -30,22 +31,22 @@ func (m *MediaHandlerController) UploadMediaHandler(w http.ResponseWriter, r *ht
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = m.mediaHandlerService.UploadMedia(file, fileHeader)
+	media, err := m.mediaHandlerService.UploadMedia(file, fileHeader)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-}
-
-func (m *MediaHandlerController) GetMediaHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := m.authClient.PerformAuthorize(r)
+	response, err := json.Marshal(media)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(response)
+}
+
+func (m *MediaHandlerController) GetMediaHandler(w http.ResponseWriter, r *http.Request) {
 	params, err := url.ParseQuery(r.URL.RawQuery)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -66,7 +67,6 @@ func (m *MediaHandlerController) GetMediaHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Write(res)
 }
 

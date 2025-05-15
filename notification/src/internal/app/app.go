@@ -37,10 +37,12 @@ func (a *App) RunHttpServer() error {
 	if err != nil {
 		return err
 	}
+	mux := http.NewServeMux()
+	a.httpServer.StartServer(mux)
+	handler := a.httpServer.ConfigureCors(mux)
 	slog.Debug("Starting HTTP server")
 	slog.Debug(hl.Addr().String())
-	a.httpServer.StartServer()
-	if err := http.Serve(hl, nil); err != nil {
+	if err := http.Serve(hl, handler); err != nil {
 		return err
 	}
 	return nil

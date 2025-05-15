@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Мессенджер</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .chat-list {
+            width: 30%;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            background: #f5f5f5;
+        }
+        .chat-list {
+            width: 30%;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .welcome-header {
+            display: flex;
+        }
+        
+        .user-profile-header {
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #ddd;
+            background: #fff;
+        }
+        
+        .user-profile-info {
+            padding: 15px;
+            flex: 1;
+            align-content: center;
+            border-bottom: 1px solid #ddd;
+            background: #fff;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .welcome-text {
+            font-weight: bold;
+            margin-bottom: 5px;
+            flex: 1;
+        }
+        
+        .chat-controls {
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+            border-bottom: 1px solid #ddd;
+            background: #fff;
+            margin-left: auto;
+        }
+        
+        .search-container {
+            padding: 10px;
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            background: #fff;
+        }
+        
+        .search-input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .search-button, .create-chat-button {
+            padding: 8px 12px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        
+        .chats-container {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .chat-content {
+            width: 70%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-active {
+            flex-direction: column;
+            overflow-y: hidden;
+            flex: 1;
+        }
+        
+        .chat-header {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-sizing: border-box;  
+            height: 9.25%;
+        }
+        
+        .chat-messages {
+            padding: 15px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            box-sizing: border-box;
+        }
+        
+        .chat-input {
+            padding: 15px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            box-sizing: border-box;
+            height: 8%;
+            margin-top: auto;
+        }
+        
+        .chat-input textarea {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: none;
+        }
+        
+        .chat-input button {
+            margin-left: 10px;
+            padding: 10px 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .chat-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            background: #fff;
+            display: flex;
+        }
+        
+        .chat-item:hover {
+            background: #e9e9e9;
+        }
+        
+        .chat-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .chat-name {
+            font-weight: bold;
+            align-content: center;
+            padding-left: 15px;
+        }
+        
+        .no-chat-selected {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #888;
+            font-size: 1.2em;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            border-radius: 5px;
+            background: #f0f0f0;
+            width: fit-content;
+            max-width: 50%;
+            display: flex;
+            word-break: break-word;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        .own-message {
+            margin-bottom: 15px;
+            border-radius: 5px;
+            background: #f0f0f0;
+            width: fit-content;
+            max-width: 50%;
+            display: flex;
+            word-break: break-word;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            margin-left: auto;
+        }
+
+        .own-message .message-footer {
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        .message-sender {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .back-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2em;
+        }
+
+        .message-box {
+            padding: 10px;
+        }
+
+        .message-metadata {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .message-sender-name {
+            font-weight: bold;
+        }
+        
+        .message-role-name {
+            font-style: italic;
+            padding-left: 5px;
+        }
+        .message-date {
+            font-size: 0.8em;
+            color: #888;
+        }
+        .message-profile-pic {
+            padding-left: 5px;
+            padding-right: 5px;
+            align-content: end;
+            background: #fff;
+        }
+        .message-files {
+            display: flex;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .message-file {
+            width: 100px;
+            height: 100px;
+            margin-right: 10px;
+            object-fit: cover;
+        }
+
+        .message-actions {
+            display: none;
+            position: absolute;
+            right: 5px;
+            top: 5px;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+        
+        .message:hover .message-actions,
+        .own-message:hover .message-actions {
+            display: flex;
+        }
+        
+        .message-action {
+            padding: 5px;
+            cursor: pointer;
+            color: #555;
+        }
+        
+        .message-action:hover {
+            color: #333;
+        }
+        
+        .message-container {
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-list" id="chatList">
+        <div class="welcome-header">
+            <div class="user-profile-header">
+                <img id="currentUserProfilePic" class="user-avatar" src="" alt="Ваш аватар">
+            </div>
+            <div class="user-profile-info">
+                <div class="welcome-text">Добро пожаловать, <span id="currentUsername"></span></div>
+            </div>
+            <div class="chat-controls">
+                <button class="create-chat-button" id="createChatButton">
+                    <i class="fas fa-plus"></i> Создать чат
+                </button>
+            </div>
+        </div>
+        
+        <div class="search-container">
+            <input type="text" class="search-input" id="searchInput" placeholder="Поиск чатов...">
+            <button class="search-button" id="searchButton">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+        
+        <div class="chats-container" id="chatsContainer">
+            <!-- Список чатов будет загружен здесь -->
+        </div>
+    </div>
+    
+    <div class="chat-content" id="chatContent">
+        <div class="no-chat-selected">
+            Выберите чат из списка
+        </div>
+        
+        <div class="chat-active" style="display: none;">
+            <div class="chat-header">
+                <button class="back-button" id="backButton">←</button>
+                <h2 id="chatTitle"></h2>
+                <img id="chatAvatar" class="user-avatar" src="" alt="Аватар чата">
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <!-- Сообщения будут загружены здесь -->
+            </div>
+            <div class="chat-input">
+                <textarea id="messageInput" placeholder="Введите сообщение..."></textarea>
+                <button id="sendButton">Отправить</button>
+                <input type="file" id="fileInput" multiple style="display: none;">
+                <button id="attachButton">Прикрепить файл</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

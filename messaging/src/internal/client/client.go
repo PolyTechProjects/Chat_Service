@@ -44,6 +44,11 @@ func (authClient *AuthGRPCClient) PerformAuthorize(r *http.Request) (*auth.Autho
 	return authClient.Authorize(ctx, &auth.AuthorizeRequest{})
 }
 
+func (authClient *AuthGRPCClient) PerformAuthorizeDirect(accessToken string) (*auth.AuthorizeResponse, error) {
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "Authorization", "Bearer "+accessToken)
+	return authClient.Authorize(ctx, &auth.AuthorizeRequest{})
+}
+
 func (authClient *AuthGRPCClient) PerformExtractUserId(r *http.Request) (*auth.ExtractUserIdResponse, error) {
 	accessToken := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 	if accessToken == "" {
@@ -51,6 +56,11 @@ func (authClient *AuthGRPCClient) PerformExtractUserId(r *http.Request) (*auth.E
 		return nil, fmt.Errorf("PerformExtractUserId failed: No access token provided")
 	}
 	ctx := metadata.AppendToOutgoingContext(r.Context(), "Authorization", "Bearer "+accessToken)
+	return authClient.ExtractUserId(ctx, &auth.ExtractUserIdRequest{})
+}
+
+func (authClient *AuthGRPCClient) PerformExtractUserIdDirect(accessToken string) (*auth.ExtractUserIdResponse, error) {
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "Authorization", "Bearer "+accessToken)
 	return authClient.ExtractUserId(ctx, &auth.ExtractUserIdRequest{})
 }
 
@@ -75,6 +85,15 @@ func (c *ChatGRPCClient) PerformGetChat(chatId string, userId string) (*chat.Cha
 		return nil, err
 	}
 	return getChatResponse, nil
+}
+
+func (c *ChatGRPCClient) PerformGetDirectChat(chatId string, ownUserId string) (*chat.DirectChatResponse, error) {
+	getDirectChatResponse, err := c.ChatClient.GetDirectChat(context.Background(), &chat.GetDirectChatRequest{ChatId: chatId, OwnUserId: ownUserId})
+	if err != nil {
+		slog.Error("PerformGetDirectChat failed : " + err.Error())
+		return nil, err
+	}
+	return getDirectChatResponse, nil
 }
 
 func (c *ChatGRPCClient) PerformVerifyUserAction(chatId string, userId string, action string) (*chat.VerifyUserActionResponse, error) {
