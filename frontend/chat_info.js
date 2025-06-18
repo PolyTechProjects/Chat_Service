@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const chatAvatarInput = document.getElementById('chatAvatar');
     const participantsList = document.getElementById('participantsList');
     const permissionsContainer = document.getElementById('permissionsContainer');
+    const rolesContainer = document.getElementById('rolesContainer');
     const saveBtn = document.getElementById('saveBtn');
     const cancelBtn = document.getElementById('cancelBtn');
     const updateBtn = document.getElementById('updateBtn');
@@ -93,6 +94,9 @@ document.addEventListener('DOMContentLoaded', function() {
         updateBtn.addEventListener('click', function() {
             updateChat(chatId);
         });
+        permissionsContainer.style.display = 'none';
+        rolesContainer.style.display = 'flex';
+        rolesContainer.style.flexDirection = 'column';
         loadChatInfo(chatId);
         
         // Обработчик кнопки удаления чата

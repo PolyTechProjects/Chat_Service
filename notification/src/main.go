@@ -26,6 +26,7 @@ func main() {
 	redisClient := client.NewRedisClient(cfg)
 	smtpClient := client.NewSmtpClient(cfg)
 	authClient := client.NewAuthClient(cfg)
+	userClient := client.NewUsersClient(cfg)
 	chatClient := client.NewChatClient(cfg)
 	subscriptionRepository := repository.NewSubscriptionRepository(db)
 	notificationRepository := repository.NewNotificationRepository(db)
@@ -33,12 +34,14 @@ func main() {
 		notificationRepository,
 		subscriptionRepository,
 		authClient,
+		userClient,
 		chatClient,
 		redisClient,
 		smtpClient,
 	)
 	go redisClient.SubscribeToNotificationChannel(notificationService.SendNotification)
 	go redisClient.SubscribeToSubscriptionChannel(notificationService.Subscribe)
+	go redisClient.SubscribeToSendEmailChannel(notificationService.SendEmail)
 	notificationController := controller.NewNotificationController(notificationService, authClient)
 	httpServer := server.NewNotificationHttpServer(notificationController)
 	app := app.New(httpServer, cfg)

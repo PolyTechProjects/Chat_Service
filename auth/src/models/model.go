@@ -9,16 +9,18 @@ import (
 )
 
 type User struct {
-	Id         uuid.UUID `gorm:"primary_key;type:uuid;default:gen_random_uuid()"`
-	Login      string    `gorm:"unique;not null;check:login <> ''"`
-	Name       string    `gorm:"not null;check:name <> ''"`
-	Pass       string    `gorm:"not null;check:pass <> ''"`
-	KeycloakId string    `gorm:"unique;not null;check:keycloak_id <> ''"`
-	Firstname  string    `gorm:"not null;check:firstname <> ''"`
-	Lastname   string    `gorm:"not null;check:lastname <> ''"`
+	Id           uuid.UUID `gorm:"primary_key;type:uuid;default:gen_random_uuid()"`
+	Login        string    `gorm:"unique;not null;check:login <> ''"`
+	Name         string    `gorm:"not null;check:name <> ''"`
+	Pass         string    `gorm:"not null;check:pass <> ''"`
+	KeycloakId   string    `gorm:"unique;not null;check:keycloak_id <> ''"`
+	Firstname    string    `gorm:"not null;check:firstname <> ''"`
+	Lastname     string    `gorm:"not null;check:lastname <> ''"`
+	IsVerified   bool      `gorm:"not null;default:false"`
+	Is2FAEnabled bool      `gorm:"not null;default:false"`
 }
 
-func New(login string, name string, pass string, firstname string, lastname string) (*User, error) {
+func NewAccount(login string, name string, pass string, firstname string, lastname string) (*User, error) {
 	/*
 		phonenumber, err := phonenumbers.Parse(login, "RU")
 		if err != nil {
@@ -36,30 +38,34 @@ func New(login string, name string, pass string, firstname string, lastname stri
 	}
 
 	user := User{
-		Id:        uuid.New(),
-		Login:     login,
-		Name:      name,
-		Pass:      pass,
-		Firstname: firstname,
-		Lastname:  lastname,
+		Id:           uuid.New(),
+		Login:        login,
+		Name:         name,
+		Pass:         pass,
+		Firstname:    firstname,
+		Lastname:     lastname,
+		IsVerified:   false,
+		Is2FAEnabled: false,
 	}
 
 	return &user, nil
 }
 
-type RefreshToken struct {
-	Id        uuid.UUID `gorm:"primary_key;type:uuid;default:gen_random_uuid()"`
-	UserId    uuid.UUID `gorm:"unique;not null"`
-	Value     string    `gorm:"not null;check:value <> ''"`
-	ExpiredAt time.Time `gorm:"not null"`
+type UserVerification struct {
+	Id                uuid.UUID `gorm:"primary_key;type:uuid;default:gen_random_uuid()"`
+	UserId            uuid.UUID `gorm:"unique;not null"`
+	VerificationToken string    `gorm:"unique;not null;check:value <> ''"`
+	CreatedAt         time.Time `gorm:"not null;default:now()"`
+	IsExpired         bool      `gorm:"not null;default:false"`
 }
 
-func NewRefreshToken(userId uuid.UUID, value string) *RefreshToken {
-	refreshToken := RefreshToken{
-		Id:        uuid.New(),
-		UserId:    userId,
-		Value:     value,
-		ExpiredAt: time.Now().Add(time.Hour * 24 * 30),
+func NewUserVerification(userId uuid.UUID, verificationToken string) *UserVerification {
+	userVerification := &UserVerification{
+		Id:                uuid.New(),
+		UserId:            userId,
+		VerificationToken: verificationToken,
+		CreatedAt:         time.Now(),
+		IsExpired:         false,
 	}
-	return &refreshToken
+	return userVerification
 }

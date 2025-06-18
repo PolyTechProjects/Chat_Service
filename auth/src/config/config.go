@@ -13,8 +13,9 @@ type Config struct {
 }
 
 type AppConfig struct {
-	InnerGrpcPort int `env:"APP_GRPC_PORT"`
-	InnerHttpPort int `env:"APP_HTTP_PORT"`
+	InnerGrpcPort int    `env:"APP_GRPC_PORT"`
+	InnerHttpPort int    `env:"APP_HTTP_PORT"`
+	TotpSecret    string `env:"APP_TOTP_SECRET"`
 }
 
 type DbConfig struct {
@@ -41,6 +42,7 @@ type RedisConfig struct {
 	InnerPort                int    `env:"REDIS_PORT"`
 	CreateAccountChannelName string `env:"REDIS_CREATE_ACCOUNT_CHANNEL_NAME"`
 	DeleteAccountChannelName string `env:"REDIS_DELETE_ACCOUNT_CHANNEL_NAME"`
+	SendEmailChannelName     string `env:"REDIS_SEND_EMAIL_CHANNEL_NAME"`
 }
 
 func MustLoad() *Config {

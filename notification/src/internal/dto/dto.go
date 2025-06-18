@@ -31,3 +31,9 @@ type NewSubscriptionNotificationEvent struct {
 	ChatId uuid.UUID `json:"chat_id"`
 	UserId uuid.UUID `json:"user_id"`
 }
+
+type SendEmailEvent struct {
+	To      string `json:"to"`
+	Subject string `json:"subject"`
+	Body    string `json:"body"`
+}

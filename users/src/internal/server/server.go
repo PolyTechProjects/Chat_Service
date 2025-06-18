@@ -62,6 +62,28 @@ func (s *GRPCServer) Start(l net.Listener) error {
 	return s.gRPCServer.Serve(l)
 }
 
+func (s *GRPCServer) GetUser(ctx context.Context, req *users.GetUserRequest) (*users.UserResponse, error) {
+	userId, err := uuid.Parse(req.UserId)
+	if err != nil {
+		slog.Error("GetUser failed: " + err.Error())
+		return nil, err
+	}
+	user, err := s.usersService.GetUserById(userId)
+	if err != nil {
+		slog.Error("GetUser failed: " + err.Error())
+		return nil, err
+	}
+	return &users.UserResponse{
+		UserId:      user.UserId,
+		Name:        user.Name,
+		Firstname:   user.Firstname,
+		Lastname:    user.Lastname,
+		ProfilePic:  user.ProfilePic,
+		ProfileLink: user.ProfileLink,
+		Description: user.Description,
+	}, nil
+}
+
 func (s *GRPCServer) GetUsers(ctx context.Context, req *users.GetUsersRequest) (*users.UsersResponse, error) {
 	userIds := make([]uuid.UUID, len(req.UserIds))
 	for i, user := range req.UserIds {

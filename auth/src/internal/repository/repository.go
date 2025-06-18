@@ -36,15 +36,6 @@ func (r *AuthRepository) FindByLogin(login string) (*models.User, error) {
 	return &user, nil
 }
 
-func (r *AuthRepository) FindTokenByUserId(userId uuid.UUID) (*models.RefreshToken, error) {
-	var token models.RefreshToken
-	err := r.db.Where("user_id = ?", userId).Find(&token).Error
-	if err != nil {
-		return nil, err
-	}
-	return &token, nil
-}
-
 func (r *AuthRepository) DeleteById(id uuid.UUID) error {
 	err := r.db.Debug().Where("id = ?", id).Delete(&models.User{}).Error
 	if err != nil {
@@ -60,4 +51,30 @@ func (r *AuthRepository) FindByKeycloakId(keycloakId uuid.UUID) (*models.User, e
 		return nil, err
 	}
 	return user, nil
+}
+
+func (r *AuthRepository) FindUserVerificationById(userId uuid.UUID) (*models.UserVerification, error) {
+	userVerification := &models.UserVerification{}
+	err := r.db.Where("user_id = ?", userId).Last(userVerification).Error
+	if err != nil {
+		return nil, err
+	}
+	return userVerification, nil
+}
+
+func (r *AuthRepository) StoreUserVerification(userVerification *models.UserVerification) (*models.UserVerification, error) {
+	res := r.db.Save(userVerification)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	return res.Value.(*models.UserVerification), nil
+}
+
+func (r *AuthRepository) FindUserVerificationByToken(verificationToken string) (*models.UserVerification, error) {
+	userVerification := &models.UserVerification{}
+	err := r.db.Where("verification_token = ?", verificationToken).Find(userVerification).Error
+	if err != nil {
+		return nil, err
+	}
+	return userVerification, nil
 }

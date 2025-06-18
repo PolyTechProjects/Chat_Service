@@ -33,6 +33,11 @@ func (h *HttpServer) StartServer(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/v1/auth/{userId}", h.authController.DeleteAccountHandler)
 	mux.HandleFunc("POST /api/v1/auth/refresh", h.authController.RefreshHandler)
 	mux.HandleFunc("GET /api/v1/auth/me", h.authController.MeHandler)
+	mux.HandleFunc("POST /api/v1/auth/mail", h.authController.SendMessageWithVerificationTokenHandler)
+	mux.HandleFunc("PATCH /api/v1/auth/verification/email", h.authController.VerifyEmailHandler)
+	mux.HandleFunc("PATCH /api/v1/auth/password", h.authController.ChangePasswordHandler)
+	mux.HandleFunc("PATCH /api/v1/auth/verification/password", h.authController.ResetPasswordHandler)
+	mux.HandleFunc("POST /api/v1/auth/2fa/connect", h.authController.Connect2FAHandler)
 }
 
 func (h *HttpServer) ConfigureCors(mux *http.ServeMux) http.Handler {

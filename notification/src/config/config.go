@@ -50,6 +50,7 @@ type RedisConfig struct {
 	Password                string `env:"REDIS_PASSWORD"`
 	NotificationChannelName string `env:"REDIS_NOTIFICATION_CHANNEL_NAME"`
 	SubscriptionChannelName string `env:"REDIS_SUBSCRIPTION_CHANNEL_NAME"`
+	SendEmailChannelName    string `env:"REDIS_SEND_EMAIL_CHANNEL_NAME"`
 }
 
 type SmtpConfig struct {

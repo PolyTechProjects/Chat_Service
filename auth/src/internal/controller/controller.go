@@ -162,3 +162,83 @@ func (a *AuthController) MeHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(response)
 }
+
+func (a *AuthController) SendMessageWithVerificationTokenHandler(w http.ResponseWriter, r *http.Request) {
+	verificationType := r.URL.Query().Get("type")
+	if verificationType == "" {
+		http.Error(w, "invalid query parameters", http.StatusBadRequest)
+		return
+	}
+	email := r.URL.Query().Get("email")
+	if verificationType == "" {
+		http.Error(w, "invalid query parameters", http.StatusBadRequest)
+		return
+	}
+	err := a.authService.SendVerificationMessage(verificationType, email)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+}
+
+func (a *AuthController) VerifyEmailHandler(w http.ResponseWriter, r *http.Request) {
+	req := &dto.VerifyEmailRequest{}
+	err := json.NewDecoder(r.Body).Decode(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = a.authService.VerifyEmail(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+}
+
+func (a *AuthController) ResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	req := &dto.ResetPasswordRequest{}
+	err := json.NewDecoder(r.Body).Decode(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = a.authService.ResetPassword(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+}
+
+func (a *AuthController) ChangePasswordHandler(w http.ResponseWriter, r *http.Request) {
+	req := &dto.ChangePasswordRequest{}
+	err := json.NewDecoder(r.Body).Decode(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	accessToken := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if accessToken == "" {
+		http.Error(w, "no access token", http.StatusUnauthorized)
+		return
+	}
+
+	err = a.authService.ChangePassword(req, accessToken)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+}
+
+func (a *AuthController) Connect2FAHandler(w http.ResponseWriter, r *http.Request) {
+	accessToken := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if accessToken == "" {
+		http.Error(w, "no access token", http.StatusUnauthorized)
+		return
+	}
+	err := a.authService.Connect2FA(accessToken)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+}

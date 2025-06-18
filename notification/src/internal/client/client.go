@@ -11,7 +11,9 @@ import (
 	"example.com/notification/src/config"
 	"example.com/notification/src/gen/go/auth"
 	"example.com/notification/src/gen/go/chat"
+	"example.com/notification/src/gen/go/users"
 	"example.com/notification/src/internal/dto"
+	"example.com/notification/src/internal/mail"
 	"github.com/go-redis/redis"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -62,6 +64,29 @@ func (c *AuthGRPCClient) PerformGetLogin(userId string) (*auth.GetLoginResponse,
 	return getLoginResponse, nil
 }
 
+type UsersGRPCClient struct {
+	users.UsersClient
+}
+
+func NewUsersClient(cfg *config.Config) *UsersGRPCClient {
+	connectionUrl := fmt.Sprintf("%s:%s", cfg.Users.UsersHost, cfg.Users.UsersPort)
+	conn, err := grpc.NewClient(connectionUrl, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic("failed to connect: " + err.Error())
+	}
+	slog.Info("Connected to Users: " + connectionUrl)
+	return &UsersGRPCClient{users.NewUsersClient(conn)}
+}
+
+func (c *UsersGRPCClient) PerformGetUser(userId string) (*users.UserResponse, error) {
+	getUserResponse, err := c.UsersClient.GetUser(context.Background(), &users.GetUserRequest{UserId: userId})
+	if err != nil {
+		slog.Error("PerformGetUser failed : " + err.Error())
+		return nil, err
+	}
+	return getUserResponse, nil
+}
+
 type ChatGRPCClient struct {
 	chat.ChatClient
 }
@@ -89,6 +114,7 @@ type RedisClient struct {
 	Client                  *redis.Client
 	NotificationChannelName string
 	SubscriptionChannelName string
+	SendEmailChannelName    string
 }
 
 func NewRedisClient(cfg *config.Config) *RedisClient {
@@ -101,6 +127,7 @@ func NewRedisClient(cfg *config.Config) *RedisClient {
 		Client:                  client,
 		NotificationChannelName: cfg.Redis.NotificationChannelName,
 		SubscriptionChannelName: cfg.Redis.SubscriptionChannelName,
+		SendEmailChannelName:    cfg.Redis.SendEmailChannelName,
 	}
 }
 
@@ -138,6 +165,23 @@ func (r *RedisClient) SubscribeToSubscriptionChannel(handler func(event *dto.New
 	}
 }
 
+func (r *RedisClient) SubscribeToSendEmailChannel(handler func(event *dto.SendEmailEvent) error) {
+	pubsub := r.Client.Subscribe(r.SendEmailChannelName)
+	defer pubsub.Close()
+	message := &dto.SendEmailEvent{}
+	for msg := range pubsub.Channel() {
+		slog.Debug("New msg received: " + msg.Payload)
+		err := json.Unmarshal([]byte(msg.Payload), message)
+		if err != nil {
+			slog.Error("Error while unmarshalling: " + err.Error())
+		}
+		err = handler(message)
+		if err != nil {
+			slog.Error("Error while handling event: " + err.Error())
+		}
+	}
+}
+
 type SmtpClient struct {
 	User   string
 	Dialer *gomail.Dialer
@@ -150,28 +194,12 @@ func NewSmtpClient(cfg *config.Config) *SmtpClient {
 	}
 }
 
-func (s *SmtpClient) SendEmail(senderName, receiverEmail, chatName, body string, filesCount int, isDirect bool) error {
+func (s *SmtpClient) SendEmail(mail *mail.Mail) error {
 	message := gomail.NewMessage()
 	message.SetHeader("From", s.User)
-	message.SetHeader("To", receiverEmail)
-	if isDirect {
-		message.SetHeader("Subject", "New message from "+senderName)
-	} else {
-		message.SetHeader("Subject", "New message in "+chatName)
-	}
-	if filesCount > 0 {
-		message.SetBody("text/plain", s.buildFiles(senderName, body, filesCount))
-	} else {
-		message.SetBody("text/plain", s.build(senderName, body))
-	}
+	message.SetHeader("To", mail.To)
+	message.SetHeader("Subject", mail.Subject)
+	message.SetBody("text/plain", mail.Body)
 	s.Dialer.DialAndSend(message)
 	return nil
-}
-
-func (s *SmtpClient) build(senderName string, body string) string {
-	return fmt.Sprintf("User %v has sent a new message to you. \"%v\"", senderName, body)
-}
-
-func (s *SmtpClient) buildFiles(senderName string, body string, filesCount int) string {
-	return fmt.Sprintf("User %v has sent a new message with %v files to you. \"%v\"\n\nPlease, check site to see files", senderName, filesCount, body)
 }

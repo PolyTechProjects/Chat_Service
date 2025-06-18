@@ -153,6 +153,7 @@ type RedisClient struct {
 	Client                   *redis.Client
 	createAccountChannelName string
 	deleteAccountChannelName string
+	sendEmailChannelName     string
 }
 
 func NewRedisClient(cfg *config.Config) *RedisClient {
@@ -165,6 +166,7 @@ func NewRedisClient(cfg *config.Config) *RedisClient {
 		Client:                   client,
 		createAccountChannelName: cfg.Redis.CreateAccountChannelName,
 		deleteAccountChannelName: cfg.Redis.DeleteAccountChannelName,
+		sendEmailChannelName:     cfg.Redis.SendEmailChannelName,
 	}
 }
 
@@ -189,6 +191,20 @@ func (c *RedisClient) SendToDeleteAccountChannel(accountDeletedEvent *dto.Accoun
 		return err
 	}
 	_, err = c.Client.Publish(c.deleteAccountChannelName, event).Result()
+	if err != nil {
+		slog.Error("Failed to publish message: " + err.Error())
+		return err
+	}
+	return nil
+}
+
+func (c *RedisClient) SendToSendMailChannel(sendEmailEvent *dto.SendEmailEvent) error {
+	event, err := json.Marshal(sendEmailEvent)
+	if err != nil {
+		slog.Error("Failed to marshal event: " + err.Error())
+		return err
+	}
+	_, err = c.Client.Publish(c.sendEmailChannelName, event).Result()
 	if err != nil {
 		slog.Error("Failed to publish message: " + err.Error())
 		return err

@@ -31,6 +31,20 @@ type MeResponse struct {
 	UserId uuid.UUID `json:"user_id"`
 }
 
+type VerifyEmailRequest struct {
+	VerificationToken string `json:"verification_token"`
+}
+
+type ResetPasswordRequest struct {
+	VerificationToken string `json:"verification_token"`
+	NewPassword       string `json:"new_password"`
+}
+
+type ChangePasswordRequest struct {
+	OldPassword string `json:"old_password"`
+	NewPassword string `json:"new_password"`
+}
+
 type AccountCreatedEvent struct {
 	UserId    string `json:"user_id"`
 	Login     string `json:"login"`
@@ -41,4 +55,10 @@ type AccountCreatedEvent struct {
 
 type AccountDeletedEvent struct {
 	UserId string `json:"user_id"`
+}
+
+type SendEmailEvent struct {
+	To      string `json:"to"`
+	Subject string `json:"subject"`
+	Body    string `json:"body"`
 }

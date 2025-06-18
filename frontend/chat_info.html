@@ -192,7 +192,7 @@
         .checkbox-item input {
             margin-right: 8px;
         }
-        
+
         .edit-nickname-btn {
             background: #9C27B0;
             color: white;
@@ -258,7 +258,12 @@
                 </div>
             </div>
 
-            <div class="form-group" id="rolesContainer">
+            <div class="form-group" id="permissionsContainer">
+                <label>Права для роли по умолчанию</label>
+                    <!-- Роли будут загружены здесь -->
+            </div>
+
+            <div class="form-group" id="rolesContainer" style="display: none;">
                 <label>Роли в чате</label>
                 <button id="createRoleBtn" class="action-btn" style="margin-left: 10px;">+ Создать новую роль</button>
                 <div id="rolesList">
